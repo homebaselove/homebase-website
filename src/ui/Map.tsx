@@ -1,3 +1,4 @@
+/** @jsxImportSource preact */
 import { Suspense } from "preact/compat"
 
 export function Map() {

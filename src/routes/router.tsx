@@ -1,3 +1,4 @@
+/** @jsxImportSource preact */
 import { lazy, Route, useRoute } from "preact/iso"
 import { Pages } from "./_manifest.ts"
 

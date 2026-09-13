@@ -1,3 +1,4 @@
+/** @jsxImportSource preact */
 import { Loader2 } from "lucide-preact"
 import { useEffect, useMemo } from "preact"
 import {

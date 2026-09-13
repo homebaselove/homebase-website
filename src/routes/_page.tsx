@@ -1,3 +1,4 @@
+/** @jsxImportSource preact */
 import { useEffect } from "preact"
 import { BasedHouseCard } from "../ui/BasedHouse"
 import { Footer } from "../ui/Footer"

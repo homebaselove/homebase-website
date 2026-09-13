@@ -1,3 +1,4 @@
+/** @jsxImportSource preact */
 import { type DotMap, DotPitch, DotRadius } from "./dots.ts"
 
 interface DotMatrixProps {

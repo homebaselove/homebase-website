@@ -1,3 +1,4 @@
+/** @jsxImportSource preact */
 import "./client.css"
 
 import { ErrorBoundary, LocationProvider, Router } from "preact/iso"

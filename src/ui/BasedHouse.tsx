@@ -1,3 +1,4 @@
+/** @jsxImportSource preact */
 import { useState } from "preact"
 import BasePaint414 from "../../assets/BasedPaint414.png"
 

@@ -1,3 +1,4 @@
+/** @jsxImportSource preact */
 import { word } from "./dots.ts"
 import { DotMatrix } from "./DotMatrix.tsx"
 

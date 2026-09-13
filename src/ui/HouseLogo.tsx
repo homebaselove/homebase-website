@@ -1,3 +1,4 @@
+/** @jsxImportSource preact */
 import { House } from "./dots.ts"
 import { DotMatrix } from "./DotMatrix.tsx"
 

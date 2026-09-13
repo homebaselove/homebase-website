@@ -1,3 +1,4 @@
+/** @jsxImportSource preact */
 import { HouseLogo } from "./HouseLogo.tsx"
 import { Socials } from "./Socials.tsx"
 

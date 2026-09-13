@@ -1,3 +1,4 @@
+/** @jsxImportSource preact */
 export default function Layout(props) {
   return (
     <div>

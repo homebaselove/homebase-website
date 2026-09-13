@@ -1,3 +1,4 @@
+/** @jsxImportSource preact */
 export function Socials() {
   return (
     <div class="flex items-center justify-center ">
