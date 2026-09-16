@@ -2,7 +2,7 @@
 export function Socials() {
   return (
     <div class="flex items-center justify-center ">
-      <div class="flex gap-4">
+      <div class="flex flex-wrap justify-center gap-4">
         <a
           href="http://warpcast.com/homebase"
           target="_blank"
@@ -56,6 +56,51 @@ export function Socials() {
           </svg>
           <span>
             Twitter
+          </span>
+        </a>
+        <a
+          href="https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24"
+          target="_blank"
+          class="flex items-center gap-2 hover:underline"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <rect
+              x="6.6"
+              y="2.5"
+              width="1.8"
+              height="19"
+              rx="0.9"
+            />
+            <rect
+              x="3.5"
+              y="6"
+              width="8"
+              height="11"
+              rx="1.5"
+            />
+            <rect
+              x="16.6"
+              y="5"
+              width="1.8"
+              height="14"
+              rx="0.9"
+            />
+            <rect
+              x="13.5"
+              y="8.5"
+              width="8"
+              height="8"
+              rx="1.5"
+            />
+          </svg>
+          <span>
+            Dexscreener
           </span>
         </a>
       </div>
