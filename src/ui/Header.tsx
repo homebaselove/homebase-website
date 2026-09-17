@@ -22,11 +22,7 @@ export function Header() {
             <Wordmark />
           </div>
 
-          <p class="text-white/80 mt-6 mb-6 text-lg max-sm:text-base">
-            Where based builders and creators come to grow.
-          </p>
-
-          <div class="text-white mb-5">
+          <div class="text-white mt-8 mb-5">
             <Socials />
           </div>
         </div>
