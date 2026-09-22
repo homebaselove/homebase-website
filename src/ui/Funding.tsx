@@ -17,7 +17,7 @@ interface Funding {
 }
 
 const FeeNote = `100% of the creator fees $home earns land in the Bankr `
-  + `address that funds ${Campaign}. The number above is that balance, live.`
+  + `address that funds ${Campaign}. This card counts that balance as raised.`
 
 export function FundingCard() {
   const raised = useSignal<number | null>(null)
@@ -38,7 +38,7 @@ export function FundingCard() {
 
         const funding: Funding = await response.json()
 
-        if (typeof funding.raisedEth !== "number") {
+        if (!Number.isFinite(funding.raisedEth)) {
           throw new Error("/funding.json carried no balance")
         }
 

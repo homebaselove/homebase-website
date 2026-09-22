@@ -78,10 +78,14 @@ export default async function handler(
     }
 
     if (!payload.result) {
+      // Logged rather than returned: a provider states its key in some auth
+      // errors.
+      console.error("Base RPC returned no balance:", payload.error?.message)
+
       response
         .status(502)
         .json({
-          error: payload.error?.message ?? "Base RPC returned no balance",
+          error: "Base RPC returned no balance",
         })
 
       return
@@ -101,10 +105,14 @@ export default async function handler(
       updatedAt: new Date().toISOString(),
     })
   } catch (error) {
+    // Logged rather than returned: the RPC URL the error carries may hold a
+    // provider key.
+    console.error("Could not read the funding balance:", error)
+
     response
       .status(502)
       .json({
-        error: `Could not read the funding balance: ${error}`,
+        error: "Could not read the funding balance",
       })
   }
 }

@@ -38,9 +38,16 @@ export const GET = Effect.gen(function*() {
   }
 
   if (!payload.result) {
+    // Logged rather than returned: a provider states its key in some auth
+    // errors.
+    yield* Effect.logError(
+      "Base RPC returned no balance",
+      payload.error?.message,
+    )
+
     return yield* HttpServerResponse.unsafeJson(
       {
-        error: payload.error?.message ?? "Base RPC returned no balance",
+        error: "Base RPC returned no balance",
       },
       {
         status: 502,
@@ -58,14 +65,22 @@ export const GET = Effect.gen(function*() {
   })
 })
   .pipe(
-    Effect.catchAll((error) =>
-      HttpServerResponse.unsafeJson(
-        {
-          error: `Could not read the funding balance: ${error}`,
-        },
-        {
-          status: 502,
-        },
-      )
+    // Cause rather than error: BigInt throws on a malformed balance, and a
+    // defect would otherwise escape as an unhandled crash. The detail is
+    // logged rather than returned, because the RPC URL it carries may hold a
+    // provider key.
+    Effect.catchAllCause((cause) =>
+      Effect.gen(function*() {
+        yield* Effect.logError("Could not read the funding balance", cause)
+
+        return yield* HttpServerResponse.unsafeJson(
+          {
+            error: "Could not read the funding balance",
+          },
+          {
+            status: 502,
+          },
+        )
+      })
     ),
   )

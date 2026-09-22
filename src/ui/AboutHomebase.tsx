@@ -37,7 +37,7 @@ export function AboutHomebase() {
           SeedMe
         </a>, a permissionless token launcher, and wired the economics back to
         the house: 100% of the creator fees $home earns land in the Bankr
-        address that funds Based House. That's the number on the left, live.
+        address that funds Based House. That's the number on the card, live.
       </p>
 
       <h3 class="text-xl font-bold mt-2">
