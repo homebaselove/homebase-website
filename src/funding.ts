@@ -21,6 +21,12 @@ export const HomeTokenUrl =
  */
 export const BasedHouseUrl = "https://warpcast.com/rafi/0x14fd4e8e"
 
+/**
+ * The Bankr address collecting the $home creator fees, whose balance the card
+ * reads as raised. HOMEBASE_FUNDING_ADDRESS overrides it.
+ */
+export const FundingAddress = "0x23cEBf0E3529a3Af4756eFAe22E56B9797f008E3"
+
 /** What the raise is for, as it reads on the card. */
 export const Campaign = "Based House"
 

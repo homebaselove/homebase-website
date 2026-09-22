@@ -6,6 +6,9 @@ interface ServerlessResponse {
 
 const BaseRpcDefault = "https://mainnet.base.org"
 
+/** Mirrors FundingAddress in src/funding.ts; a test holds the two together. */
+const FundingAddressDefault = "0x23cEBf0E3529a3Af4756eFAe22E56B9797f008E3"
+
 const AddressPattern = /^0x[0-9a-fA-F]{40}$/
 
 /**
@@ -19,17 +22,7 @@ export default async function handler(
   _request: unknown,
   response: ServerlessResponse,
 ) {
-  const address = process.env.HOMEBASE_FUNDING_ADDRESS
-
-  if (!address) {
-    response
-      .status(500)
-      .json({
-        error: "HOMEBASE_FUNDING_ADDRESS is not set",
-      })
-
-    return
-  }
+  const address = process.env.HOMEBASE_FUNDING_ADDRESS || FundingAddressDefault
 
   if (!AddressPattern.test(address)) {
     response
