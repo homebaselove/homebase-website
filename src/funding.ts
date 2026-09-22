@@ -8,6 +8,19 @@
 /** Where the buy and donate buttons send people. */
 export const SeedMeUrl = "https://seedme.xyz"
 
+/** Where the lock card sends people, matching SeedMe's own nav. */
+export const SeedMeLockUrl = `${SeedMeUrl}/lock`
+
+/** $home, on the pool the socials row already points at. */
+export const HomeTokenUrl =
+  "https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24"
+
+/**
+ * Stands in for a Based House Mumbai page, reusing the cast the Based House
+ * card links to. Swap it once there is a page of its own.
+ */
+export const BasedHouseUrl = "https://warpcast.com/rafi/0x14fd4e8e"
+
 /** What the raise is for, as it reads on the card. */
 export const Campaign = "Based House"
 

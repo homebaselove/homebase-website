@@ -1,8 +1,8 @@
 /** @jsxImportSource preact */
-import { Info } from "lucide-preact"
 import { useEffect } from "preact"
 import { useComputed, useSignal } from "preact/signals"
 import {
+  BasedHouseUrl,
   Campaign,
   formatEth,
   nextMilestone,
@@ -11,13 +11,11 @@ import {
   segmentFills,
   TargetEth,
 } from "../funding.ts"
+import { HomeToken, InfoCard } from "./InfoCard.tsx"
 
 interface Funding {
   raisedEth: number
 }
-
-const FeeNote = `100% of the creator fees $home earns land in the Bankr `
-  + `address that funds ${Campaign}. This card counts that balance as raised.`
 
 export function FundingCard() {
   const raised = useSignal<number | null>(null)
@@ -72,104 +70,117 @@ export function FundingCard() {
   })
 
   return (
-    <div class="relative bg-white w-full rounded-lg shadow-md border-[1px] border-gray-200">
-      <div class="flex flex-col gap-5 p-5 max-sm:p-4">
-        <div class="flex items-start justify-between gap-3">
-          <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            {loading.value
-              ? (
-                <div class="h-11 w-44 rounded-lg bg-gray-100 animate-pulse" />
-              )
-              : raised.value === null
-              ? (
-                <h2 class="text-4xl max-sm:text-3xl font-bold leading-none">
-                  Fund {Campaign}
-                </h2>
-              )
-              : (
-                <>
-                  <span class="text-5xl max-sm:text-4xl font-bold leading-none">
-                    {formatEth(raised.value)} ETH
-                  </span>
-
-                  <span class="text-gray-500">
-                    Raised for {Campaign}
-                  </span>
-                </>
-              )}
-          </div>
-
-          <span
-            class="text-gray-400 shrink-0 cursor-help"
-            title={FeeNote}
-            aria-label={FeeNote}
-          >
-            <Info size={20} />
-          </span>
-        </div>
-
-        {raised.value !== null && <MilestoneBar raised={raised.value} />}
-
-        <div class="grid grid-cols-4 max-sm:grid-cols-2 gap-2">
-          {PresetsEth.map((value) => {
-            const selected = custom.value.trim() === ""
-              && preset.value === value
-
-            return (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={selected}
-                class={`rounded-full border-[1px] py-2 text-sm font-medium transition-colors ${
-                  selected
-                    ? "border-brand/40 bg-brand/10 text-brand"
-                    : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
-                }`}
-                onClick={() => {
-                  preset.value = value
-                  custom.value = ""
-                }}
-              >
-                {formatEth(value)} ETH
-              </button>
+    <InfoCard
+      header={
+        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          {loading.value
+            ? <div class="h-11 w-44 rounded-lg bg-gray-100 animate-pulse" />
+            : raised.value === null
+            ? (
+              <h2 class="text-4xl max-sm:text-3xl font-bold leading-none">
+                Fund {Campaign}
+              </h2>
             )
-          })}
+            : (
+              <>
+                <span class="text-5xl max-sm:text-4xl font-bold leading-none">
+                  {formatEth(raised.value)} ETH
+                </span>
 
-          <input
-            type="number"
-            min="0"
-            step="any"
-            inputMode="decimal"
-            placeholder="Custom"
-            value={custom.value}
-            class="rounded-full border-[1px] border-gray-200 bg-gray-50 py-2 px-3 text-sm text-center w-full appearance-none placeholder:text-gray-400 focus:outline-none focus:border-brand/40 focus:bg-white"
-            onInput={(e) => {
-              custom.value = (e.target as HTMLInputElement).value
-            }}
-          />
+                <span class="text-gray-500">
+                  Raised for {Campaign}
+                </span>
+              </>
+            )}
         </div>
-
-        <div class="grid grid-cols-2 max-sm:grid-cols-1 gap-3">
+      }
+      bullets={[
+        <>
+          100% of <HomeToken /> creator fees are allocated to{" "}
           <a
-            href={seedMeUrl("buy", amount.value)}
+            href={BasedHouseUrl}
             target="_blank"
             rel="noreferrer"
-            class="btn-brand w-full"
+            class="underline hover:text-brand"
           >
-            Buy $home
+            Based House Mumbai
           </a>
+        </>,
+        <>
+          Lock $home to gain access to upcoming $seed claims
+        </>,
+        <>
+          The more tokens locked over a longer period of time shows commitment,
+          potentially earning you more privileges from founders launching on
+          SeedMe
+        </>,
+        <>
+          Homebase has been incubating SeedMe since Based House ETHDenver to
+          support the founders in residence
+        </>,
+      ]}
+    >
+      {raised.value !== null && <MilestoneBar raised={raised.value} />}
 
-          <a
-            href={seedMeUrl("donate", amount.value)}
-            target="_blank"
-            rel="noreferrer"
-            class="btn-brand w-full"
-          >
-            Donate
-          </a>
-        </div>
+      <div class="grid grid-cols-4 max-sm:grid-cols-2 gap-2">
+        {PresetsEth.map((value) => {
+          const selected = custom.value.trim() === ""
+            && preset.value === value
+
+          return (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={selected}
+              class={`rounded-full border-[1px] py-2 text-sm font-medium transition-colors ${
+                selected
+                  ? "border-brand/40 bg-brand/10 text-brand"
+                  : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
+              }`}
+              onClick={() => {
+                preset.value = value
+                custom.value = ""
+              }}
+            >
+              {formatEth(value)} ETH
+            </button>
+          )
+        })}
+
+        <input
+          type="number"
+          min="0"
+          step="any"
+          inputMode="decimal"
+          placeholder="Custom"
+          value={custom.value}
+          class="rounded-full border-[1px] border-gray-200 bg-gray-50 py-2 px-3 text-sm text-center w-full appearance-none placeholder:text-gray-400 focus:outline-none focus:border-brand/40 focus:bg-white"
+          onInput={(e) => {
+            custom.value = (e.target as HTMLInputElement).value
+          }}
+        />
       </div>
-    </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <a
+          href={seedMeUrl("buy", amount.value)}
+          target="_blank"
+          rel="noreferrer"
+          class="btn-brand w-full max-sm:px-3"
+        >
+          Buy $home
+        </a>
+
+        <a
+          href={seedMeUrl("donate", amount.value)}
+          target="_blank"
+          rel="noreferrer"
+          class="btn-brand w-full max-sm:px-3"
+        >
+          Donate
+        </a>
+      </div>
+    </InfoCard>
   )
 }
 

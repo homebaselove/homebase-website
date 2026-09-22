@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import {
   formatEth,
   nextMilestone,
+  SeedMeLockUrl,
   seedMeUrl,
   segmentFills,
   weiToEth,
@@ -110,4 +111,11 @@ test("no amount selected leaves the link bare", () => {
     seedMeUrl("donate", null),
   )
     .toBe("https://seedme.xyz/?action=donate")
+})
+
+test("the lock card points at SeedMe's lock page", () => {
+  expect(
+    SeedMeLockUrl,
+  )
+    .toBe("https://seedme.xyz/lock")
 })

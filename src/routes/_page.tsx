@@ -1,10 +1,10 @@
 /** @jsxImportSource preact */
 import { useEffect } from "preact"
-import { AboutHomebase } from "../ui/AboutHomebase.tsx"
 import { BasedHouseCard } from "../ui/BasedHouse"
 import { Footer } from "../ui/Footer"
 import { FundingCard } from "../ui/Funding.tsx"
 import { Header } from "../ui/Header"
+import { LockCard } from "../ui/Lock.tsx"
 import { VideoGallery } from "../ui/VideoGallery"
 import { WorkshopListCard } from "../ui/Workshop"
 
@@ -22,7 +22,7 @@ export default function() {
       >
         <div class="grid items-start gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
           <FundingCard />
-          <AboutHomebase />
+          <LockCard />
         </div>
       </div>
 
