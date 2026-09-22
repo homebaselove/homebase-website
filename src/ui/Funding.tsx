@@ -21,7 +21,7 @@ export function FundingCard() {
   const raised = useSignal<number | null>(null)
   const loading = useSignal(true)
   const preset = useSignal<number | null>(PresetsEth[0])
-  const custom = useSignal("")
+  const custom = useSignal<string | undefined>(undefined)
 
   useEffect(() => {
     let cancelled = false
@@ -114,22 +114,19 @@ export function FundingCard() {
 
       <div class="grid grid-cols-4 max-sm:grid-cols-2 gap-2">
         {PresetsEth.map((value) => {
-          const selected = custom.value.trim() === ""
-            && preset.value === value
+          const selected = !custom.value?.trim() && preset.value === value
 
           return (
             <button
               key={value}
               type="button"
               aria-pressed={selected}
-              class={`rounded-full border-[1px] py-2 text-sm font-medium transition-colors ${
-                selected
-                  ? "border-brand/40 bg-brand/10 text-brand"
-                  : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
-              }`}
+              class={selected
+                ? "rounded-full border-[1px] py-2 text-sm font-medium transition-colors border-brand/40 bg-brand/10 text-brand"
+                : "rounded-full border-[1px] py-2 text-sm font-medium transition-colors border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"}
               onClick={() => {
                 preset.value = value
-                custom.value = ""
+                custom.value = undefined
               }}
             >
               {formatEth(value)} ETH

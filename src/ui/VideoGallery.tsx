@@ -1,5 +1,5 @@
 /** @jsxImportSource preact */
-import { Loader2, VideoIcon, X } from "lucide-preact"
+import { CloseIcon, SpinnerIcon, VideoIcon } from "./Icons.tsx"
 import { useState } from "preact"
 import Videos from "../videos.json" with { type: "json" }
 
@@ -135,7 +135,7 @@ export function VideoGallery() {
                 class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100"
                 aria-label="Close modal"
               >
-                <X size={24} />
+                <CloseIcon size={24} />
               </button>
             </div>
             <div class="p-0 flex-grow overflow-hidden relative rounded-b-xl">
@@ -146,7 +146,7 @@ export function VideoGallery() {
                     {isVideoLoading && (
                       <div class="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-b-2xl">
                         <div class="flex flex-col items-center">
-                          <Loader2
+                          <SpinnerIcon
                             size={36}
                             class="text-brand mb-2 animate-spin"
                           />
