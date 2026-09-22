@@ -1,13 +1,13 @@
 /** @jsxImportSource preact */
 import { useEffect } from "preact"
-import { useComputed, useSignal } from "preact/signals"
+import { useSignal } from "preact/signals"
 import {
   BasedHouseUrl,
   Campaign,
   formatEth,
   nextMilestone,
   PresetsEth,
-  seedMeUrl,
+  SeedMeUrl,
   segmentFills,
   TargetEth,
 } from "../funding.ts"
@@ -58,16 +58,6 @@ export function FundingCard() {
       cancelled = true
     }
   }, [])
-
-  const amount = useComputed(() => {
-    const typed = Number.parseFloat(custom.value)
-
-    if (custom.value.trim() !== "" && Number.isFinite(typed) && typed > 0) {
-      return typed
-    }
-
-    return preset.value
-  })
 
   return (
     <InfoCard
@@ -163,7 +153,7 @@ export function FundingCard() {
 
       <div class="grid grid-cols-2 gap-3">
         <a
-          href={seedMeUrl("buy", amount.value)}
+          href={SeedMeUrl}
           target="_blank"
           rel="noreferrer"
           class="btn-brand w-full max-sm:px-3"
@@ -172,7 +162,7 @@ export function FundingCard() {
         </a>
 
         <a
-          href={seedMeUrl("donate", amount.value)}
+          href={SeedMeUrl}
           target="_blank"
           rel="noreferrer"
           class="btn-brand w-full max-sm:px-3"

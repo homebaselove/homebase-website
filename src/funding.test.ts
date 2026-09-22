@@ -3,7 +3,7 @@ import {
   formatEth,
   nextMilestone,
   SeedMeLockUrl,
-  seedMeUrl,
+  SeedMeUrl,
   segmentFills,
   weiToEth,
 } from "./funding.ts"
@@ -99,18 +99,11 @@ test("wei converts to eth from hex and from decimal", () => {
     ])
 })
 
-test("the selected amount rides along to seedme", () => {
+test("buy and donate point at the seedme home page", () => {
   expect(
-    seedMeUrl("buy", 0.01),
+    SeedMeUrl,
   )
-    .toBe("https://seedme.xyz/?action=buy&amount=0.01")
-})
-
-test("no amount selected leaves the link bare", () => {
-  expect(
-    seedMeUrl("donate", null),
-  )
-    .toBe("https://seedme.xyz/?action=donate")
+    .toBe("https://seedme.xyz")
 })
 
 test("the lock card points at SeedMe's lock page", () => {
