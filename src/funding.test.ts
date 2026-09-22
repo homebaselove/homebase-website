@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test"
 import {
   formatEth,
+  FundingAddress,
   nextMilestone,
   SeedMeLockUrl,
   SeedMeUrl,
@@ -111,4 +112,22 @@ test("the lock card points at SeedMe's lock page", () => {
     SeedMeLockUrl,
   )
     .toBe("https://seedme.xyz/lock")
+})
+
+test("the funding address is a checksummed 0x address", () => {
+  expect(
+    /^0x[0-9a-fA-F]{40}$/.test(FundingAddress),
+  )
+    .toBe(true)
+})
+
+test("the serverless function falls back to the same address", async () => {
+  const serverless = await Bun
+    .file(new URL("../api/funding.ts", import.meta.url))
+    .text()
+
+  expect(
+    serverless.includes(FundingAddress),
+  )
+    .toBe(true)
 })

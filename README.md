@@ -62,10 +62,10 @@ settings needed are the environment variables:
 
 - `HOMEBASE_LIVE_ICAL` — the calendar feed URL. Without it `/events.json`
   answers with a 500 and the site renders with no events.
-- `HOMEBASE_FUNDING_ADDRESS` — the Bankr address that collects 100% of the
-  $home creator fees. Its balance is what the funding card reads as raised.
-  Without it `/funding.json` answers with a 500 and the card renders without a
-  number, keeping its buy and donate links.
+- `HOMEBASE_FUNDING_ADDRESS` — optional. The Bankr address that collects 100%
+  of the $home creator fees, whose balance the funding card reads as raised.
+  It defaults to the address in `src/funding.ts`, so this only needs setting to
+  point the card somewhere else.
 - `HOMEBASE_BASE_RPC` — optional. A Base JSON-RPC endpoint, defaulting to
   `https://mainnet.base.org`. Set it to a provider with a key if the public
   endpoint rate-limits.

@@ -1,6 +1,6 @@
 import { HttpBody, HttpClient, HttpServerResponse } from "@effect/platform"
 import { Config, DateTime, Effect } from "effect"
-import { weiToEth } from "../../funding.ts"
+import { FundingAddress, weiToEth } from "../../funding.ts"
 
 const BaseRpcDefault = "https://mainnet.base.org"
 
@@ -11,7 +11,9 @@ const BaseRpcDefault = "https://mainnet.base.org"
  * Keep the payload in sync with api/funding.ts.
  */
 export const GET = Effect.gen(function*() {
-  const address = yield* Config.string("HOMEBASE_FUNDING_ADDRESS")
+  const address = yield* Config
+    .string("HOMEBASE_FUNDING_ADDRESS")
+    .pipe(Config.withDefault(FundingAddress))
   const rpcUrl = yield* Config
     .string("HOMEBASE_BASE_RPC")
     .pipe(Config.withDefault(BaseRpcDefault))
