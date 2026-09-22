@@ -2,7 +2,7 @@
 import { useEffect } from "preact"
 import { useSignal } from "preact/signals"
 import {
-  BasedHouseUrl,
+  BasedHouseMumbaiUrl,
   Campaign,
   formatEth,
   nextMilestone,
@@ -88,7 +88,7 @@ export function FundingCard() {
         <>
           100% of <HomeToken /> creator fees are allocated to{" "}
           <a
-            href={BasedHouseUrl}
+            href={BasedHouseMumbaiUrl}
             target="_blank"
             rel="noreferrer"
             class="underline hover:text-brand"

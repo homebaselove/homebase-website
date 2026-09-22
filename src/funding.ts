@@ -15,11 +15,8 @@ export const SeedMeLockUrl = `${SeedMeUrl}/lock`
 export const HomeTokenUrl =
   "https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24"
 
-/**
- * Stands in for a Based House Mumbai page, reusing the cast the Based House
- * card links to. Swap it once there is a page of its own.
- */
-export const BasedHouseUrl = "https://warpcast.com/rafi/0x14fd4e8e"
+/** The Based House Mumbai form, where the raise is headed. */
+export const BasedHouseMumbaiUrl = "https://forms.gle/ZKkD9fCnBCx5pitv9"
 
 /**
  * The Bankr address collecting the $home creator fees, whose balance the card
