@@ -79,19 +79,3 @@ export function weiToEth(wei: string | bigint): number {
 
   return Number(value / unit) + Number(value % unit) / 1e18
 }
-
-/** Deep link into SeedMe with the amount the card has selected. */
-export function seedMeUrl(
-  action: "buy" | "donate",
-  amountEth: number | null,
-): string {
-  const url = new URL(SeedMeUrl)
-
-  url.searchParams.set("action", action)
-
-  if (amountEth !== null && amountEth > 0) {
-    url.searchParams.set("amount", String(amountEth))
-  }
-
-  return url.toString()
-}
