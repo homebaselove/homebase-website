@@ -8,6 +8,10 @@
       "destination": "/api/events"
     },
     {
+      "source": "/funding.json",
+      "destination": "/api/funding"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

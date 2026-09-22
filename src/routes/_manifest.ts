@@ -32,6 +32,11 @@ const server__events_json = {
   load: () => import("./events.json/_server.ts"),
 } as const
 
+const server__funding_json = {
+  path: "/funding.json",
+  load: () => import("./funding.json/_server.ts"),
+} as const
+
 export const Layouts: Router.LayoutRoutes = [
   layout__,
   layout__about
@@ -43,6 +48,7 @@ export const Pages: Router.PageRoutes = [
 ] as const
 
 export const Servers: Router.ServerRoutes = [
-  server__events_json
+  server__events_json,
+  server__funding_json
 ] as const
  

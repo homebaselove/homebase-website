@@ -6,6 +6,8 @@ A modern, responsive web application for the Base community - a platform for bui
 
 The Homebase website serves as a hub for the Base community, featuring:
 
+- Live funding card for Based House, read from the address that collects the
+  $home creator fees
 - Interactive map of Homebase physical locations (Based Houses)
 - Upcoming workshops and events with timezone support
 - Video gallery of past events and workshops
@@ -52,14 +54,21 @@ bun run dev
 
 Vercel has no Bun runtime, no persistent disk for SQLite and nowhere to run the
 calendar sync loop, so it serves the client as static files and answers
-`/events.json` with a function in `api/` that parses the iCal feed per request
-and lets the CDN cache it for five minutes.
+`/events.json` and `/funding.json` with functions in `api/` that fetch per
+request and let the CDN cache the result.
 
 `vercel.json` carries the build command and the routing, so the only project
-setting needed is the environment variable:
+settings needed are the environment variables:
 
 - `HOMEBASE_LIVE_ICAL` — the calendar feed URL. Without it `/events.json`
   answers with a 500 and the site renders with no events.
+- `HOMEBASE_FUNDING_ADDRESS` — the Bankr address that collects 100% of the
+  $home creator fees. Its balance is what the funding card reads as raised.
+  Without it `/funding.json` answers with a 500 and the card renders without a
+  number, keeping its buy and donate links.
+- `HOMEBASE_BASE_RPC` — optional. A Base JSON-RPC endpoint, defaulting to
+  `https://mainnet.base.org`. Set it to a provider with a key if the public
+  endpoint rate-limits.
 
 The same build runs locally:
 
