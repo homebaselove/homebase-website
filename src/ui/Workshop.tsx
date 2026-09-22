@@ -1,5 +1,5 @@
 /** @jsxImportSource preact */
-import { Loader2 } from "lucide-preact"
+import { SpinnerIcon } from "./Icons.tsx"
 import { useEffect, useMemo } from "preact"
 import {
   For,
@@ -296,7 +296,7 @@ export function WorkshopListCard() {
 
         <div class="flex flex-col gap-6 p-4">
           <div class="flex items-center justify-center py-12">
-            <Loader2 class="w-8 h-8 text-brand animate-spin" />
+            <SpinnerIcon class="w-8 h-8 text-brand animate-spin" />
           </div>
         </div>
       </div>

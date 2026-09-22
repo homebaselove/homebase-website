@@ -1,5 +1,5 @@
 /** @jsxImportSource preact */
-import { Loader2, VideoIcon, X } from "lucide-preact"
+import { CloseIcon, SpinnerIcon, VideoIcon } from "./Icons.tsx"
 import { useState } from "preact"
 import Videos from "../videos.json" with { type: "json" }
 
@@ -14,7 +14,7 @@ export function VideoGallery() {
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null)
   const [isVideoLoading, setIsVideoLoading] = useState(true)
 
-  const getYoutubeEmbedUrl = (url: string): string | null => {
+  const getYoutubeEmbedUrl = (url?: string): string | null => {
     if (!url) return null
 
     // Only handle YouTube URLs
@@ -135,18 +135,18 @@ export function VideoGallery() {
                 class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100"
                 aria-label="Close modal"
               >
-                <X size={24} />
+                <CloseIcon size={24} />
               </button>
             </div>
             <div class="p-0 flex-grow overflow-hidden relative rounded-b-xl">
-              {getYoutubeEmbedUrl(selectedVideo?.url || "")
+              {getYoutubeEmbedUrl(selectedVideo?.url)
                 ? (
                   <div class="aspect-video w-full relative">
                     {/* Loading indicator */}
                     {isVideoLoading && (
                       <div class="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-b-2xl">
                         <div class="flex flex-col items-center">
-                          <Loader2
+                          <SpinnerIcon
                             size={36}
                             class="text-brand mb-2 animate-spin"
                           />
@@ -155,7 +155,7 @@ export function VideoGallery() {
                     )}
 
                     <iframe
-                      src={getYoutubeEmbedUrl(selectedVideo?.url || "")
+                      src={getYoutubeEmbedUrl(selectedVideo?.url)
                         || undefined}
                       title={selectedVideo?.title}
                       class="w-full h-full select-none"
@@ -171,7 +171,7 @@ export function VideoGallery() {
                   <div class="flex flex-col items-center justify-center p-12 text-center space-y-4 h-full">
                     <VideoIcon size={48} class="text-gray-400 mb-2" />
                     <p class="text-gray-600 text-lg">
-                      This content can't be embedded.
+                      This content cannot be embedded.
                     </p>
                     <a
                       href={selectedVideo?.url}

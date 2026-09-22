@@ -1,5 +1,5 @@
 /** @jsxImportSource preact */
-import { Info } from "lucide-preact"
+import { InfoIcon } from "./Icons.tsx"
 import { useSignal } from "preact/signals"
 import { HomeTokenUrl } from "../funding.ts"
 
@@ -20,16 +20,14 @@ export function InfoCard(props) {
             type="button"
             aria-expanded={open.value}
             aria-label={open.value ? "Hide details" : "Show details"}
-            class={`shrink-0 rounded-full border-[1px] p-1.5 transition-colors ${
-              open.value
-                ? "border-brand/40 bg-brand/10 text-brand"
-                : "border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600"
-            }`}
+            class={open.value
+              ? "shrink-0 rounded-full border-[1px] p-1.5 transition-colors border-brand/40 bg-brand/10 text-brand"
+              : "shrink-0 rounded-full border-[1px] p-1.5 transition-colors border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600"}
             onClick={() => {
               open.value = !open.value
             }}
           >
-            <Info size={20} />
+            <InfoIcon size={20} />
           </button>
         </div>
 
