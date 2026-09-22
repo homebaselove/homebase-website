@@ -2,7 +2,7 @@
 
 /**
  * Inlined rather than taken from lucide-preact. The bundler emits that
- * package's module body as an empty initializer, so every icon it exports
+ * module body of that package as an empty initializer, so its icons all
  * reads as an undeclared binding at runtime: rendering one throws, and the
  * error boundary drops the card around it without a word.
  */

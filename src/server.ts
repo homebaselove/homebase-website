@@ -1,6 +1,7 @@
 import { FetchHttpClient, HttpClient, HttpRouter } from "@effect/platform"
 import { Console, Effect, Layer } from "effect"
 import { BunTailwindPlugin, Start } from "effect-start"
+import * as BunUuidPlugin from "./BunUuidPlugin.ts"
 import * as Sql from "./db/Sql"
 import IndexHtml from "./index.html" with { type: "file" }
 import * as CalendarSync from "./jobs/CalendarSync"
@@ -15,6 +16,7 @@ export default Layer
       ],
       plugins: [
         BunTailwindPlugin.make(),
+        BunUuidPlugin.make(),
       ],
     }),
     CalendarSync.layer(),

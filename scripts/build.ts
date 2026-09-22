@@ -1,4 +1,5 @@
 import { BunTailwindPlugin } from "effect-start"
+import * as BunUuidPlugin from "../src/BunUuidPlugin.ts"
 import * as NFs from "node:fs/promises"
 
 /**
@@ -26,6 +27,7 @@ const result = await Bun.build({
   },
   plugins: [
     BunTailwindPlugin.make(),
+    BunUuidPlugin.make(),
   ],
 })
 
