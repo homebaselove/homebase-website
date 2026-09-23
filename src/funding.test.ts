@@ -1,12 +1,14 @@
 import { expect, test } from "bun:test"
+import { raisedFrom } from "../api/funding.ts"
 import {
+  bankrCreatorFeesUrl,
   formatEth,
   FundingAddress,
   nextMilestone,
+  raisedFromCreatorFees,
   SeedMeLockUrl,
   SeedMeUrl,
   segmentFills,
-  weiToEth,
 } from "./funding.ts"
 
 test("next milestone steps past the amount already raised", () => {
@@ -85,21 +87,6 @@ test("amounts read without trailing zeros", () => {
     ])
 })
 
-test("wei converts to eth from hex and from decimal", () => {
-  expect(
-    [
-      weiToEth("0x401d8985ae4e0000"),
-      weiToEth("4620000000000000000"),
-      weiToEth(0n),
-    ],
-  )
-    .toEqual([
-      4.62,
-      4.62,
-      0,
-    ])
-})
-
 test("buy and donate point at the seedme home page", () => {
   expect(
     SeedMeUrl,
@@ -130,4 +117,111 @@ test("the serverless function falls back to the same address", async () => {
     serverless.includes(FundingAddress),
   )
     .toBe(true)
+})
+
+test("raised reads what the fees earned, claimed or not", () => {
+  expect(
+    raisedFromCreatorFees({
+      lifetimeEarnedWeth: "4.62",
+      totals: {
+        claimedWeth: "0.0005",
+        claimableWeth: "4.6195",
+      },
+    }),
+  )
+    .toBe(4.62)
+})
+
+test("without a lifetime total, claimed and claimable are added", () => {
+  expect(
+    raisedFromCreatorFees({
+      totals: {
+        claimedWeth: "0.0005",
+        claimableWeth: "4.6195",
+      },
+    }),
+  )
+    .toBe(4.62)
+})
+
+test("a claim that has not happened yet still counts", () => {
+  expect(
+    raisedFromCreatorFees({
+      totals: {
+        claimedWeth: "0",
+        claimableWeth: "4.62",
+      },
+    }),
+  )
+    .toBe(4.62)
+})
+
+test("numbers are accepted as readily as strings", () => {
+  expect(
+    raisedFromCreatorFees({
+      lifetimeEarnedWeth: 4.62,
+    }),
+  )
+    .toBe(4.62)
+})
+
+test("a payload carrying no fees reads as nothing, not as zero", () => {
+  expect(
+    [
+      raisedFromCreatorFees({}),
+      raisedFromCreatorFees({
+        lifetimeEarnedWeth: "not a number",
+      }),
+      raisedFromCreatorFees({
+        totals: {},
+      }),
+    ],
+  )
+    .toEqual([
+      null,
+      null,
+      null,
+    ])
+})
+
+test("the serverless copy of the parser agrees with this one", () => {
+  const payloads = [
+    {
+      lifetimeEarnedWeth: "4.62",
+    },
+    {
+      totals: {
+        claimedWeth: "0.0005",
+        claimableWeth: "4.6195",
+      },
+    },
+    {
+      totals: {
+        claimedWeth: "0",
+        claimableWeth: "4.62",
+      },
+    },
+    {
+      lifetimeEarnedWeth: 4.62,
+    },
+    {},
+    {
+      lifetimeEarnedWeth: "not a number",
+    },
+  ]
+
+  expect(
+    payloads.map(raisedFrom),
+  )
+    .toEqual(payloads.map(raisedFromCreatorFees))
+})
+
+test("the fees url needs no key and names the recipient", () => {
+  expect(
+    bankrCreatorFeesUrl(FundingAddress),
+  )
+    .toBe(
+      "https://api.bankr.bot/public/doppler/creator-fees/"
+        + "0x23cEBf0E3529a3Af4756eFAe22E56B9797f008E3",
+    )
 })

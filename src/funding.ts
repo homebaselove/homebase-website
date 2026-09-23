@@ -75,10 +75,45 @@ export function formatEth(value: number): string {
     .replace(/\.?0+$/, "")
 }
 
-/** Wei, hex or decimal, as a number of ETH. */
-export function weiToEth(wei: string | bigint): number {
-  const value = typeof wei === "bigint" ? wei : BigInt(wei)
-  const unit = 10n ** 18n
+/** Bankr's public read API, where the creator fees sit until they are claimed. */
+export const BankrApiUrl = "https://api.bankr.bot"
 
-  return Number(value / unit) + Number(value % unit) / 1e18
+/** Every position this address is the fee recipient for. Needs no key. */
+export const bankrCreatorFeesUrl = (address: string, api = BankrApiUrl) =>
+  `${api}/public/doppler/creator-fees/${address}`
+
+const toEth = (value: unknown): number | null => {
+  const eth = typeof value === "string" ? Number(value) : value
+
+  return typeof eth === "number" && Number.isFinite(eth) ? eth : null
+}
+
+/**
+ * What the card counts as raised: everything the fees have earned, whether or
+ * not anyone has claimed them yet. Reading the recipient's balance instead
+ * shows only what has already been withdrawn, which is why the card read 0.
+ *
+ * Bankr reports WETH in whole units rather than wei.
+ */
+export function raisedFromCreatorFees(payload: {
+  lifetimeEarnedWeth?: unknown
+  totals?: {
+    claimedWeth?: unknown
+    claimableWeth?: unknown
+  }
+}): number | null {
+  const lifetime = toEth(payload?.lifetimeEarnedWeth)
+
+  if (lifetime !== null) {
+    return lifetime
+  }
+
+  const claimed = toEth(payload?.totals?.claimedWeth)
+  const claimable = toEth(payload?.totals?.claimableWeth)
+
+  if (claimed === null && claimable === null) {
+    return null
+  }
+
+  return (claimed ?? 0) + (claimable ?? 0)
 }

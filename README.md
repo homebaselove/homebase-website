@@ -6,8 +6,8 @@ A modern, responsive web application for the Base community - a platform for bui
 
 The Homebase website serves as a hub for the Base community, featuring:
 
-- Live funding card for Based House, read from the address that collects the
-  $home creator fees
+- Live funding card for Based House, read from the creator fees the $home
+  position has earned
 - Interactive map of Homebase physical locations (Based Houses)
 - Upcoming workshops and events with timezone support
 - Video gallery of past events and workshops
@@ -63,12 +63,15 @@ settings needed are the environment variables:
 - `HOMEBASE_LIVE_ICAL` — the calendar feed URL. Without it `/events.json`
   answers with a 500 and the site renders with no events.
 - `HOMEBASE_FUNDING_ADDRESS` — optional. The Bankr address that collects 100%
-  of the $home creator fees, whose balance the funding card reads as raised.
-  It defaults to the address in `src/funding.ts`, so this only needs setting to
-  point the card somewhere else.
-- `HOMEBASE_BASE_RPC` — optional. A Base JSON-RPC endpoint, defaulting to
-  `https://mainnet.base.org`. Set it to a provider with a key if the public
-  endpoint rate-limits.
+  of the $home creator fees. It defaults to the address in `src/funding.ts`, so
+  this only needs setting to point the card somewhere else.
+- `HOMEBASE_BANKR_API` — optional. Bankr's read API, defaulting to
+  `https://api.bankr.bot`. Its creator-fee endpoints need no key.
+
+The fees accrue inside Bankr and only reach the address once someone claims
+them, so the card counts what the position has earned — claimed and unclaimed
+together — rather than what the address is holding. Reading the balance instead
+shows only what has already been withdrawn.
 
 The same build runs locally:
 
