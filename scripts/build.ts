@@ -1,6 +1,6 @@
 import { BunTailwindPlugin } from "effect-start"
-import * as BunUuidPlugin from "../src/BunUuidPlugin.ts"
 import * as NFs from "node:fs/promises"
+import * as BunUuidPlugin from "../src/BunUuidPlugin.ts"
 
 /**
  * Builds the client into static files for hosts that cannot run the Bun

@@ -7,9 +7,9 @@ import type { BunPlugin } from "bun"
  * v4 while the Farcaster SDK loads, which took `sdk.actions.ready()` down with
  * it and left the mini app sitting on its splash screen.
  *
- * jayson's browser client is the only thing that reads from that namespace,
- * and it reads only v4, so only v4 is replaced. The rest of the module is
- * passed through as it was.
+ * jayson is the only thing that reads from that namespace, in its browser
+ * client and the request builder it calls, and it reads only v4, so only v4
+ * is replaced. The rest of the module is passed through as it was.
  */
 export function make(): BunPlugin {
   return {
@@ -17,18 +17,11 @@ export function make(): BunPlugin {
     setup(builder) {
       builder.onLoad({
         filter: /uuid[\\/]dist[\\/]esm-browser[\\/]index\.js$/,
-      }, async (args) => {
-        const source = await Bun.file(args.path).text()
-
-        if (!V4Reexport.test(source)) {
-          return undefined
-        }
-
-        return {
-          contents: source.replace(V4Reexport, V4Source),
-          loader: "js",
-        }
-      })
+      }, async (args) => ({
+        contents: (await Bun.file(args.path).text())
+          .replace(V4Reexport, V4Source),
+        loader: "js",
+      }))
     },
   }
 }
@@ -37,7 +30,7 @@ const V4Reexport = /export\s*\{\s*default as v4\s*\}\s*from\s*["'][^"']+["'];?/
 
 const V4Source = `
 export function v4() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+  if (crypto.randomUUID) {
     return crypto.randomUUID()
   }
 

@@ -24,7 +24,7 @@ export const Campaign = "Based House"
 export const TargetEth = 10
 
 /** Segments in the milestone bar, each worth TargetEth / SegmentCount. */
-export const SegmentCount = 10
+const SegmentCount = 10
 
 /** Amounts offered next to the custom field. */
 export const PresetsEth = [0.001, 0.01, 0.1]

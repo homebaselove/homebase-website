@@ -1,7 +1,7 @@
 /** @jsxImportSource preact */
-import { CloseIcon, SpinnerIcon, VideoIcon } from "./Icons.tsx"
 import { useState } from "preact"
 import Videos from "../videos.json" with { type: "json" }
+import { CloseIcon, SpinnerIcon, VideoIcon } from "./Icons.tsx"
 
 interface Video {
   title: string
@@ -54,9 +54,9 @@ export function VideoGallery() {
       </div>
 
       <div
-        class={`flex flex-col  px-5 py-3 relative ${
-          isExpanded ? "pb-20" : "overflow-hidden"
-        }`}
+        class={isExpanded
+          ? "flex flex-col px-5 py-3 relative pb-20"
+          : "flex flex-col px-5 py-3 relative overflow-hidden"}
         style={{
           maskImage: !isExpanded
             ? "linear-gradient(to bottom, black 70%, rgba(0,0,0,0.8) 85%, rgba(0,0,0,0.4) 95%, transparent)"

@@ -1,10 +1,10 @@
 /** @jsxImportSource preact */
 
 /**
- * Inlined rather than taken from lucide-preact. The bundler emits that
- * module body of that package as an empty initializer, so its icons all
- * reads as an undeclared binding at runtime: rendering one throws, and the
- * error boundary drops the card around it without a word.
+ * Inlined rather than taken from lucide-preact. The bundler emits the module
+ * body of that package as an empty initializer, so each of its icons reads as
+ * an undeclared binding at runtime: rendering one throws, and the error
+ * boundary drops the card around it without a word.
  */
 function Icon(props) {
   return (
@@ -58,14 +58,13 @@ export function CloseIcon(props) {
 export function VideoIcon(props) {
   return (
     <Icon {...props}>
-      <path d="m22 8-6 4 6 4V8Z" />
+      <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
       <rect
-        width="14"
-        height="12"
         x="2"
         y="6"
+        width="14"
+        height="12"
         rx="2"
-        ry="2"
       />
     </Icon>
   )

@@ -13,7 +13,12 @@ export const FundingAddress = "0x23cEBf0E3529a3Af4756eFAe22E56B9797f008E3"
 /** Bankr's public read API. Its creator-fee reads need no key. */
 export const BankrApiUrl = "https://api.bankr.bot"
 
-export const CacheControl = "public, s-maxage=120, stale-while-revalidate=600"
+/**
+ * stale-if-error lets the CDN keep serving the last answer for an hour when a
+ * read fails, across instances, as the kept answer below does within one.
+ */
+export const CacheControl =
+  "public, s-maxage=120, stale-while-revalidate=600, stale-if-error=3600"
 
 const AddressPattern = /^0x[0-9a-fA-F]{40}$/
 
@@ -22,7 +27,7 @@ export const creatorFeesUrl = (address: string, api = BankrApiUrl) =>
   `${api}/public/doppler/creator-fees/${address}`
 
 /** A failure whose message is safe to hand back, since it carries no URL. */
-export class BankrError extends Error {}
+class BankrError extends Error {}
 
 /** Fees are never negative, and a blank field is missing rather than zero. */
 const toEth = (value: unknown): number | null => {
@@ -36,26 +41,17 @@ const toEth = (value: unknown): number | null => {
 }
 
 /**
- * What the card counts as raised: every fee the position has earned, claimed
- * or not. The fees sit inside Bankr until someone claims them, so the
- * address's balance counts only what has been withdrawn.
+ * What the card counts as raised: Bankr's lifetime total of the WETH the
+ * address has earned, claimed or not. The fees sit inside Bankr until someone
+ * claims them, so the address's balance counts only what has been withdrawn.
  *
- * Bankr reports WETH in whole units rather than wei. Its lifetime total is
- * used when present; otherwise claimed and claimable must both be there, since
- * either alone is only part of it. Anything less reads as no answer rather
- * than as a wrong number.
+ * Bankr reports WETH in whole units rather than wei. Its claimed total only
+ * counts claims within the requested window of days, so claimed plus
+ * claimable is no stand-in: without the lifetime total there is no answer
+ * rather than a smaller number.
  */
 export function raisedFrom(payload: any): number | null {
-  const lifetime = toEth(payload?.lifetimeEarnedWeth)
-
-  if (lifetime !== null) {
-    return lifetime
-  }
-
-  const claimed = toEth(payload?.totals?.claimedWeth)
-  const claimable = toEth(payload?.totals?.claimableWeth)
-
-  return claimed === null || claimable === null ? null : claimed + claimable
+  return toEth(payload?.lifetimeEarnedWeth)
 }
 
 /**
@@ -92,9 +88,6 @@ export function createRaisedReader(
 
     const pass = (async () => {
       const response = await fetch(url, {
-        headers: {
-          accept: "application/json",
-        },
         signal: AbortSignal.timeout(timeoutMs),
       })
 
@@ -145,7 +138,7 @@ export function createRaisedReader(
 }
 
 /** Shared by the Vercel function and the Bun route: one answer per process. */
-export const readRaised = createRaisedReader()
+const readRaised = createRaisedReader()
 
 /** The answer both runtimes give for /funding.json. */
 export async function answerFunding(

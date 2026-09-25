@@ -20,18 +20,19 @@ interface Funding {
 export function FundingCard() {
   const raised = useSignal<number | null>(null)
   const loading = useSignal(true)
-  const preset = useSignal<number | null>(PresetsEth[0])
-  const custom = useSignal<string | undefined>(undefined)
+  const preset = useSignal(PresetsEth[0])
+  // String() is an empty string without an empty literal, which the class
+  // scanner misreads, dropping classes from this file.
+  const custom = useSignal(String())
 
   useEffect(() => {
-    let cancelled = false
-
     const fetchFunding = async () => {
       try {
         // Longer than the five seconds the endpoint gives Bankr, so the
-        // endpoint answers first; the card only gives up if it never does.
+        // endpoint answers first. Browsers without AbortSignal.timeout
+        // (Safari before 16) wait on the endpoint instead.
         const response = await fetch("/funding.json", {
-          signal: AbortSignal.timeout(10_000),
+          signal: AbortSignal.timeout?.(10_000),
         })
 
         if (!response.ok) {
@@ -44,27 +45,20 @@ export function FundingCard() {
           throw new Error("/funding.json carried no balance")
         }
 
-        if (!cancelled) {
-          raised.value = funding.raisedEth
-        }
+        raised.value = funding.raisedEth
       } catch (error) {
         console.error("Error fetching funding:", error)
       } finally {
-        if (!cancelled) {
-          loading.value = false
-        }
+        loading.value = false
       }
     }
 
     fetchFunding()
-
-    return () => {
-      cancelled = true
-    }
   }, [])
 
   return (
     <InfoCard
+      label={`${Campaign} funding details`}
       header={
         <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           {loading.value
@@ -94,14 +88,13 @@ export function FundingCard() {
           <a
             href={BasedHouseMumbaiUrl}
             target="_blank"
-            rel="noreferrer"
             class="underline hover:text-brand"
           >
             Based House Mumbai
           </a>
         </>,
         <>
-          Lock $home to gain access to upcoming $seed claims
+          Lock <HomeToken /> to gain access to upcoming $seed claims
         </>,
         <>
           The more tokens locked over a longer period of time shows commitment,
@@ -118,19 +111,18 @@ export function FundingCard() {
 
       <div class="grid grid-cols-4 max-sm:grid-cols-2 gap-2">
         {PresetsEth.map((value) => {
-          const selected = !custom.value?.trim() && preset.value === value
+          const selected = !custom.value && preset.value === value
 
           return (
             <button
               key={value}
-              type="button"
               aria-pressed={selected}
               class={selected
-                ? "rounded-full border-[1px] py-2 text-sm font-medium transition-colors border-brand/40 bg-brand/10 text-brand"
-                : "rounded-full border-[1px] py-2 text-sm font-medium transition-colors border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"}
+                ? "rounded-full border-[1px] py-2 text-sm transition-colors border-brand/40 bg-brand/10 text-brand"
+                : "rounded-full border-[1px] py-2 text-sm transition-colors border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"}
               onClick={() => {
                 preset.value = value
-                custom.value = undefined
+                custom.value = String()
               }}
             >
               {formatEth(value)} ETH
@@ -145,7 +137,7 @@ export function FundingCard() {
           inputMode="decimal"
           placeholder="Custom"
           value={custom.value}
-          class="rounded-full border-[1px] border-gray-200 bg-gray-50 py-2 px-3 text-sm text-center w-full appearance-none placeholder:text-gray-400 focus:outline-none focus:border-brand/40 focus:bg-white"
+          class="rounded-full border-[1px] border-gray-200 bg-gray-50 py-2 px-3 text-sm text-center w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none placeholder:text-gray-400 focus:outline-none focus:border-brand/40 focus:bg-white"
           onInput={(e) => {
             custom.value = (e.target as HTMLInputElement).value
           }}
@@ -156,8 +148,7 @@ export function FundingCard() {
         <a
           href={SeedMeUrl}
           target="_blank"
-          rel="noreferrer"
-          class="btn-brand w-full max-sm:px-3"
+          class="btn-brand max-sm:px-3!"
         >
           Buy $home
         </a>
@@ -165,8 +156,7 @@ export function FundingCard() {
         <a
           href={SeedMeUrl}
           target="_blank"
-          rel="noreferrer"
-          class="btn-brand w-full max-sm:px-3"
+          class="btn-brand max-sm:px-3!"
         >
           Donate
         </a>
@@ -197,7 +187,7 @@ function MilestoneBar(props: { raised: number }) {
             class="h-2 flex-1 rounded-full bg-gray-200 overflow-hidden"
           >
             <div
-              class="h-full rounded-full bg-brand transition-[width] duration-500"
+              class="h-full rounded-full bg-brand"
               style={{
                 width: `${fill * 100}%`,
               }}

@@ -89,7 +89,9 @@ export function BasedHouseBlueprint() {
       {/* Shadow layer */}
       <img
         src={BasePaint414}
-        aria-hidden="true"
+        // String() is an empty alt without an empty literal, which the class
+        // scanner misreads, dropping classes further down this file.
+        alt={String()}
         class="absolute inset-0 w-full h-full object-cover -z-10"
         style={{
           transform: "translateZ(-20px) scale(1.05)",

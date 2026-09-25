@@ -4,7 +4,6 @@ import {
   formatEth,
   nextMilestone,
   SeedMeLockUrl,
-  SeedMeUrl,
   segmentFills,
 } from "./funding.ts"
 
@@ -47,21 +46,21 @@ test("segments fill whole, then part, then empty", () => {
     ])
 })
 
-test("an overshot raise leaves every segment full", () => {
+test("milestones and segments follow the segment size", () => {
   expect(
-    segmentFills(12),
+    [
+      nextMilestone(4.62, 20, 10),
+      segmentFills(3, 20, 4),
+    ],
   )
     .toEqual([
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
+      6,
+      [
+        0.6,
+        0,
+        0,
+        0,
+      ],
     ])
 })
 
@@ -84,11 +83,19 @@ test("amounts read without trailing zeros", () => {
     ])
 })
 
-test("buy and donate point at the seedme home page", () => {
+test("amounts round to two places from one ETH and four below", () => {
   expect(
-    SeedMeUrl,
+    [
+      formatEth(4.6234),
+      formatEth(1.2345),
+      formatEth(0.00049),
+    ],
   )
-    .toBe("https://seedme.xyz")
+    .toEqual([
+      "4.62",
+      "1.23",
+      "0.0005",
+    ])
 })
 
 test("the lock card points at SeedMe's lock page", () => {
@@ -98,61 +105,17 @@ test("the lock card points at SeedMe's lock page", () => {
     .toBe("https://seedme.xyz/lock")
 })
 
-test("the funding address is a checksummed 0x address", () => {
-  expect(
-    /^0x[0-9a-fA-F]{40}$/.test(FundingAddress),
-  )
-    .toBe(true)
-})
-
-test("raised reads what the fees earned, claimed or not", () => {
+test("raised is the lifetime total, not claimed plus claimable", () => {
   expect(
     raisedFrom({
-      lifetimeEarnedWeth: "4.62",
+      lifetimeEarnedWeth: "12.5406",
       totals: {
-        claimedWeth: "0.0005",
-        claimableWeth: "4.6195",
+        claimedWeth: "0.000000",
+        claimableWeth: "0.018885",
       },
     }),
   )
-    .toBe(4.62)
-})
-
-test("the lifetime total wins over claimed and claimable", () => {
-  expect(
-    raisedFrom({
-      lifetimeEarnedWeth: "5",
-      totals: {
-        claimedWeth: "1",
-        claimableWeth: "3",
-      },
-    }),
-  )
-    .toBe(5)
-})
-
-test("without a lifetime total, claimed and claimable are added", () => {
-  expect(
-    raisedFrom({
-      totals: {
-        claimedWeth: "0.0005",
-        claimableWeth: "4.6195",
-      },
-    }),
-  )
-    .toBe(4.62)
-})
-
-test("a claim that has not happened yet still counts", () => {
-  expect(
-    raisedFrom({
-      totals: {
-        claimedWeth: "0",
-        claimableWeth: "4.62",
-      },
-    }),
-  )
-    .toBe(4.62)
+    .toBe(12.5406)
 })
 
 test("numbers are accepted as readily as strings", () => {
@@ -164,49 +127,33 @@ test("numbers are accepted as readily as strings", () => {
     .toBe(4.62)
 })
 
-test("a payload carrying no fees reads as nothing, not as zero", () => {
+test("a lifetime of zero reads as zero", () => {
+  expect(
+    raisedFrom({
+      lifetimeEarnedWeth: "0",
+    }),
+  )
+    .toBe(0)
+})
+
+test("a payload without a lifetime total reads as nothing, not as zero", () => {
   expect(
     [
+      raisedFrom(null),
       raisedFrom({}),
+      raisedFrom({
+        lifetimeEarnedWeth: "",
+      }),
+      raisedFrom({
+        lifetimeEarnedWeth: " ",
+      }),
       raisedFrom({
         lifetimeEarnedWeth: "not a number",
       }),
       raisedFrom({
-        totals: {},
-      }),
-    ],
-  )
-    .toEqual([
-      null,
-      null,
-      null,
-    ])
-})
-
-test("a blank lifetime total is missing, not zero", () => {
-  expect(
-    raisedFrom({
-      lifetimeEarnedWeth: "",
-      totals: {
-        claimedWeth: "1",
-        claimableWeth: "2",
-      },
-    }),
-  )
-    .toBe(3)
-})
-
-test("claimed or claimable alone is only part of the total", () => {
-  expect(
-    [
-      raisedFrom({
         totals: {
-          claimedWeth: "3",
-        },
-      }),
-      raisedFrom({
-        totals: {
-          claimableWeth: "3",
+          claimedWeth: "1",
+          claimableWeth: "2",
         },
       }),
     ],
@@ -214,20 +161,21 @@ test("claimed or claimable alone is only part of the total", () => {
     .toEqual([
       null,
       null,
+      null,
+      null,
+      null,
+      null,
     ])
 })
 
-test("a negative figure is no answer", () => {
+test("a negative or unbounded figure is no answer", () => {
   expect(
     [
       raisedFrom({
         lifetimeEarnedWeth: "-5",
       }),
       raisedFrom({
-        totals: {
-          claimedWeth: "-1",
-          claimableWeth: "2",
-        },
+        lifetimeEarnedWeth: "1e999",
       }),
     ],
   )

@@ -17,13 +17,9 @@ export default function() {
     <main>
       <Header />
 
-      <div
-        class={`flex flex-col mt-16 w-full max-w-[960px] mx-auto px-4 z-10 relative gap-8`}
-      >
-        <div class="grid items-start gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-          <FundingCard />
-          <LockCard />
-        </div>
+      <div class="grid items-start gap-8 mt-16 max-w-[960px] mx-auto px-4 z-10 relative lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        <FundingCard />
+        <LockCard />
       </div>
 
       <div

@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, expect, spyOn, test } from "bun:test"
-import { ConfigProvider, Effect, Logger, LogLevel } from "effect"
+import { ConfigProvider, Effect } from "effect"
 import handler, {
   CacheControl,
   createRaisedReader,
@@ -8,13 +8,16 @@ import handler, {
 } from "../api/funding.ts"
 import { GET } from "./routes/funding.json/_server.ts"
 
+/** Shaped like a recorded Bankr answer, whose totals do not add up to it. */
 const Earned = {
-  lifetimeEarnedWeth: "4.62",
+  lifetimeEarnedWeth: "4.6200",
   totals: {
-    claimedWeth: "0",
-    claimableWeth: "4.62",
+    claimedWeth: "0.000000",
+    claimableWeth: "0.018885",
   },
 }
+
+let stubsStarted = 0
 
 /** Stands in for Bankr: answers as told, and counts what it was asked. */
 function stubBankr(initial: {
@@ -48,7 +51,9 @@ function stubBankr(initial: {
   stubs.push(server)
 
   return {
-    api: `http://127.0.0.1:${server.port}`,
+    // A path of its own, so a port handed out again cannot reach an answer an
+    // earlier stub left in the shared reader.
+    api: `http://127.0.0.1:${server.port}/${++stubsStarted}`,
     answer: (next: typeof initial) => {
       mode = next
     },
@@ -81,7 +86,7 @@ afterEach(() => {
 async function callHandler(api: string, address?: string) {
   process.env.HOMEBASE_BANKR_API = api
 
-  if (address) {
+  if (address !== undefined) {
     process.env.HOMEBASE_FUNDING_ADDRESS = address
   }
 
@@ -120,14 +125,13 @@ async function callRoute(api: string, address?: string) {
     ],
   ])
 
-  if (address) {
+  if (address !== undefined) {
     config.set("HOMEBASE_FUNDING_ADDRESS", address)
   }
 
   const response = await Effect.runPromise(
     GET.pipe(
       Effect.withConfigProvider(ConfigProvider.fromMap(config)),
-      Logger.withMinimumLogLevel(LogLevel.None),
     ),
   )
 
@@ -142,7 +146,7 @@ test("an answer under a minute old is served without Bankr", async () => {
   const bankr = stubBankr({
     body: Earned,
   })
-  let clock = 0
+  let clock = 1_000_000
   const read = createRaisedReader({
     now: () => clock,
   })
@@ -169,7 +173,7 @@ test("a kept answer comes at once while one pass refreshes it", async () => {
   const bankr = stubBankr({
     body: Earned,
   })
-  let clock = 0
+  let clock = 1_000_000
   const read = createRaisedReader({
     now: () => clock,
     timeoutMs: 200,
@@ -213,7 +217,7 @@ test("a failed refresh leaves the kept answer standing", async () => {
   const bankr = stubBankr({
     body: Earned,
   })
-  let clock = 0
+  let clock = 1_000_000
   const read = createRaisedReader({
     now: () => clock,
   })
@@ -238,7 +242,7 @@ test("an answer over an hour old is not served", async () => {
   const bankr = stubBankr({
     body: Earned,
   })
-  let clock = 0
+  let clock = 1_000_000
   const read = createRaisedReader({
     now: () => clock,
   })
@@ -362,20 +366,63 @@ test("both runtimes pass on what Bankr said went wrong", async () => {
   }
 })
 
-test("a failed connection answers without the request url", async () => {
+test("a failed read answers without the request url", async () => {
   const unreachable = "http://127.0.0.1:1/v2/SECRET_KEY"
+  const url = creatorFeesUrl(FundingAddress, unreachable)
+  // Node's fetch names a url it cannot parse; Bun's never does.
+  const fetched = spyOn(globalThis, "fetch")
+    .mockRejectedValue(new TypeError(`Failed to parse URL from ${url}`))
 
-  for (const call of [callHandler, callRoute]) {
-    const answer = await call(unreachable)
+  try {
+    for (const call of [callHandler, callRoute]) {
+      const answer = await call(unreachable)
+
+      expect(
+        answer.status,
+      )
+        .toBe(502)
+      expect(
+        JSON.stringify(answer.body).includes("SECRET_KEY"),
+      )
+        .toBe(false)
+    }
+  } finally {
+    fetched.mockRestore()
+  }
+})
+
+test("an empty override falls back to the defaults in both runtimes", async () => {
+  const fetched = spyOn(globalThis, "fetch")
+    .mockResolvedValue(Response.json(Earned))
+
+  try {
+    const expected = {
+      status: 200,
+      body: {
+        address: FundingAddress,
+        raisedEth: 4.62,
+      },
+      cacheControl: CacheControl,
+    }
 
     expect(
-      answer.status,
+      [
+        await callHandler("", ""),
+        await callRoute("", ""),
+      ],
     )
-      .toBe(502)
+      .toEqual([
+        expected,
+        expected,
+      ])
     expect(
-      JSON.stringify(answer.body).includes("SECRET_KEY"),
+      fetched.mock.calls.map(([input]) => String(input)),
     )
-      .toBe(false)
+      .toEqual([
+        creatorFeesUrl(FundingAddress),
+      ])
+  } finally {
+    fetched.mockRestore()
   }
 })
 
@@ -384,11 +431,22 @@ test("a malformed address override is refused before any read", async () => {
     body: Earned,
   })
 
-  for (const call of [callHandler, callRoute]) {
-    expect(
-      (await call(bankr.api, "not-an-address")).status,
-    )
-      .toBe(500)
+  const hex = FundingAddress.slice(2)
+  const malformed = [
+    "not-an-address",
+    `0x${hex.slice(1)}`,
+    `${FundingAddress}0`,
+    `x${FundingAddress}`,
+    `${FundingAddress}/x`,
+  ]
+
+  for (const address of malformed) {
+    for (const call of [callHandler, callRoute]) {
+      expect(
+        (await call(bankr.api, address)).status,
+      )
+        .toBe(500)
+    }
   }
   expect(
     bankr.requests(),
