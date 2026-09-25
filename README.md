@@ -63,7 +63,7 @@ settings needed are the environment variables:
 - `HOMEBASE_LIVE_ICAL` — the calendar feed URL. Without it `/events.json`
   answers with a 500 and the site renders with no events.
 - `HOMEBASE_FUNDING_ADDRESS` — optional. The Bankr address that collects 100%
-  of the $home creator fees. It defaults to the address in `src/funding.ts`, so
+  of the $home creator fees. It defaults to the address in `api/funding.ts`, so
   this only needs setting to point the card somewhere else.
 - `HOMEBASE_BANKR_API` — optional. Bankr's read API, defaulting to
   `https://api.bankr.bot`. Its creator-fee endpoints need no key.
@@ -71,7 +71,13 @@ settings needed are the environment variables:
 The fees accrue inside Bankr and only reach the address once someone claims
 them, so the card counts what the position has earned — claimed and unclaimed
 together — rather than what the address is holding. Reading the balance instead
-shows only what has already been withdrawn.
+shows only what has already been withdrawn. The endpoint reads every position
+the address earns fees from.
+
+`api/funding.ts` is the one fee read: the Bun route imports it rather than
+keeping a copy. It keeps its last good answer for an hour and serves it at once
+while it refreshes, so a slow or failing Bankr costs the card nothing until
+that hour runs out. A read that takes over five seconds counts as failed.
 
 The same build runs locally:
 

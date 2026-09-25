@@ -1,11 +1,8 @@
 import { expect, test } from "bun:test"
-import { raisedFrom } from "../api/funding.ts"
+import { creatorFeesUrl, FundingAddress, raisedFrom } from "../api/funding.ts"
 import {
-  bankrCreatorFeesUrl,
   formatEth,
-  FundingAddress,
   nextMilestone,
-  raisedFromCreatorFees,
   SeedMeLockUrl,
   SeedMeUrl,
   segmentFills,
@@ -108,20 +105,9 @@ test("the funding address is a checksummed 0x address", () => {
     .toBe(true)
 })
 
-test("the serverless function falls back to the same address", async () => {
-  const serverless = await Bun
-    .file(new URL("../api/funding.ts", import.meta.url))
-    .text()
-
-  expect(
-    serverless.includes(FundingAddress),
-  )
-    .toBe(true)
-})
-
 test("raised reads what the fees earned, claimed or not", () => {
   expect(
-    raisedFromCreatorFees({
+    raisedFrom({
       lifetimeEarnedWeth: "4.62",
       totals: {
         claimedWeth: "0.0005",
@@ -132,9 +118,22 @@ test("raised reads what the fees earned, claimed or not", () => {
     .toBe(4.62)
 })
 
+test("the lifetime total wins over claimed and claimable", () => {
+  expect(
+    raisedFrom({
+      lifetimeEarnedWeth: "5",
+      totals: {
+        claimedWeth: "1",
+        claimableWeth: "3",
+      },
+    }),
+  )
+    .toBe(5)
+})
+
 test("without a lifetime total, claimed and claimable are added", () => {
   expect(
-    raisedFromCreatorFees({
+    raisedFrom({
       totals: {
         claimedWeth: "0.0005",
         claimableWeth: "4.6195",
@@ -146,7 +145,7 @@ test("without a lifetime total, claimed and claimable are added", () => {
 
 test("a claim that has not happened yet still counts", () => {
   expect(
-    raisedFromCreatorFees({
+    raisedFrom({
       totals: {
         claimedWeth: "0",
         claimableWeth: "4.62",
@@ -158,7 +157,7 @@ test("a claim that has not happened yet still counts", () => {
 
 test("numbers are accepted as readily as strings", () => {
   expect(
-    raisedFromCreatorFees({
+    raisedFrom({
       lifetimeEarnedWeth: 4.62,
     }),
   )
@@ -168,11 +167,11 @@ test("numbers are accepted as readily as strings", () => {
 test("a payload carrying no fees reads as nothing, not as zero", () => {
   expect(
     [
-      raisedFromCreatorFees({}),
-      raisedFromCreatorFees({
+      raisedFrom({}),
+      raisedFrom({
         lifetimeEarnedWeth: "not a number",
       }),
-      raisedFromCreatorFees({
+      raisedFrom({
         totals: {},
       }),
     ],
@@ -184,41 +183,63 @@ test("a payload carrying no fees reads as nothing, not as zero", () => {
     ])
 })
 
-test("the serverless copy of the parser agrees with this one", () => {
-  const payloads = [
-    {
-      lifetimeEarnedWeth: "4.62",
-    },
-    {
-      totals: {
-        claimedWeth: "0.0005",
-        claimableWeth: "4.6195",
-      },
-    },
-    {
-      totals: {
-        claimedWeth: "0",
-        claimableWeth: "4.62",
-      },
-    },
-    {
-      lifetimeEarnedWeth: 4.62,
-    },
-    {},
-    {
-      lifetimeEarnedWeth: "not a number",
-    },
-  ]
-
+test("a blank lifetime total is missing, not zero", () => {
   expect(
-    payloads.map(raisedFrom),
+    raisedFrom({
+      lifetimeEarnedWeth: "",
+      totals: {
+        claimedWeth: "1",
+        claimableWeth: "2",
+      },
+    }),
   )
-    .toEqual(payloads.map(raisedFromCreatorFees))
+    .toBe(3)
+})
+
+test("claimed or claimable alone is only part of the total", () => {
+  expect(
+    [
+      raisedFrom({
+        totals: {
+          claimedWeth: "3",
+        },
+      }),
+      raisedFrom({
+        totals: {
+          claimableWeth: "3",
+        },
+      }),
+    ],
+  )
+    .toEqual([
+      null,
+      null,
+    ])
+})
+
+test("a negative figure is no answer", () => {
+  expect(
+    [
+      raisedFrom({
+        lifetimeEarnedWeth: "-5",
+      }),
+      raisedFrom({
+        totals: {
+          claimedWeth: "-1",
+          claimableWeth: "2",
+        },
+      }),
+    ],
+  )
+    .toEqual([
+      null,
+      null,
+    ])
 })
 
 test("the fees url needs no key and names the recipient", () => {
   expect(
-    bankrCreatorFeesUrl(FundingAddress),
+    creatorFeesUrl(FundingAddress),
   )
     .toBe(
       "https://api.bankr.bot/public/doppler/creator-fees/"

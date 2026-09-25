@@ -28,7 +28,11 @@ export function FundingCard() {
 
     const fetchFunding = async () => {
       try {
-        const response = await fetch("/funding.json")
+        // Longer than the five seconds the endpoint gives Bankr, so the
+        // endpoint answers first; the card only gives up if it never does.
+        const response = await fetch("/funding.json", {
+          signal: AbortSignal.timeout(10_000),
+        })
 
         if (!response.ok) {
           throw new Error(`/funding.json responded with ${response.status}`)
