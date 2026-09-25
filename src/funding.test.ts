@@ -1,7 +1,10 @@
 import { expect, test } from "bun:test"
-import { creatorFeesUrl, FundingAddress, raisedFrom } from "../api/funding.ts"
+import * as AbiParameters from "ox/AbiParameters"
+import * as Hash from "ox/Hash"
+import { earnedWei, HomePoolId } from "../api/funding.ts"
 import {
   formatEth,
+  HomeTokenUrl,
   nextMilestone,
   SeedMeLockUrl,
   segmentFills,
@@ -105,92 +108,79 @@ test("the lock card points at SeedMe's lock page", () => {
     .toBe("https://seedme.xyz/lock")
 })
 
-test("raised is the lifetime total, not claimed plus claimable", () => {
+test("earned is the address's share of all the fees the ledger has taken", () => {
+  // The share recorded on Base, with the pool's fees sized so it comes to the
+  // 1.061413 WETH Bankr's terminal showed the address as claimable.
   expect(
-    raisedFrom({
-      lifetimeEarnedWeth: "12.5406",
-      totals: {
-        claimedWeth: "0.000000",
-        claimableWeth: "0.018885",
-      },
+    earnedWei({
+      shares: 482758620689655174n,
+      cumulatedFees0: 0n,
+      beneficiaryFees0: 2198641214285714279n,
     }),
   )
-    .toBe(12.5406)
+    .toBe(1_061_413_000_000_000_000n)
 })
 
-test("numbers are accepted as readily as strings", () => {
-  expect(
-    raisedFrom({
-      lifetimeEarnedWeth: 4.62,
-    }),
-  )
-    .toBe(4.62)
-})
+test("collecting the fees leaves earned standing", () => {
+  const shares = 482758620689655174n
 
-test("a lifetime of zero reads as zero", () => {
-  expect(
-    raisedFrom({
-      lifetimeEarnedWeth: "0",
-    }),
-  )
-    .toBe(0)
-})
-
-test("a payload without a lifetime total reads as nothing, not as zero", () => {
   expect(
     [
-      raisedFrom(null),
-      raisedFrom({}),
-      raisedFrom({
-        lifetimeEarnedWeth: "",
+      earnedWei({
+        shares,
+        cumulatedFees0: 0n,
+        beneficiaryFees0: 3n * 10n ** 18n,
       }),
-      raisedFrom({
-        lifetimeEarnedWeth: " ",
-      }),
-      raisedFrom({
-        lifetimeEarnedWeth: "not a number",
-      }),
-      raisedFrom({
-        totals: {
-          claimedWeth: "1",
-          claimableWeth: "2",
-        },
+      earnedWei({
+        shares,
+        cumulatedFees0: 3n * 10n ** 18n,
+        beneficiaryFees0: 0n,
       }),
     ],
   )
     .toEqual([
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
+      1_448_275_862_068_965_522n,
+      1_448_275_862_068_965_522n,
     ])
 })
 
-test("a negative or unbounded figure is no answer", () => {
+test("the pool is $home's, and WETH is its 0 side", () => {
+  const weth = "0x4200000000000000000000000000000000000006"
+  const home = "0xB9A1E52f3ED678B01Ff5e256fDe43f26f9C01bA3"
+  const key = AbiParameters.encode(
+    AbiParameters.from([
+      "address currency0",
+      "address currency1",
+      "uint24 fee",
+      "int24 tickSpacing",
+      "address hooks",
+    ]),
+    [
+      weth,
+      home,
+      // Doppler's flag for a fee its hook sets.
+      0x800000,
+      200,
+      // Doppler's hook initializer, which launched the pool.
+      "0xBDF938149ac6a781F94FAa0ed45E6A0e984c6544",
+    ],
+  )
+
   expect(
     [
-      raisedFrom({
-        lifetimeEarnedWeth: "-5",
-      }),
-      raisedFrom({
-        lifetimeEarnedWeth: "1e999",
-      }),
+      Hash.keccak256(key),
+      BigInt(weth) < BigInt(home),
     ],
   )
     .toEqual([
-      null,
-      null,
+      HomePoolId,
+      true,
     ])
 })
 
-test("the fees url needs no key and names the recipient", () => {
+test("the card links the pool whose fees it counts", () => {
   expect(
-    creatorFeesUrl(FundingAddress),
+    HomeTokenUrl,
   )
-    .toBe(
-      "https://api.bankr.bot/public/doppler/creator-fees/"
-        + "0x23cEBf0E3529a3Af4756eFAe22E56B9797f008E3",
-    )
+    .toBe(`https://dexscreener.com/base/${HomePoolId}`)
 })

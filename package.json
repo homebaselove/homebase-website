@@ -33,6 +33,7 @@
     "effect": "^3.16.12",
     "effect-start": "nounder/effect-start#2120500",
     "ical.js": "^2.1.0",
+    "ox": "^0.4.4",
     "preact": "nounder/preact-uno#d747dca",
     "tw-animate-css": "^1.3.4",
     "ulid": "^3.0.1"

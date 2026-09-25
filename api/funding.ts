@@ -1,17 +1,38 @@
+import * as AbiFunction from "ox/AbiFunction"
+import type * as Hex from "ox/Hex"
+import * as Value from "ox/Value"
+
 interface ServerlessResponse {
   setHeader(name: string, value: string): void
   status(code: number): ServerlessResponse
   json(body: unknown): void
 }
 
+type Address = `0x${string}`
+
 /**
- * The Bankr address collecting 100% of the $home creator fees.
- * HOMEBASE_FUNDING_ADDRESS overrides it.
+ * The Bankr address holding the creator's share of $home's fees, all of it
+ * pledged to Based House. HOMEBASE_FUNDING_ADDRESS overrides it.
  */
 export const FundingAddress = "0x23cEBf0E3529a3Af4756eFAe22E56B9797f008E3"
 
-/** Bankr's public read API. Its creator-fee reads need no key. */
-export const BankrApiUrl = "https://api.bankr.bot"
+/** Base's public JSON-RPC endpoint. HOMEBASE_BASE_RPC overrides it. */
+export const BaseRpcUrl = "https://mainnet.base.org"
+
+/** $home's Uniswap v4 pool on Base, where it trades against WETH. */
+export const HomePoolId =
+  "0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24"
+
+/**
+ * The Doppler hook on $home's pool, which keeps the pool's fee ledger: every
+ * swap adds to the fees owed to the pool's fee beneficiaries, and a collect
+ * folds them into a running total that only grows. Only the token's timelock,
+ * or an authority it names, can point the pool at another hook.
+ */
+const FeeLedger: Address = "0x9982538F41f2ae29ddb9d3D9307010052984FDbB"
+
+/** Makes several reads in one call, so they all come from the same block. */
+const Multicall3 = "0xcA11bde05977b3631167028862bE2a173976CA11"
 
 /**
  * stale-if-error lets the CDN keep serving the last answer for an hour when a
@@ -22,36 +43,80 @@ export const CacheControl =
 
 const AddressPattern = /^0x[0-9a-fA-F]{40}$/
 
-/** Every position the address earns fees from. */
-export const creatorFeesUrl = (address: string, api = BankrApiUrl) =>
-  `${api}/public/doppler/creator-fees/${address}`
+const isAddress = (value: string): value is Address =>
+  AddressPattern.test(value)
+
+const WAD = 10n ** 18n
+
+const aggregate3 = AbiFunction.from(
+  "function aggregate3((address target, bool allowFailure, bytes callData)[] calls) payable returns ((bool success, bytes returnData)[] returnData)",
+)
+
+const getShares = AbiFunction.from(
+  "function getShares(bytes32 poolId, address beneficiary) view returns (uint256)",
+)
+
+const getCumulatedFees0 = AbiFunction.from(
+  "function getCumulatedFees0(bytes32 poolId) view returns (uint256)",
+)
+
+const getHookFees = AbiFunction.from(
+  "function getHookFees(bytes32 poolId) view returns (uint128 fees0, uint128 fees1, uint128 beneficiaryFees0, uint128 beneficiaryFees1, uint128 airlockOwnerFees0, uint128 airlockOwnerFees1, uint24 customFee)",
+)
 
 /** A failure whose message is safe to hand back, since it carries no URL. */
-class BankrError extends Error {}
+class ReadError extends Error {}
 
-/** Fees are never negative, and a blank field is missing rather than zero. */
-const toEth = (value: unknown): number | null => {
-  const eth = typeof value === "string" && value.trim().length > 0
-    ? Number(value)
-    : value
+/**
+ * The fees the address has earned from $home's pool, in wei of WETH, claimed
+ * or not: its share of everything the ledger has taken, whether that still
+ * waits for a collect or is already in the running total. A claim moves only
+ * the address's own marker, so claiming never lowers this. WETH sorts first
+ * in the pool, which makes its fees the 0 side.
+ */
+export function earnedWei(ledger: {
+  shares: bigint
+  cumulatedFees0: bigint
+  beneficiaryFees0: bigint
+}): bigint {
+  return (ledger.cumulatedFees0 + ledger.beneficiaryFees0) * ledger.shares / WAD
+}
 
-  return typeof eth === "number" && Number.isFinite(eth) && eth >= 0
-    ? eth
-    : null
+/** The three ledger reads as one call. */
+function ledgerCall(address: Address): Hex.Hex {
+  return AbiFunction.encodeData(aggregate3, [
+    [
+      AbiFunction.encodeData(getShares, [HomePoolId, address]),
+      AbiFunction.encodeData(getCumulatedFees0, [HomePoolId]),
+      AbiFunction.encodeData(getHookFees, [HomePoolId]),
+    ]
+      .map((callData) => ({
+        target: FeeLedger,
+        allowFailure: false,
+        callData,
+      })),
+  ])
 }
 
 /**
- * What the card counts as raised: Bankr's lifetime total of the WETH the
- * address has earned, claimed or not. The fees sit inside Bankr until someone
- * claims them, so the address's balance counts only what has been withdrawn.
- *
- * Bankr reports WETH in whole units rather than wei. Its claimed total only
- * counts claims within the requested window of days, so claimed plus
- * claimable is no stand-in: without the lifetime total there is no answer
- * rather than a smaller number.
+ * What the card counts as raised, in ETH. An address with no share of the
+ * fees is misconfigured rather than owed nothing, so it gets no answer.
  */
-export function raisedFrom(payload: any): number | null {
-  return toEth(payload?.lifetimeEarnedWeth)
+function raisedFrom(answer: Hex.Hex): number {
+  const [shares, cumulatedFees0, hookFees] = AbiFunction
+    .decodeResult(aggregate3, answer)
+    .map(({ returnData }) => returnData)
+  const ledger = {
+    shares: AbiFunction.decodeResult(getShares, shares),
+    cumulatedFees0: AbiFunction.decodeResult(getCumulatedFees0, cumulatedFees0),
+    beneficiaryFees0: AbiFunction.decodeResult(getHookFees, hookFees)[2],
+  }
+
+  if (ledger.shares === 0n) {
+    throw new ReadError("The address holds no share of the $home fees")
+  }
+
+  return Number(Value.formatEther(earnedWei(ledger)))
 }
 
 /**
@@ -60,7 +125,8 @@ export function raisedFrom(payload: any): number | null {
  * shared pass refreshes it, and a failed pass leaves it standing. Past that,
  * callers wait on the pass, which gives up after timeoutMs.
  *
- * Bankr asks for no more than one poll per token every 30 seconds.
+ * Base's public endpoint is rate limited, so a process reads it at most once a
+ * minute.
  */
 export function createRaisedReader(
   {
@@ -79,51 +145,76 @@ export function createRaisedReader(
   >()
   const passes = new Map<string, Promise<number>>()
 
-  const refresh = (url: string): Promise<number> => {
-    const running = passes.get(url)
+  const refresh = (
+    address: Address,
+    rpc: string,
+    key: string,
+  ): Promise<number> => {
+    const running = passes.get(key)
 
     if (running) {
       return running
     }
 
     const pass = (async () => {
-      const response = await fetch(url, {
+      const response = await fetch(rpc, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "eth_call",
+          params: [
+            {
+              to: Multicall3,
+              data: ledgerCall(address),
+            },
+            "latest",
+          ],
+        }),
         signal: AbortSignal.timeout(timeoutMs),
       })
 
       if (!response.ok) {
-        throw new BankrError(`Bankr responded with ${response.status}`)
+        throw new ReadError(`Base RPC responded with ${response.status}`)
       }
 
-      const raisedEth = raisedFrom(await response.json())
+      const { result, error } = await response.json()
 
-      if (raisedEth === null) {
-        throw new BankrError("Bankr returned no creator fees")
+      if (typeof result !== "string") {
+        throw new ReadError("Base RPC refused the read", {
+          cause: error,
+        })
       }
 
-      kept.set(url, {
+      const raisedEth = raisedFrom(result as Hex.Hex)
+
+      kept.set(key, {
         raisedEth,
         at: now(),
       })
 
       return raisedEth
     })()
-      .finally(() => passes.delete(url))
+      .finally(() => passes.delete(key))
 
-    passes.set(url, pass)
+    passes.set(key, pass)
 
     return pass
   }
 
-  return async (url: string): Promise<number> => {
-    const last = kept.get(url)
+  return async (address: Address, rpc: string): Promise<number> => {
+    const key = `${rpc} ${address}`
+    const last = kept.get(key)
     const age = last ? now() - last.at : Infinity
 
     if (last && age < freshMs) {
       return last.raisedEth
     }
 
-    const pass = refresh(url)
+    const pass = refresh(address, rpc, key)
 
     if (last && age < keptMs) {
       pass.catch((error) =>
@@ -143,12 +234,12 @@ const readRaised = createRaisedReader()
 /** The answer both runtimes give for /funding.json. */
 export async function answerFunding(
   address: string,
-  api: string,
+  rpc: string,
 ): Promise<{
   status: number
   body: unknown
 }> {
-  if (!AddressPattern.test(address)) {
+  if (!isAddress(address)) {
     return {
       status: 500,
       body: {
@@ -162,7 +253,7 @@ export async function answerFunding(
       status: 200,
       body: {
         address,
-        raisedEth: await readRaised(creatorFeesUrl(address, api)),
+        raisedEth: await readRaised(address, rpc),
       },
     }
   } catch (error) {
@@ -173,7 +264,7 @@ export async function answerFunding(
     return {
       status: 502,
       body: {
-        error: error instanceof BankrError
+        error: error instanceof ReadError
           ? error.message
           : "Could not read the funding balance",
       },
@@ -191,7 +282,7 @@ export default async function handler(
 ) {
   const { status, body } = await answerFunding(
     process.env.HOMEBASE_FUNDING_ADDRESS || FundingAddress,
-    process.env.HOMEBASE_BANKR_API || BankrApiUrl,
+    process.env.HOMEBASE_BASE_RPC || BaseRpcUrl,
   )
 
   if (status === 200) {
