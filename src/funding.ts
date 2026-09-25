@@ -1,8 +1,7 @@
 /**
- * Funding card configuration and the milestone math behind it.
- *
- * Dependency-free on purpose: the client bundle, the Bun route and the Vercel
- * function all read from here.
+ * Funding card configuration and the milestone math behind it, bundled into
+ * the client. The fee read lives in api/funding.ts, which the Vercel function
+ * and the Bun route both serve.
  */
 
 /** Where the buy and donate buttons send people. */
@@ -18,12 +17,6 @@ export const HomeTokenUrl =
 /** The Based House Mumbai form, where the raise is headed. */
 export const BasedHouseMumbaiUrl = "https://forms.gle/ZKkD9fCnBCx5pitv9"
 
-/**
- * The Bankr address collecting the $home creator fees, whose balance the card
- * reads as raised. HOMEBASE_FUNDING_ADDRESS overrides it.
- */
-export const FundingAddress = "0x23cEBf0E3529a3Af4756eFAe22E56B9797f008E3"
-
 /** What the raise is for, as it reads on the card. */
 export const Campaign = "Based House"
 
@@ -31,7 +24,7 @@ export const Campaign = "Based House"
 export const TargetEth = 10
 
 /** Segments in the milestone bar, each worth TargetEth / SegmentCount. */
-export const SegmentCount = 10
+const SegmentCount = 10
 
 /** Amounts offered next to the custom field. */
 export const PresetsEth = [0.001, 0.01, 0.1]
@@ -73,47 +66,4 @@ export function formatEth(value: number): string {
   return value
     .toFixed(value >= 1 ? 2 : 4)
     .replace(/\.?0+$/, "")
-}
-
-/** Bankr's public read API, where the creator fees sit until they are claimed. */
-export const BankrApiUrl = "https://api.bankr.bot"
-
-/** Every position this address is the fee recipient for. Needs no key. */
-export const bankrCreatorFeesUrl = (address: string, api = BankrApiUrl) =>
-  `${api}/public/doppler/creator-fees/${address}`
-
-const toEth = (value: unknown): number | null => {
-  const eth = typeof value === "string" ? Number(value) : value
-
-  return typeof eth === "number" && Number.isFinite(eth) ? eth : null
-}
-
-/**
- * What the card counts as raised: everything the fees have earned, whether or
- * not anyone has claimed them yet. Reading the recipient's balance instead
- * shows only what has already been withdrawn, which is why the card read 0.
- *
- * Bankr reports WETH in whole units rather than wei.
- */
-export function raisedFromCreatorFees(payload: {
-  lifetimeEarnedWeth?: unknown
-  totals?: {
-    claimedWeth?: unknown
-    claimableWeth?: unknown
-  }
-}): number | null {
-  const lifetime = toEth(payload?.lifetimeEarnedWeth)
-
-  if (lifetime !== null) {
-    return lifetime
-  }
-
-  const claimed = toEth(payload?.totals?.claimedWeth)
-  const claimable = toEth(payload?.totals?.claimableWeth)
-
-  if (claimed === null && claimable === null) {
-    return null
-  }
-
-  return (claimed ?? 0) + (claimable ?? 0)
 }

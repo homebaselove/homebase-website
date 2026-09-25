@@ -20,7 +20,6 @@
         "effect": "^3.16.12",
         "effect-start": "nounder/effect-start#2120500",
         "ical.js": "^2.1.0",
-        "lucide-preact": "^0.514.0",
         "preact": "nounder/preact-uno#d747dca",
         "tw-animate-css": "^1.3.4",
         "ulid": "^3.0.1",
@@ -277,7 +276,6 @@
 
     "lightningcss-win32-x64-msvc": ["lightningcss-win32-x64-msvc@1.30.1", "", { "os": "win32", "cpu": "x64" }, "sha512-PVqXh48wh4T53F/1CCu8PIPCxLzWyCnn/9T5W1Jpmdy5h9Cwd+0YQS6/LwhHXSafuc61/xg9Lv5OrCby6a++jg=="],
 
-    "lucide-preact": ["lucide-preact@0.514.0", "", { "peerDependencies": { "preact": "^10.5.13" } }, "sha512-D00WPWu29HKYu3rURDdvP4NsPN74nTX3kRrZ72CUfYrqB34LJxJvd58ca2jaQAIaydfsSWyiBvMu4cpmSbaBSg=="],
 
     "magic-string": ["magic-string@0.30.17", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.0" } }, "sha512-sNPKHvyjVf7gyjwS4xGTaW/mCnF8wnjtifKBEhxfZ7E/S8tQ0rssrwGNn6q8JH/ohItJfSQp9mBtQYuTlH5QnA=="],
 

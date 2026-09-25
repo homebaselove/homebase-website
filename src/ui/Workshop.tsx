@@ -1,5 +1,4 @@
 /** @jsxImportSource preact */
-import { SpinnerIcon } from "./Icons.tsx"
 import { useEffect, useMemo } from "preact"
 import {
   For,
@@ -10,6 +9,7 @@ import {
   useSignalEffect,
 } from "preact/signals"
 import { createCalendarLinks } from "../calendar.ts"
+import { SpinnerIcon } from "./Icons.tsx"
 
 // Types
 interface LiveEvent {

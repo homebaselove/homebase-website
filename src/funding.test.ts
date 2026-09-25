@@ -1,13 +1,9 @@
 import { expect, test } from "bun:test"
-import { raisedFrom } from "../api/funding.ts"
+import { creatorFeesUrl, FundingAddress, raisedFrom } from "../api/funding.ts"
 import {
-  bankrCreatorFeesUrl,
   formatEth,
-  FundingAddress,
   nextMilestone,
-  raisedFromCreatorFees,
   SeedMeLockUrl,
-  SeedMeUrl,
   segmentFills,
 } from "./funding.ts"
 
@@ -50,21 +46,21 @@ test("segments fill whole, then part, then empty", () => {
     ])
 })
 
-test("an overshot raise leaves every segment full", () => {
+test("milestones and segments follow the segment size", () => {
   expect(
-    segmentFills(12),
+    [
+      nextMilestone(4.62, 20, 10),
+      segmentFills(3, 20, 4),
+    ],
   )
     .toEqual([
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
+      6,
+      [
+        0.6,
+        0,
+        0,
+        0,
+      ],
     ])
 })
 
@@ -87,11 +83,19 @@ test("amounts read without trailing zeros", () => {
     ])
 })
 
-test("buy and donate point at the seedme home page", () => {
+test("amounts round to two places from one ETH and four below", () => {
   expect(
-    SeedMeUrl,
+    [
+      formatEth(4.6234),
+      formatEth(1.2345),
+      formatEth(0.00049),
+    ],
   )
-    .toBe("https://seedme.xyz")
+    .toEqual([
+      "4.62",
+      "1.23",
+      "0.0005",
+    ])
 })
 
 test("the lock card points at SeedMe's lock page", () => {
@@ -101,79 +105,56 @@ test("the lock card points at SeedMe's lock page", () => {
     .toBe("https://seedme.xyz/lock")
 })
 
-test("the funding address is a checksummed 0x address", () => {
+test("raised is the lifetime total, not claimed plus claimable", () => {
   expect(
-    /^0x[0-9a-fA-F]{40}$/.test(FundingAddress),
-  )
-    .toBe(true)
-})
-
-test("the serverless function falls back to the same address", async () => {
-  const serverless = await Bun
-    .file(new URL("../api/funding.ts", import.meta.url))
-    .text()
-
-  expect(
-    serverless.includes(FundingAddress),
-  )
-    .toBe(true)
-})
-
-test("raised reads what the fees earned, claimed or not", () => {
-  expect(
-    raisedFromCreatorFees({
-      lifetimeEarnedWeth: "4.62",
+    raisedFrom({
+      lifetimeEarnedWeth: "12.5406",
       totals: {
-        claimedWeth: "0.0005",
-        claimableWeth: "4.6195",
+        claimedWeth: "0.000000",
+        claimableWeth: "0.018885",
       },
     }),
   )
-    .toBe(4.62)
-})
-
-test("without a lifetime total, claimed and claimable are added", () => {
-  expect(
-    raisedFromCreatorFees({
-      totals: {
-        claimedWeth: "0.0005",
-        claimableWeth: "4.6195",
-      },
-    }),
-  )
-    .toBe(4.62)
-})
-
-test("a claim that has not happened yet still counts", () => {
-  expect(
-    raisedFromCreatorFees({
-      totals: {
-        claimedWeth: "0",
-        claimableWeth: "4.62",
-      },
-    }),
-  )
-    .toBe(4.62)
+    .toBe(12.5406)
 })
 
 test("numbers are accepted as readily as strings", () => {
   expect(
-    raisedFromCreatorFees({
+    raisedFrom({
       lifetimeEarnedWeth: 4.62,
     }),
   )
     .toBe(4.62)
 })
 
-test("a payload carrying no fees reads as nothing, not as zero", () => {
+test("a lifetime of zero reads as zero", () => {
+  expect(
+    raisedFrom({
+      lifetimeEarnedWeth: "0",
+    }),
+  )
+    .toBe(0)
+})
+
+test("a payload without a lifetime total reads as nothing, not as zero", () => {
   expect(
     [
-      raisedFromCreatorFees({}),
-      raisedFromCreatorFees({
+      raisedFrom(null),
+      raisedFrom({}),
+      raisedFrom({
+        lifetimeEarnedWeth: "",
+      }),
+      raisedFrom({
+        lifetimeEarnedWeth: " ",
+      }),
+      raisedFrom({
         lifetimeEarnedWeth: "not a number",
       }),
-      raisedFromCreatorFees({
-        totals: {},
+      raisedFrom({
+        totals: {
+          claimedWeth: "1",
+          claimableWeth: "2",
+        },
       }),
     ],
   )
@@ -181,44 +162,32 @@ test("a payload carrying no fees reads as nothing, not as zero", () => {
       null,
       null,
       null,
+      null,
+      null,
+      null,
     ])
 })
 
-test("the serverless copy of the parser agrees with this one", () => {
-  const payloads = [
-    {
-      lifetimeEarnedWeth: "4.62",
-    },
-    {
-      totals: {
-        claimedWeth: "0.0005",
-        claimableWeth: "4.6195",
-      },
-    },
-    {
-      totals: {
-        claimedWeth: "0",
-        claimableWeth: "4.62",
-      },
-    },
-    {
-      lifetimeEarnedWeth: 4.62,
-    },
-    {},
-    {
-      lifetimeEarnedWeth: "not a number",
-    },
-  ]
-
+test("a negative or unbounded figure is no answer", () => {
   expect(
-    payloads.map(raisedFrom),
+    [
+      raisedFrom({
+        lifetimeEarnedWeth: "-5",
+      }),
+      raisedFrom({
+        lifetimeEarnedWeth: "1e999",
+      }),
+    ],
   )
-    .toEqual(payloads.map(raisedFromCreatorFees))
+    .toEqual([
+      null,
+      null,
+    ])
 })
 
 test("the fees url needs no key and names the recipient", () => {
   expect(
-    bankrCreatorFeesUrl(FundingAddress),
+    creatorFeesUrl(FundingAddress),
   )
     .toBe(
       "https://api.bankr.bot/public/doppler/creator-fees/"

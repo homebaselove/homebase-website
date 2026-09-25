@@ -5,6 +5,7 @@ import { HomeToken, InfoCard } from "./InfoCard.tsx"
 export function LockCard() {
   return (
     <InfoCard
+      label="Lock $home details"
       header={
         <h2 class="text-3xl max-sm:text-2xl font-bold leading-none">
           Lock $home
@@ -28,8 +29,7 @@ export function LockCard() {
       <a
         href={SeedMeLockUrl}
         target="_blank"
-        rel="noreferrer"
-        class="btn-brand w-full"
+        class="btn-brand"
       >
         SeedMe
       </a>
