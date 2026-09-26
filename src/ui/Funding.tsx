@@ -28,8 +28,8 @@ export function FundingCard() {
   useEffect(() => {
     const fetchFunding = async () => {
       try {
-        // Longer than the five seconds the endpoint gives Bankr, so the
-        // endpoint answers first. Browsers without AbortSignal.timeout
+        // Longer than the five seconds the endpoint gives the chain read, so
+        // the endpoint answers first. Browsers without AbortSignal.timeout
         // (Safari before 16) wait on the endpoint instead.
         const response = await fetch("/funding.json", {
           signal: AbortSignal.timeout?.(10_000),

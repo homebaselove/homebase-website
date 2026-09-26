@@ -2,7 +2,7 @@ import { HttpServerResponse } from "@effect/platform"
 import { Config, Effect } from "effect"
 import {
   answerFunding,
-  BankrApiUrl,
+  BaseRpcUrl,
   CacheControl,
   FundingAddress,
 } from "../../../api/funding.ts"
@@ -16,12 +16,12 @@ export const GET = Effect.gen(function*() {
   const address = yield* Config
     .nonEmptyString("HOMEBASE_FUNDING_ADDRESS")
     .pipe(Config.withDefault(FundingAddress))
-  const api = yield* Config
-    .nonEmptyString("HOMEBASE_BANKR_API")
-    .pipe(Config.withDefault(BankrApiUrl))
+  const rpc = yield* Config
+    .nonEmptyString("HOMEBASE_BASE_RPC")
+    .pipe(Config.withDefault(BaseRpcUrl))
 
   const { status, body } = yield* Effect.promise(() =>
-    answerFunding(address, api)
+    answerFunding(address, rpc)
   )
 
   return yield* HttpServerResponse.unsafeJson(body, {

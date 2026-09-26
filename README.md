@@ -63,24 +63,28 @@ settings are the environment variables:
 
 - `HOMEBASE_LIVE_ICAL` — the calendar feed URL. Without it `/events.json`
   answers with a 500 and the site renders with no events.
-- `HOMEBASE_FUNDING_ADDRESS` — optional. The Bankr address that collects 100%
-  of the $home creator fees. It defaults to the address in `api/funding.ts`, so
-  this only needs setting to point the card somewhere else.
-- `HOMEBASE_BANKR_API` — optional. Bankr's read API, defaulting to
-  `https://api.bankr.bot`. Its creator-fee endpoints need no key.
+- `HOMEBASE_FUNDING_ADDRESS` — optional. The Bankr address holding the
+  creator's share of the $home fees. It defaults to the address in
+  `api/funding.ts`, so this only needs setting to point the card somewhere
+  else.
+- `HOMEBASE_BASE_RPC` — optional. The Base JSON-RPC endpoint the fees are read
+  from, defaulting to Base's public, rate-limited `https://mainnet.base.org`,
+  which each instance reads at most once a minute. A provider's URL works the
+  same way, and a key in it never appears in an answer.
 
 An empty value counts as unset for both optional variables.
 
-The fees accrue inside Bankr and only reach the address once someone claims
-them, so the card shows Bankr's lifetime total of what the address has earned —
-claimed and unclaimed together — rather than what the address is holding.
-Reading the balance instead shows only what has already been withdrawn. The
-endpoint reads every position the address earns fees from.
+$home's creator fees accrue in its pool's fee ledger, a Doppler hook on Base,
+and only reach the address when someone claims them. The card reads that
+ledger: the address's share of every WETH fee the pool has taken, collected or
+still waiting, which claiming does not lower. The address's balance shows only
+what has been claimed, and Bankr's API is no substitute: its lifetime total for
+the address read 0 while more than 1 WETH sat unclaimed.
 
 `api/funding.ts` is the one fee read: the Bun route imports it rather than
 keeping a copy. It keeps its last good answer for an hour and serves it at once
 while it refreshes, and the CDN keeps serving the last answer for an hour when a
-read fails, so a slow or failing Bankr costs the card nothing until that hour
+read fails, so a slow or failing read costs the card nothing until that hour
 runs out. A read that takes over five seconds counts as failed.
 
 The same build runs locally:
