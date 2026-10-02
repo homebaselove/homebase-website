@@ -2,11 +2,12 @@
 export function Socials() {
   return (
     <div class="flex items-center justify-center ">
-      <div class="flex flex-wrap justify-center gap-4">
+      <div class="flex flex-wrap justify-center gap-6">
         <a
           href="http://warpcast.com/homebase"
           target="_blank"
-          class="flex items-center gap-2 hover:underline"
+          aria-label="Farcaster"
+          class="flex items-center hover:opacity-80"
         >
           <svg
             width="32"
@@ -31,14 +32,12 @@ export function Socials() {
             >
             </path>
           </svg>
-          <span>
-            Farcaster
-          </span>
         </a>
         <a
           href="https://x.com/homebasedotlove"
           target="_blank"
-          class="flex items-center gap-2 hover:underline"
+          aria-label="Twitter"
+          class="flex items-center hover:opacity-80"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -54,14 +53,12 @@ export function Socials() {
             >
             </path>
           </svg>
-          <span>
-            Twitter
-          </span>
         </a>
         <a
           href="https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24"
           target="_blank"
-          class="flex items-center gap-2 hover:underline"
+          aria-label="Dexscreener"
+          class="flex items-center hover:opacity-80"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -99,9 +96,51 @@ export function Socials() {
               rx="1.5"
             />
           </svg>
-          <span>
-            Dexscreener
-          </span>
+        </a>
+        <a
+          href="https://docs.fileverse.io/document/3xrdwjabrTJDy8AxgKdCuG#k=PMLaADggql3fdhpShUOZLCAAXfffpbE0gTo9iZzIh_8"
+          target="_blank"
+          aria-label="Fileverse"
+          class="flex items-center hover:opacity-80"
+        >
+          {/* Fileverse's stacked-pages smiley, cut to three pages so the face still reads at 32px. */}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+          >
+            <rect
+              x="2.5"
+              y="8"
+              width="12"
+              height="14"
+            />
+            <path d="M6 8V5H18V19H14.5" />
+            <path d="M9.5 5V2H21.5V16H18" />
+            <circle
+              cx="6.3"
+              cy="12.6"
+              r="1.3"
+              fill="currentColor"
+              stroke="none"
+            />
+            <circle
+              cx="10.7"
+              cy="12.6"
+              r="1.3"
+              fill="currentColor"
+              stroke="none"
+            />
+            <path
+              d="M5.6 15.2a2.9 2.9 0 0 0 5.8 0z"
+              fill="currentColor"
+              stroke="none"
+            />
+          </svg>
         </a>
       </div>
     </div>
