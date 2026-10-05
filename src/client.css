@@ -64,6 +64,26 @@
   .btn-brand:hover {
     background: var(--color-brand-dark);
   }
+
+  /* The story reel: cards share one width that leaves the neighbors peeking
+     in on either side, and the scrollbar stays hidden because the dots and
+     arrows are the controls. */
+  .story-reel {
+    --story-card: min(calc(100% - 5rem), 640px);
+    --story-gap: 0.5rem;
+    gap: var(--story-gap);
+    scrollbar-width: none;
+  }
+
+  @media (min-width: 40rem) {
+    .story-reel {
+      --story-gap: 1rem;
+    }
+  }
+
+  .story-reel::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @keyframes fade-in {

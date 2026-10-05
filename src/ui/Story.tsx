@@ -1,58 +1,282 @@
 /** @jsxImportSource preact */
+import { useEffect, useRef } from "preact"
+import { useSignal } from "preact/signals"
 import { type Chapter, Chapters } from "../story.ts"
 
 /**
- * The Based House story as a timeline: one card per chapter down a brand
- * rail, each with its figures and the letters, decks and recaps it came
- * from. The hero button lands here. No apostrophes or quotes in prose here:
- * the class scanner pairs any quote with the next one of any kind.
+ * The Based House story as a reel: the chapter in focus sits front and
+ * center at full size, with the one behind and the one ahead peeking in at
+ * a smaller scale. Scrolling, swiping, the arrows, the dots and the keyboard
+ * all move the focus; off-center chapters are inert so focus never lands in
+ * a card the reader cannot see. No apostrophes or quotes in prose here: the
+ * class scanner pairs any quote with the next one of any kind.
  */
 export function BasedHouseStory() {
+  const active = useSignal(0)
+  const reel = useRef<HTMLOListElement>(null)
+
+  const cards = () =>
+    Array.from(
+      reel.current?.querySelectorAll<HTMLElement>("[data-chapter]") ?? [],
+    )
+
+  const goTo = (index: number) => {
+    const scroller = reel.current
+    const card = cards()[index]
+
+    if (!scroller || !card) {
+      return
+    }
+
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
+
+    scroller.scrollTo({
+      left: card.offsetLeft - (scroller.clientWidth - card.offsetWidth) / 2,
+      behavior: reduced ? "auto" : "smooth",
+    })
+  }
+
+  // The chapter whose center is nearest the center of the reel is the one in
+  // focus, read on each scroll frame so swipes and the buttons agree.
+  useEffect(() => {
+    const scroller = reel.current
+
+    if (!scroller) {
+      return
+    }
+
+    let frame = 0
+
+    const settle = () => {
+      frame = 0
+
+      const center = scroller.scrollLeft + scroller.clientWidth / 2
+      let nearest = 0
+      let distance = Infinity
+
+      cards().forEach((card, index) => {
+        const gap = Math.abs(card.offsetLeft + card.offsetWidth / 2 - center)
+
+        if (gap < distance) {
+          distance = gap
+          nearest = index
+        }
+      })
+
+      active.value = nearest
+    }
+
+    const onScroll = () => {
+      if (!frame) {
+        frame = requestAnimationFrame(settle)
+      }
+    }
+
+    scroller.addEventListener("scroll", onScroll, {
+      passive: true,
+    })
+
+    return () => {
+      scroller.removeEventListener("scroll", onScroll)
+      cancelAnimationFrame(frame)
+    }
+  }, [])
+
+  const last = Chapters.length - 1
+
   return (
     <section
       id="story"
-      class="scroll-mt-8"
+      class="scroll-mt-8 flex flex-col gap-6"
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="The Based House story"
+      onKeyDown={(e) => {
+        if (e.key === "ArrowRight") {
+          e.preventDefault()
+          goTo(Math.min(last, active.value + 1))
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault()
+          goTo(Math.max(0, active.value - 1))
+        }
+      }}
     >
       <div class="max-w-[640px] mx-auto text-center">
-        <h2 class="text-4xl max-sm:text-3xl font-bold">
-          The Based House story
+        <div class="text-sm font-bold uppercase tracking-wide text-brand">
+          Based House
+        </div>
+
+        <h2 class="text-4xl max-sm:text-3xl font-bold mt-1">
+          Story
         </h2>
 
-        <p class="py-6 text-gray-600">
-          How a letter to Jesse became a house for based builders and creators
-          at every event that matters, and what we built between houses.
+        <p class="mt-3 text-gray-600">
+          From a letter to Jesse to Based House Mumbai.
         </p>
       </div>
 
-      <ol class="relative ml-3 pl-8 border-l-2 border-brand/20 flex flex-col gap-10 mt-4">
-        {Chapters.map((chapter) => (
+      <Rail
+        active={active.value}
+        goTo={goTo}
+      />
+
+      <ol
+        ref={reel}
+        tabIndex={0}
+        class="story-reel relative flex items-start overflow-x-auto overscroll-x-contain snap-x snap-mandatory py-3 -my-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded-xl"
+      >
+        <li
+          aria-hidden="true"
+          class="shrink-0"
+          style="width: calc(50% - var(--story-card) / 2 - var(--story-gap))"
+        />
+
+        {Chapters.map((chapter, index) => (
           <ChapterCard
             key={chapter.id}
             chapter={chapter}
+            index={index}
+            focused={index === active.value}
+            goTo={goTo}
           />
         ))}
+
+        <li
+          aria-hidden="true"
+          class="shrink-0"
+          style="width: calc(50% - var(--story-card) / 2 - var(--story-gap))"
+        />
       </ol>
+
+      <div class="flex items-center justify-center gap-5">
+        <button
+          type="button"
+          aria-label="Previous chapter"
+          disabled={active.value === 0}
+          class="rounded-full border-[1px] p-2.5 transition-colors border-gray-200 text-gray-600 hover:border-brand/40 hover:bg-brand/10 hover:text-brand disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-600"
+          onClick={() => goTo(active.value - 1)}
+        >
+          <ArrowIcon direction="left" />
+        </button>
+
+        <span
+          aria-live="polite"
+          class="text-sm text-gray-500 tabular-nums"
+        >
+          {active.value + 1} of {Chapters.length}
+        </span>
+
+        <button
+          type="button"
+          aria-label="Next chapter"
+          disabled={active.value === last}
+          class="rounded-full border-[1px] p-2.5 transition-colors border-gray-200 text-gray-600 hover:border-brand/40 hover:bg-brand/10 hover:text-brand disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-600"
+          onClick={() => goTo(active.value + 1)}
+        >
+          <ArrowIcon direction="right" />
+        </button>
+      </div>
     </section>
   )
 }
 
-function ChapterCard(props: { chapter: Chapter }) {
-  const { chapter } = props
+/**
+ * The timeline itself: one dot per chapter on a rail that fills up to the
+ * chapter in focus. Each dot is a button that moves the reel there.
+ */
+function Rail(props: { active: number; goTo: (index: number) => void }) {
+  const count = Chapters.length
+  const inset = `calc(100% / ${count} / 2)`
+  const filled = count > 1 ? props.active / (count - 1) : 0
+
+  return (
+    <div class="relative max-w-[720px] w-full mx-auto">
+      <div
+        aria-hidden="true"
+        class="absolute top-[7px] h-0.5 bg-gray-200"
+        style={`left: ${inset}; right: ${inset}`}
+      />
+
+      <div
+        aria-hidden="true"
+        class="absolute top-[7px] h-0.5 bg-brand transition-[width] duration-300 motion-reduce:transition-none"
+        style={`left: ${inset}; width: calc((100% - ${inset} * 2) * ${filled})`}
+      />
+
+      <ol
+        class="relative grid"
+        style={`grid-template-columns: repeat(${count}, minmax(0, 1fr))`}
+      >
+        {Chapters.map((chapter, index) => {
+          const reached = index <= props.active
+          const focused = index === props.active
+
+          return (
+            <li
+              key={chapter.id}
+              class="flex flex-col items-center"
+            >
+              <button
+                type="button"
+                aria-label={`${chapter.when}: ${chapter.title}`}
+                aria-current={focused ? "step" : undefined}
+                class="group flex flex-col items-center gap-2 px-1 focus:outline-none"
+                onClick={() => props.goTo(index)}
+              >
+                <span
+                  class={focused
+                    ? "block w-4 h-4 rounded-full bg-brand ring-4 ring-brand/20 transition-all duration-300 motion-reduce:transition-none"
+                    : reached
+                    ? "block w-4 h-4 rounded-full bg-brand ring-4 ring-white transition-all duration-300 motion-reduce:transition-none group-hover:ring-brand/20 group-focus-visible:ring-brand/20"
+                    : "block w-4 h-4 rounded-full bg-white border-2 border-gray-300 ring-4 ring-white transition-all duration-300 motion-reduce:transition-none group-hover:border-brand group-focus-visible:border-brand"}
+                />
+
+                <span
+                  class={focused
+                    ? "max-sm:sr-only text-xs font-bold text-brand leading-tight text-center"
+                    : "max-sm:sr-only text-xs text-gray-500 leading-tight text-center group-hover:text-brand"}
+                >
+                  {chapter.when}
+                </span>
+              </button>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
+function ChapterCard(props: {
+  chapter: Chapter
+  index: number
+  focused: boolean
+  goTo: (index: number) => void
+}) {
+  const { chapter, focused } = props
   const today = chapter.id === "today"
 
   return (
     <li
-      id={`story-${chapter.id}`}
-      class="relative"
+      data-chapter={chapter.id}
+      role="group"
+      aria-roledescription="slide"
+      aria-label={`${props.index + 1} of ${Chapters.length}: ${chapter.title}`}
+      class={focused
+        ? "shrink-0 snap-center flex transition-[transform,opacity] duration-300 motion-reduce:transition-none scale-100 opacity-100"
+        : "shrink-0 snap-center flex transition-[transform,opacity] duration-300 motion-reduce:transition-none scale-[0.92] sm:scale-[0.88] opacity-50 cursor-pointer"}
+      style="width: var(--story-card)"
+      onClick={() => {
+        if (!focused) {
+          props.goTo(props.index)
+        }
+      }}
     >
-      <span
-        aria-hidden="true"
-        class={today
-          ? "absolute -left-[43px] top-6 w-5 h-5 rounded-full bg-brand ring-4 ring-white animate-pulse"
-          : "absolute -left-[43px] top-6 w-5 h-5 rounded-full bg-brand ring-4 ring-white"}
-      />
-
-      <article class="bg-white rounded-lg shadow-md border-[1px] border-gray-200 p-5 max-sm:p-4 flex flex-col gap-4">
+      <article
+        // Only the chapter in focus can be read or tabbed into.
+        inert={!focused}
+        class="w-full bg-white rounded-2xl shadow-md border-[1px] border-gray-200 p-6 max-sm:p-5 flex flex-col gap-4"
+      >
         <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <span class="text-sm font-bold uppercase tracking-wide text-brand">
             {chapter.kicker}
@@ -63,24 +287,20 @@ function ChapterCard(props: { chapter: Chapter }) {
           </span>
         </div>
 
-        <h3 class="text-2xl max-sm:text-xl font-bold leading-tight">
+        <h3 class="text-3xl max-sm:text-2xl font-bold leading-tight">
           {chapter.title}
         </h3>
 
-        <div class="flex flex-col gap-3 text-gray-700">
-          {chapter.paragraphs.map((paragraph, index) => (
-            <p key={index}>
-              {paragraph}
-            </p>
-          ))}
-        </div>
+        <p class="text-gray-700 leading-relaxed">
+          {chapter.summary}
+        </p>
 
         {chapter.stats && (
-          <dl class="grid grid-cols-3 max-sm:grid-cols-2 gap-3 pt-1">
+          <dl class="grid grid-cols-2 sm:flex gap-3">
             {chapter.stats.map((stat) => (
               <div
                 key={stat.label}
-                class="rounded-lg bg-gray-50 border-[1px] border-gray-200 px-3 py-2"
+                class="sm:flex-1 sm:basis-0 max-sm:odd:last:col-span-2 rounded-lg bg-gray-50 border-[1px] border-gray-200 px-3 py-2"
               >
                 <dd class="text-2xl font-bold leading-none text-brand">
                   {stat.value}
@@ -93,7 +313,7 @@ function ChapterCard(props: { chapter: Chapter }) {
           </dl>
         )}
 
-        <div class="flex flex-wrap gap-2 pt-1">
+        <div class="flex flex-wrap gap-2 mt-auto pt-1">
           {chapter.links.map((link) => (
             <a
               key={link.href}
@@ -110,5 +330,24 @@ function ChapterCard(props: { chapter: Chapter }) {
         </div>
       </article>
     </li>
+  )
+}
+
+function ArrowIcon(props: { direction: "left" | "right" }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      {props.direction === "left"
+        ? <path d="m15 18-6-6 6-6" />
+        : <path d="m9 18 6-6-6-6" />}
+    </svg>
   )
 }

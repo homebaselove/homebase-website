@@ -23,7 +23,8 @@ export interface Chapter {
   /** The small label above the title: which house, or what kind of step. */
   kicker: string
   title: string
-  paragraphs: string[]
+  /** One short paragraph: what happened and why it mattered. */
+  summary: string
   stats?: StoryStat[]
   links: StoryLink[]
 }
@@ -39,10 +40,8 @@ export const Chapters: Chapter[] = [
     when: "Early 2025",
     kicker: "Inception",
     title: "A letter to Jesse",
-    paragraphs: [
-      "Homebase started as a community initiative to grow the Base ecosystem, with a simple question: what if based builders and creators had a home at the events that matter? The answer went public as a letter to Jesse, shipped as a Farcaster miniapp: a pitch for a house where residents could live, work and build together for the length of a hackathon.",
-      "The plan had three legs. Build Board online, so based builders could find bounties, grants and hackathons in one place. Based House as temporary residencies at quality Ethereum events. And permanent coworking in cities around the world once the houses had proven the appetite for it.",
-    ],
+    summary:
+      "Homebase asked Base for a house where based builders and creators could live and build together at the events that matter, as a letter to Jesse shipped as a Farcaster miniapp. The plan had three legs: Build Board online, Based House residencies at Ethereum events, and permanent coworking once the houses proved the appetite.",
     links: [
       {
         label: "Letter to Jesse V1",
@@ -56,18 +55,12 @@ export const Chapters: Chapter[] = [
     when: "Feb – Mar 2025",
     kicker: "1st Based House",
     title: "Based House ETHDenver",
-    paragraphs: [
-      "The first house opened in Lakewood, Colorado, hosted with Kismet Casa for nine days around ETHDenver. Fourteen residents from seven countries moved in: founders and builders from Neynar, Fairmint, Precog, FarHack, Grow, Starta, Howler, Swiddle and more.",
-      "The house hosted a Based BBQ, Base Game Day with a creator session, three workshops and FarHack, a live Farcaster hackathon with six bounties from three sponsors. Family dinners, two all-nighters and five live submissions later, the proof of work was in, and Homebase has incubated SeedMe for the founders in residence ever since.",
-    ],
+    summary:
+      "Nine days in Lakewood, Colorado with Kismet Casa around ETHDenver. Fourteen residents from seven countries hosted a Based BBQ, Base Game Day, three workshops and FarHack, a live Farcaster hackathon. Homebase has incubated SeedMe for the founders in residence ever since.",
     stats: [
       {
         value: "14",
         label: "residents from 7 countries",
-      },
-      {
-        value: "9",
-        label: "days in Denver",
       },
       {
         value: "6",
@@ -96,10 +89,8 @@ export const Chapters: Chapter[] = [
     when: "Apr – May 2025",
     kicker: "Building the foundation",
     title: "Base Batches workshops and the Homebase Map",
-    paragraphs: [
-      "Straight after Denver, Homebase ran the workshops for the very first Base Batches, for the community by the community. Ten online sessions across three weeks took builders from \"why onchain\" through OnchainKit, MiniKit, AgentKit, smart wallets, onchain games and smart contracts, taught by Base DevRel, Farcaster founders and the builders who had lived in the house. The recordings are in the video gallery below.",
-      "The series came with an IRL format any community host could run, and Base communities around the world did, from Pune to New York. To show them all in one place, Homebase built the Homebase Map: a global map of Base meetups with onchain attendance attestations, so every workshop could be found and every attendee could prove they were there.",
-    ],
+    summary:
+      "Homebase ran the workshops for the very first Base Batches, for the community by the community: ten online sessions with Base DevRel and house alumni, plus an IRL format community hosts ran in 50+ cities. The Homebase Map put every Base meetup on one map, with onchain attendance.",
     stats: [
       {
         value: "10",
@@ -111,7 +102,7 @@ export const Chapters: Chapter[] = [
       },
       {
         value: "1",
-        label: "map of them all",
+        label: "map of every meetup",
       },
     ],
     links: [
@@ -135,19 +126,12 @@ export const Chapters: Chapter[] = [
     when: "Nov 2025",
     kicker: "2nd Based House",
     title: "Based House Devconnect",
-    paragraphs: [
-      "It started with another letter to Jesse, again as a miniapp, and ended with ten days in the heart of Buenos Aires. Kismet Casa and Homebase brought fifteen residents from five countries together for Devconnect, this time with creators at the centre: most of the house was Zora artists, alongside builders from dTech, Tortoise, Vector and Scratch.",
-      "For five of those days the house curated the Onchain Art Hub, platforming artists from across Latin America, and hosted a Base meetup with art curation and live performances, plus the Based House Asado. The residents shipped five live miniapps and eleven artworks, two of them made together.",
-      "The vision sharpened here too: Based House as temporary residencies during Ethereum events, and Homebase Hubs as the permanent coworking spaces those residencies make room for, each feeding the other through the onchain community.",
-    ],
+    summary:
+      "Another letter to Jesse, then ten days in Buenos Aires with Kismet Casa for Devconnect. Fifteen residents, most of them Zora artists, curated the Onchain Art Hub for five days, hosted a Base meetup and the Based Asado, and shipped five miniapps and eleven artworks.",
     stats: [
       {
         value: "15",
         label: "residents from 5 countries",
-      },
-      {
-        value: "10",
-        label: "days in Buenos Aires",
       },
       {
         value: "5",
@@ -184,9 +168,8 @@ export const Chapters: Chapter[] = [
     when: "Feb – Mar 2026",
     kicker: "3rd Based House",
     title: "Back at ETHDenver",
-    paragraphs: [
-      "Announced on the last slide of the Devconnect retrospective, the third house brought Based House back to where it began. A year on from the first residency, the house returned to Denver with a new cohort of residents, a new round of events and a public recap of everything they shipped.",
-    ],
+    summary:
+      "Announced on the last slide of the Devconnect retrospective, the third house brought Based House back to Denver a year after the first, with a new cohort of residents, a new round of events and a public recap of everything they shipped.",
     links: [
       {
         label: "Recap thread",
@@ -209,10 +192,8 @@ export const Chapters: Chapter[] = [
     when: "Today",
     kicker: "Where we are",
     title: "Based House Mumbai",
-    paragraphs: [
-      "Three houses, two continents and one flywheel later, the next house is headed to Mumbai. This time the community funds it directly: every creator fee $home earns goes to Based House Mumbai, and the raise at the top of this page shows how far along it is.",
-      "The founders in residence keep launching through SeedMe, which Homebase has incubated since the first house, and locking $home is what grants access to their claims. Welcome home. Welcome to Base.",
-    ],
+    summary:
+      "The next house is headed to Mumbai, and the community funds it directly: every creator fee $home earns goes to Based House Mumbai. Founders in residence keep launching through SeedMe, and locking $home grants access to their claims. Welcome home. Welcome to Base.",
     links: [
       {
         label: "Fund Based House Mumbai",
