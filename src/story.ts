@@ -4,9 +4,12 @@
  * where it stands today. The figures come from each house's retrospective.
  */
 
-import BasedHouseEthDenver from "../assets/story/BasedHouseEthDenver.jpg"
+import DevconnectRecapCast from "../assets/story/DevconnectRecapCast.webp"
+import EthDenverCrew from "../assets/story/EthDenverCrew.webp"
+import EthDenverReturnCrew from "../assets/story/EthDenverReturnCrew.webp"
 import JesseHappyToFund from "../assets/story/JesseHappyToFund.webp"
 import LetterToJesseCast from "../assets/story/LetterToJesseCast.webp"
+import LetterToJesseV2Cast from "../assets/story/LetterToJesseV2Cast.webp"
 
 export interface StoryLink {
   label: string
@@ -55,6 +58,14 @@ export const LetterToJesseV1Url = "https://farcaster.xyz/rafi/0x14fd4e8e"
 
 export const LetterToJesseV2Url = "https://farcaster.xyz/luciano/0xf5061233"
 
+export const EthDenverRecapVideoUrl =
+  "https://x.com/lucianodeangeIo/status/1899183264759439586?s=20"
+
+export const DevconnectRecapUrl = "https://farcaster.xyz/luciano/0x78eb1ae0"
+
+export const EthDenverReturnRecapUrl =
+  "https://x.com/homebasedotlove/status/2029929738454847972"
+
 export const Chapters: Chapter[] = [
   {
     id: "inception",
@@ -97,13 +108,12 @@ export const Chapters: Chapter[] = [
     title: "Based House ETHDenver",
     cover: [
       {
-        src: BasedHouseEthDenver,
-        width: 800,
-        height: 510,
+        src: EthDenverCrew,
+        width: 2000,
+        height: 963,
         alt:
-          "Residents gathered in the living room of Based House ETHDenver under the words Welcome to Base",
-        href:
-          "https://docs.google.com/presentation/d/1HMOmPOZU0LBbKLtSVmbBxai4nk2YIlB8kAK7C_c8YBA/edit?usp=sharing",
+          "The Based House ETHDenver crew standing together in the living room, captioned ETH Denver - Based House",
+        href: EthDenverRecapVideoUrl,
       },
     ],
     summary:
@@ -131,6 +141,10 @@ export const Chapters: Chapter[] = [
         label: "Retrospective",
         href:
           "https://docs.google.com/presentation/d/1HMOmPOZU0LBbKLtSVmbBxai4nk2YIlB8kAK7C_c8YBA/edit?usp=sharing",
+      },
+      {
+        label: "Recap vid",
+        href: EthDenverRecapVideoUrl,
       },
     ],
   },
@@ -177,6 +191,24 @@ export const Chapters: Chapter[] = [
     when: "Nov 2025",
     kicker: "2nd Based House",
     title: "Based House Devconnect",
+    cover: [
+      {
+        src: LetterToJesseV2Cast,
+        width: 1110,
+        height: 240,
+        alt:
+          "luciano casts: Dear jesse.base.eth, we got the crew back together to build another Based House in Argentina for Devconnect with leaolmos.eth and rafi. Shall we run it back?",
+        href: LetterToJesseV2Url,
+      },
+      {
+        src: DevconnectRecapCast,
+        width: 1088,
+        height: 290,
+        alt:
+          "luciano casts: Based House Devconnect Retrospective. A residency for developers and artists to collaborate during Devconnect Buenos Aires by kismet and homebase, supported by base.base.eth",
+        href: DevconnectRecapUrl,
+      },
+    ],
     summary:
       "Another letter to Jesse, then ten days in Buenos Aires with Kismet Casa for Devconnect. Fifteen residents, most of them Zora artists, curated the Onchain Art Hub for five days, hosted a Base meetup and the Based Asado, and shipped five miniapps and eleven artworks.",
     stats: [
@@ -209,7 +241,7 @@ export const Chapters: Chapter[] = [
       },
       {
         label: "Public recap",
-        href: "https://farcaster.xyz/luciano/0x78eb1ae0",
+        href: DevconnectRecapUrl,
       },
     ],
   },
@@ -219,12 +251,22 @@ export const Chapters: Chapter[] = [
     when: "Feb – Mar 2026",
     kicker: "3rd Based House",
     title: "Back at ETHDenver",
+    cover: [
+      {
+        src: EthDenverReturnCrew,
+        width: 675,
+        height: 520,
+        alt:
+          "The third Based House crew piled onto the sectional couches of the Denver house, waving at the camera",
+        href: EthDenverReturnRecapUrl,
+      },
+    ],
     summary:
       "Announced on the last slide of the Devconnect retrospective, the third house brought Based House back to Denver a year after the first, with a new cohort of residents, a new round of events and a public recap of everything they shipped.",
     links: [
       {
         label: "Recap thread",
-        href: "https://x.com/homebasedotlove/status/2029929738454847972",
+        href: EthDenverReturnRecapUrl,
       },
       {
         label: "Retrospective",

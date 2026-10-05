@@ -97,6 +97,14 @@
     .story-pair > a {
       flex: var(--aspect) 1 0%;
     }
+
+    .story-pair-stack {
+      flex-direction: column;
+    }
+
+    .story-pair-stack > a {
+      flex: none;
+    }
   }
 
   .story-reel::-webkit-scrollbar {

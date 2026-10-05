@@ -365,16 +365,25 @@ function ChapterCard(props: {
 }
 
 /**
- * The photos on top of a card. One photo fills the width. Two share the
- * width in proportion to their aspect ratios, so they stand at one height
- * with no margins between or beside them, and stack on phones. Each photo
- * opens its source.
+ * The photos on top of a card. One photo keeps its own shape up to a cap on
+ * its height. Two share the width in proportion to their aspect ratios, so
+ * they stand at one height with no margins between or beside them, unless
+ * both are wide strips, which stack instead. Phones always stack. Each
+ * photo opens its source.
  */
 function Cover(props: { photos: CoverPhoto[] }) {
   const pair = props.photos.length > 1
+  const stacked = pair
+    && props.photos.every((photo) => photo.width / photo.height > 2)
 
   return (
-    <div class={pair ? "story-pair bg-gray-100" : "bg-gray-100"}>
+    <div
+      class={stacked
+        ? "story-pair story-pair-stack bg-gray-100"
+        : pair
+        ? "story-pair bg-gray-100"
+        : "bg-gray-100"}
+    >
       {props.photos.map((photo) => (
         <a
           key={photo.src}
@@ -393,9 +402,12 @@ function Cover(props: { photos: CoverPhoto[] }) {
             alt={photo.alt}
             loading="lazy"
             draggable={false}
+            style={pair
+              ? undefined
+              : `aspect-ratio: ${(photo.width / photo.height).toFixed(4)}`}
             class={pair
               ? "w-full h-auto"
-              : "w-full h-52 max-sm:h-44 object-cover"}
+              : "w-full object-cover sm:max-h-[360px]"}
           />
         </a>
       ))}
