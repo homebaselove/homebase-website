@@ -1,0 +1,47 @@
+import { expect, test } from "bun:test"
+import { Chapters, LetterToJesseV1Url } from "./story.ts"
+
+test("chapters run in order from the first letter to today", () => {
+  expect(
+    Chapters.map((chapter) => chapter.month),
+  )
+    .toEqual([
+      ...Chapters.map((chapter) => chapter.month),
+    ].sort())
+})
+
+test("each chapter has its own id", () => {
+  expect(
+    new Set(Chapters.map((chapter) => chapter.id)).size,
+  )
+    .toBe(Chapters.length)
+})
+
+test("every link is either on the web or on this page", () => {
+  expect(
+    Chapters
+      .flatMap((chapter) => chapter.links)
+      .map((link) => link.href)
+      .filter((href) => !/^(https:\/\/|#)/.test(href)),
+  )
+    .toEqual([])
+})
+
+test("the story opens with the letter the house started from", () => {
+  expect(
+    Chapters[0].links[0],
+  )
+    .toEqual({
+      label: "Letter to Jesse V1",
+      href: LetterToJesseV1Url,
+    })
+})
+
+test("every chapter points at its sources", () => {
+  expect(
+    Chapters
+      .filter((chapter) => chapter.links.length === 0)
+      .map((chapter) => chapter.id),
+  )
+    .toEqual([])
+})

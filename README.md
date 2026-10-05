@@ -9,6 +9,8 @@ The Homebase website serves as a hub for the Base community, featuring:
 - Live funding card for Based House, read from the creator fees the $home
   position has earned
 - Interactive map of Homebase physical locations (Based Houses)
+- The Based House story: a timeline of every house, the Base Batches
+  workshops and the Homebase Map, with each chapter's figures and sources
 - Upcoming workshops and events with timezone support
 - Video gallery of past events and workshops
 - Farcaster Frame integration

@@ -18,14 +18,14 @@ export function BasedHouseCard() {
           </h1>
           <p class="py-6">
             Physical space for builders and creators to gather, work, and learn
-            together.
+            together. Three houses so far, from ETHDenver to Devconnect and
+            back, with Mumbai next.
           </p>
           <a
-            href="https://warpcast.com/rafi/0x14fd4e8e"
+            href="#story"
             class="btn-brand"
-            target="_blank"
           >
-            Learn more
+            Read the story
           </a>
         </div>
       </div>
