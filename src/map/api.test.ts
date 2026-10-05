@@ -1611,6 +1611,28 @@ test("sign-in attempts are limited per address", async () => {
     ])
 })
 
+test("a HEAD is answered like the GET it stands for", async () => {
+  const { ctx } = await site()
+  const response = await handle(
+    request({
+      method: "HEAD",
+    }),
+    "map",
+    ctx,
+  )
+
+  expect(
+    [
+      response.status,
+      response.headers.get("cache-control"),
+    ],
+  )
+    .toEqual([
+      200,
+      ListCacheControl,
+    ])
+})
+
 test("a body that is not what the endpoint expects is refused before anything else", async () => {
   const { ctx } = await site()
 
