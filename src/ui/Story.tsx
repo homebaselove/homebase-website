@@ -1,7 +1,7 @@
 /** @jsxImportSource preact */
 import { useEffect, useRef } from "preact"
 import { useSignal } from "preact/signals"
-import { type Chapter, Chapters } from "../story.ts"
+import { type Chapter, Chapters, type CoverPhoto } from "../story.ts"
 
 /**
  * The Based House story as a reel: the chapter in focus sits front and
@@ -290,64 +290,135 @@ function ChapterCard(props: {
       <article
         // Only the chapter in focus can be read or tabbed into.
         inert={!focused}
-        class="w-full bg-white rounded-2xl shadow-md border-[1px] border-gray-200 p-6 max-sm:p-5 flex flex-col gap-4"
+        class="w-full bg-white rounded-2xl shadow-md border-[1px] border-gray-200 overflow-hidden flex flex-col"
       >
-        <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <span class="text-sm font-bold uppercase tracking-wide text-brand">
-            {chapter.kicker}
-          </span>
-
-          <span class="text-sm text-gray-500">
-            {chapter.when}
-          </span>
-        </div>
-
-        <h3 class="text-3xl max-sm:text-2xl font-bold leading-tight">
-          {chapter.title}
-        </h3>
-
-        <p class="text-gray-700 leading-relaxed">
-          {chapter.summary}
-        </p>
-
-        {chapter.stats && (
-          <dl class="grid grid-cols-2 sm:flex gap-3">
-            {chapter.stats.map((stat) => (
-              <div
-                key={stat.label}
-                class="sm:flex-1 sm:basis-0 max-sm:odd:last:col-span-2 rounded-lg bg-gray-50 px-3 py-2.5"
-              >
-                <dd class="text-2xl font-bold leading-none text-brand">
-                  {stat.value}
-                </dd>
-                <dt class="text-sm text-gray-500 mt-1">
-                  {stat.label}
-                </dt>
-              </div>
-            ))}
-          </dl>
+        {chapter.cover && (
+          <Cover photos={chapter.cover} />
         )}
 
-        <div class="flex flex-wrap gap-2 mt-auto pt-1">
-          {chapter.links.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              target={link.href.startsWith("#") ? undefined : "_blank"}
-              rel={link.href.startsWith("#") ? undefined : "noopener"}
-              class={today
-                ? "btn-brand text-sm"
-                : "inline-flex items-center gap-1.5 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand"}
-            >
-              {link.label}
-              {!link.href.startsWith("#") && (
-                <OutwardIcon />
-              )}
-            </a>
-          ))}
+        <div class="p-6 max-sm:p-5 flex flex-col gap-4">
+          <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <span class="text-sm font-bold uppercase tracking-wide text-brand">
+              {chapter.kicker}
+            </span>
+
+            <span class="text-sm text-gray-500">
+              {chapter.when}
+            </span>
+          </div>
+
+          <h3 class="text-3xl max-sm:text-2xl font-bold leading-tight">
+            {chapter.title}
+          </h3>
+
+          <details class="group -mt-1">
+            <summary class="list-none [&::-webkit-details-marker]:hidden inline-flex items-center gap-1.5 text-sm font-bold text-gray-600 cursor-pointer select-none rounded-full -mx-2 px-2 py-1 transition-colors hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+              What happened
+              <ChevronIcon />
+            </summary>
+
+            <p class="text-gray-700 leading-relaxed pt-2">
+              {chapter.summary}
+            </p>
+          </details>
+
+          {chapter.stats && (
+            <dl class="grid grid-cols-2 sm:flex gap-3">
+              {chapter.stats.map((stat) => (
+                <div
+                  key={stat.label}
+                  class="sm:flex-1 sm:basis-0 max-sm:odd:last:col-span-2 rounded-lg bg-gray-50 px-3 py-2.5"
+                >
+                  <dd class="text-2xl font-bold leading-none text-brand">
+                    {stat.value}
+                  </dd>
+                  <dt class="text-sm text-gray-500 mt-1">
+                    {stat.label}
+                  </dt>
+                </div>
+              ))}
+            </dl>
+          )}
+
+          <div class="flex flex-wrap gap-2 mt-auto pt-1">
+            {chapter.links.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                target={link.href.startsWith("#") ? undefined : "_blank"}
+                rel={link.href.startsWith("#") ? undefined : "noopener"}
+                class={today
+                  ? "btn-brand text-sm"
+                  : "inline-flex items-center gap-1.5 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand"}
+              >
+                {link.label}
+                {!link.href.startsWith("#") && (
+                  <OutwardIcon />
+                )}
+              </a>
+            ))}
+          </div>
         </div>
       </article>
     </li>
+  )
+}
+
+/**
+ * The photos on top of a card. One photo fills the width; two sit side by
+ * side at one height on wider screens and stack on phones, each kept whole
+ * so a screenshot stays readable. Each photo opens its source.
+ */
+function Cover(props: { photos: CoverPhoto[] }) {
+  const pair = props.photos.length > 1
+
+  return (
+    <div
+      class={pair
+        ? "flex max-sm:flex-col sm:h-52 gap-1 bg-gray-100 sm:justify-center"
+        : "bg-gray-100"}
+    >
+      {props.photos.map((photo) => (
+        <a
+          key={photo.src}
+          href={photo.href}
+          target="_blank"
+          rel="noopener"
+          class={pair
+            ? "block min-w-0 sm:h-full transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/60"
+            : "block transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/60"}
+        >
+          <img
+            src={photo.src}
+            alt={photo.alt}
+            loading="lazy"
+            draggable={false}
+            class={pair
+              ? "max-sm:w-full sm:h-full sm:w-auto max-w-full object-contain"
+              : "w-full h-52 max-sm:h-44 object-cover"}
+          />
+        </a>
+      ))}
+    </div>
+  )
+}
+
+function ChevronIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="transition-transform duration-200 motion-reduce:transition-none group-open:rotate-180"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
   )
 }
 

@@ -4,8 +4,19 @@
  * where it stands today. The figures come from each house's retrospective.
  */
 
+import BasedHouseEthDenver from "../assets/story/BasedHouseEthDenver.jpg"
+import JesseHappyToFund from "../assets/story/JesseHappyToFund.webp"
+import LetterToJesseCast from "../assets/story/LetterToJesseCast.webp"
+
 export interface StoryLink {
   label: string
+  href: string
+}
+
+/** A photo on the cover of a chapter; clicking it opens href. */
+export interface CoverPhoto {
+  src: string
+  alt: string
   href: string
 }
 
@@ -23,6 +34,11 @@ export interface Chapter {
   /** The small label above the title: which house, or what kind of step. */
   kicker: string
   title: string
+  /**
+   * Up to two portrait photos, or one landscape, of the actual event. They
+   * sit on top of the card and each links to its source.
+   */
+  cover?: CoverPhoto[]
   /** One short paragraph: what happened and why it mattered. */
   summary: string
   stats?: StoryStat[]
@@ -40,6 +56,20 @@ export const Chapters: Chapter[] = [
     when: "Early 2025",
     kicker: "Inception",
     title: "A letter to Jesse",
+    cover: [
+      {
+        src: JesseHappyToFund,
+        alt:
+          "samuellhuber.eth asks on Farcaster whether there is a Base house at ETHDenver, and jessepollak replies: happy to fund one if you want to get a crew together",
+        href: LetterToJesseV1Url,
+      },
+      {
+        src: LetterToJesseCast,
+        alt:
+          "rafi casts: Dear jessepollak, we want to build a Based House at ETHDenver with luciano and samuellhuber.eth. Will you help us? Below, an envelope reads Dear Jesse, we got the crew, and Jesse replies: happy to fund one",
+        href: LetterToJesseV1Url,
+      },
+    ],
     summary:
       "Homebase asked Base for a house where based builders and creators could live and build together at the events that matter, as a letter to Jesse shipped as a Farcaster miniapp. The plan had three legs: Build Board online, Based House residencies at Ethereum events, and permanent coworking once the houses proved the appetite.",
     links: [
@@ -55,6 +85,15 @@ export const Chapters: Chapter[] = [
     when: "Feb – Mar 2025",
     kicker: "1st Based House",
     title: "Based House ETHDenver",
+    cover: [
+      {
+        src: BasedHouseEthDenver,
+        alt:
+          "Residents gathered in the living room of Based House ETHDenver under the words Welcome to Base",
+        href:
+          "https://docs.google.com/presentation/d/1HMOmPOZU0LBbKLtSVmbBxai4nk2YIlB8kAK7C_c8YBA/edit?usp=sharing",
+      },
+    ],
     summary:
       "Nine days in Lakewood, Colorado with Kismet Casa around ETHDenver. Fourteen residents from seven countries hosted a Based BBQ, Base Game Day, three workshops and FarHack, a live Farcaster hackathon. Homebase has incubated SeedMe for the founders in residence ever since.",
     stats: [

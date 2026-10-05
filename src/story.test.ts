@@ -20,11 +20,38 @@ test("each chapter has its own id", () => {
 test("every link is either on the web or on this page", () => {
   expect(
     Chapters
-      .flatMap((chapter) => chapter.links)
+      .flatMap((chapter) => [
+        ...chapter.links,
+        ...(chapter.cover ?? []),
+      ])
       .map((link) => link.href)
       .filter((href) => !/^(https:\/\/|#)/.test(href)),
   )
     .toEqual([])
+})
+
+test("a cover holds at most two photos, each bundled with alt text", () => {
+  expect(
+    Chapters
+      .filter((chapter) => chapter.cover)
+      .map((chapter) => [
+        chapter.id,
+        chapter.cover!.length <= 2,
+        chapter.cover!.every((photo) => photo.src.length > 0 && photo.alt.length > 0),
+      ]),
+  )
+    .toEqual([
+      [
+        "inception",
+        true,
+        true,
+      ],
+      [
+        "ethdenver-2025",
+        true,
+        true,
+      ],
+    ])
 })
 
 test("the story opens with the letter the house started from", () => {
