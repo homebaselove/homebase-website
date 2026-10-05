@@ -22,8 +22,15 @@ export const LumaHosts = [
 /** Where event pages are read from. luma.com is Luma's current canonical host. */
 export const PageOrigin = "https://luma.com"
 
-/** The endpoint the Luma app itself reads event pages from. */
-export const ApiOrigin = "https://api.lu.ma"
+/**
+ * The endpoint the Luma app itself reads event pages from, on both hosts it
+ * has answered on. A host that is retired answers 404 for everything, so no
+ * single host's 404 is taken as the event being gone.
+ */
+export const ApiOrigins = [
+  "https://api.lu.ma",
+  "https://api.luma.com",
+]
 
 const SlugPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,98}$/
 
@@ -210,10 +217,10 @@ export const pageUrl = (link: Link) =>
     ? `${PageOrigin}/${encodeURIComponent(link.slug)}`
     : `${PageOrigin}/event/${encodeURIComponent(link.id)}`
 
-export const apiUrl = (link: Link) =>
+export const apiUrl = (link: Link, origin: string = ApiOrigins[0]) =>
   link.kind === "slug"
-    ? `${ApiOrigin}/url?url=${encodeURIComponent(link.slug)}`
-    : `${ApiOrigin}/event/get?event_api_id=${encodeURIComponent(link.id)}`
+    ? `${origin}/url?url=${encodeURIComponent(link.slug)}`
+    : `${origin}/event/get?event_api_id=${encodeURIComponent(link.id)}`
 
 type Fetched =
   | {
@@ -264,9 +271,10 @@ async function fetchText(
 const isGone = (status: number | null) => status === 404 || status === 410
 
 /**
- * The page first, then Luma's endpoint, then the page's markup. A 404 from
- * either source means Luma no longer shows the event: cancelling one deletes
- * it, and private events answer the same way.
+ * The page first, then Luma's endpoint on each of its hosts, then the page's
+ * markup. A 404 from the page means Luma no longer shows the event: cancelling
+ * one deletes it, and private events answer the same way. The endpoint only
+ * gets to say so when every host agrees and no page exists to contradict it.
  */
 export async function resolve(link: Link, deps: Deps): Promise<Resolution> {
   const page = await fetchText(pageUrl(link), "text/html", deps)
@@ -285,19 +293,32 @@ export async function resolve(link: Link, deps: Deps): Promise<Resolution> {
     }
   }
 
-  const api = await fetchText(apiUrl(link), "application/json", deps)
+  let answered = false
+  let gone = 0
 
-  if (!api.ok && isGone(api.status)) {
-    return {
-      kind: "not-found",
+  for (const origin of ApiOrigins) {
+    const api = await fetchText(apiUrl(link, origin), "application/json", deps)
+
+    if (api.ok) {
+      answered = true
+
+      const read = readApi(api.text, link)
+
+      if (read) {
+        return read
+      }
+
+      break
+    }
+
+    if (isGone(api.status)) {
+      gone += 1
     }
   }
 
-  if (api.ok) {
-    const answered = readApi(api.text, link)
-
-    if (answered) {
-      return answered
+  if (!page.ok && gone === ApiOrigins.length) {
+    return {
+      kind: "not-found",
     }
   }
 
@@ -311,7 +332,7 @@ export async function resolve(link: Link, deps: Deps): Promise<Resolution> {
 
   return {
     kind: "unavailable",
-    message: page.ok || api.ok
+    message: page.ok || answered
       ? "Luma's event page changed shape and couldn't be read. Try again later."
       : "Luma didn't answer. Try again in a minute.",
   }

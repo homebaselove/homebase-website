@@ -140,8 +140,10 @@ export function EventDetails(props: Props) {
           </a>
 
           {hasPin(event) && event.placement === "venue" && (
+            // Google's Maps URLs need no key and no billing, unlike the API
+            // behind the old map, and open the phone's maps app.
             <a
-              href={`https://www.openstreetmap.org/?mlat=${event.lat}&mlon=${event.lng}#map=16/${event.lat}/${event.lng}`}
+              href={`https://www.google.com/maps/dir/?api=1&destination=${event.lat},${event.lng}`}
               target="_blank"
               rel="noopener noreferrer"
               class="rounded-full border-[1px] border-gray-200 px-4 py-2 text-sm hover:bg-gray-50"

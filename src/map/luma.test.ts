@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import {
+  ApiOrigins,
   apiUrl,
   excerpt,
   fromPayload,
@@ -593,6 +594,77 @@ test("an id is read from the event endpoint's bare answer", async () => {
       event: Lisbon,
       source: "api",
     })
+})
+
+test("a host that has retired the endpoint does not make the event gone", async () => {
+  const luma = stubLuma({
+    [page]: () =>
+      new Response("busy", {
+        status: 503,
+      }),
+    [api]: () =>
+      Response.json(
+        {
+          message: "Not found.",
+        },
+        {
+          status: 404,
+        },
+      ),
+    [apiUrl(link, ApiOrigins[1])]: () =>
+      Response.json(answer("event", payload())),
+  })
+
+  expect(
+    await resolve(link, luma),
+  )
+    .toEqual({
+      kind: "event",
+      event: Lisbon,
+      source: "api",
+    })
+})
+
+test("every host saying gone is gone, unless the page says otherwise", async () => {
+  const gone = () =>
+    new Response("gone", {
+      status: 404,
+    })
+  const busy = () =>
+    new Response("busy", {
+      status: 503,
+    })
+
+  expect(
+    [
+      await resolve(
+        link,
+        stubLuma({
+          [page]: busy,
+          [api]: gone,
+          [apiUrl(link, ApiOrigins[1])]: gone,
+        }),
+      ),
+      await resolve(
+        link,
+        stubLuma({
+          [page]: () => html("<html>app shell</html>"),
+          [api]: gone,
+          [apiUrl(link, ApiOrigins[1])]: gone,
+        }),
+      ),
+    ],
+  )
+    .toEqual([
+      {
+        kind: "not-found",
+      },
+      {
+        kind: "unavailable",
+        message:
+          "Luma's event page changed shape and couldn't be read. Try again later.",
+      },
+    ])
 })
 
 test("a calendar link is named as one", async () => {

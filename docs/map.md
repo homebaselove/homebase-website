@@ -28,33 +28,67 @@ the research behind each decision, and what is left to do.
 
 ### Reading Luma
 
-Luma's public API needs a paid Luma Plus key and only describes events the
-key's own calendar manages. Its slug lookup resolves any public link but
-returns no location. So an arbitrary pasted link can only be read the way a
-browser reads it: from the public event page.
+Every way of getting an event out of Luma was weighed. The sandbox this was
+built in could not reach any Luma host, so each row rests on Luma's published
+API schema, its help pages as search engines index them, and the source of
+open-source clients read directly from GitHub and npm, dated where it matters.
 
-The resolver tries, in order:
+| Channel                                                                                                                                                                               | Needs                                                           | Any public link?                                                      | Coordinates, timezone, address visibility                                             | Standing                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The event page's embedded JSON (`__NEXT_DATA__`, `props.pageProps.initialData`)                                                                                                       | nothing                                                         | yes                                                                   | yes, yes, yes                                                                         | the public page, read as a browser reads it; a Next.js router change on Luma's side would drop it                                                                              |
+| Luma's own endpoint behind the page: `api.lu.ma/url?url=<slug>`, `api.lu.ma/event/get?event_api_id=<id>`, also served on `api.luma.com`; `api2.luma.com` appears in October 2026 code | nothing                                                         | yes                                                                   | yes, yes, yes                                                                         | undocumented, unchanged in client code from 2024 to October 2026; Luma's terms say "you must not access the Service by any means other than our publicly supported interfaces" |
+| The page's schema.org `Event` markup                                                                                                                                                  | nothing                                                         | yes                                                                   | sometimes, no, no                                                                     | the markup Luma publishes for search engines: the most defensible read and the thinnest                                                                                        |
+| A calendar's iCal feed, `api.lu.ma/ics/get?entity=calendar&id=cal-…`                                                                                                                  | nothing                                                         | only events on that calendar                                          | `GEO` yes; no timezone (UTC times), no visibility; the link sits inside `DESCRIPTION` | official: every public calendar offers "Add iCal Subscription"                                                                                                                 |
+| The discover feed, `api.luma.com/discover/get-paginated-events?discover_place_api_id=…`                                                                                               | nothing                                                         | no, by city or category                                               | yes                                                                                   | undocumented; sends no CORS headers, so servers only                                                                                                                           |
+| The sitemap, `sitemap.luma.com/sitemap.xml`                                                                                                                                           | nothing                                                         | lists every public event and calendar, about 60k URLs, no details     | no                                                                                    | a public artifact; answers "does this slug exist"                                                                                                                              |
+| Official API, `public-api.luma.com/v1/entity/lookup?slug=`                                                                                                                            | Luma Plus key, $59 a month billed yearly, 200 requests a minute | yes                                                                   | no location at all                                                                    | official                                                                                                                                                                       |
+| Official API, `/v1/event/get`, `/v1/calendar/list-events`, webhooks                                                                                                                   | Luma Plus                                                       | only the key's own calendar                                           | yes: `geo_address_json`, `coordinate`, `timezone`, `location_visibility`              | official                                                                                                                                                                       |
+| Official API, `/v1/calendar/add-event` and `/v1/calendar/lookup-event?url=`                                                                                                           | Luma Plus                                                       | adds any Luma event to your calendar; lookup says whether it is there | n/a                                                                                   | official                                                                                                                                                                       |
+| Official MCP server, `mcp.luma.com`                                                                                                                                                   | OAuth with any Luma account, no Plus                            | "look up event and calendar links"                                    | not yet verified                                                                      | official, built for assistants; OAuth through Client ID Metadata Documents, no dynamic registration                                                                            |
+| Third-party scrapers (Apify actors, parse.bot)                                                                                                                                        | their fees                                                      | yes                                                                   | yes                                                                                   | someone else's scraping, with the same terms question                                                                                                                          |
+| Fetching from the admin's browser                                                                                                                                                     |                                                                 |                                                                       |                                                                                       | not possible: Luma sends no CORS headers for other origins                                                                                                                     |
 
-1. the event page's embedded JSON (the `__NEXT_DATA__` payload the Luma app
-   renders from), which carries coordinates, timezone, address visibility,
-   cover and hosts;
-2. the same JSON from the endpoint behind the page (`api.lu.ma/url?url=<slug>`
-   and `api.lu.ma/event/get?event_api_id=<id>`), for when the page cannot be
-   read;
-3. the page's schema.org `Event` markup, which carries no Luma id, no
-   timezone and only sometimes coordinates.
+Evidence, by row: the page JSON and the endpoint are read by knod-events,
+luma-event-scanner, omarchyevents (`geo_address_visibility`, `coordinate`,
+`description_mirror`), luma-cal-mcp (`/url`, `/calendar/get-items`, the
+`/discover` page's embedded JSON) and Luma-Discover (committed 2026-10-01,
+whose worker forwards to `api2.luma.com`); the iCal feed by london-hackathons
+(`GEO`, `ORGANIZER;CN`, the link in `DESCRIPTION`) and musenmingle, which
+cites it as the "publicly supported interface" Luma's terms allow; the discover
+feed and the sitemap by luma-monitor (committed 2026-10-05); the official API
+by Luma's own OpenAPI document (61 paths) and the recorded response schema in
+n8n-nodes-luma; the MCP server and the plan requirement by Luma's help pages;
+CORS by Luma-Discover's README.
+
+So an arbitrary pasted link can only be read the way a browser reads it. The
+resolver tries, in order:
+
+1. the event page's embedded JSON;
+2. the same JSON from Luma's endpoint, on each host it answers on;
+3. the page's schema.org markup.
 
 Every field is checked with Effect Schema before it is trusted, since none of
-these is a documented interface. A 404 from the page or the endpoint means
-Luma no longer shows the event: cancelling deletes it, and private events
-answer the same way.
+these is a documented interface. A 404 from the page means Luma no longer
+shows the event: cancelling deletes it, and private events answer the same
+way. The endpoint only gets to say so when every host agrees and no page
+exists to contradict it, so a host Luma retires cannot retire the pins.
+
+Two officially supported paths are worth keeping in view:
+
+- **A Homebase calendar on Luma.** Adding each pinned event to the community's
+  own calendar (free, from Luma's UI) puts it on that calendar's official iCal
+  feed, which the site can poll the way it already polls the workshop feed:
+  times, `GEO`, the organizer and the link, with cancellations simply
+  disappearing. The page read would still supply the cover, the timezone and
+  the address visibility.
+- **The MCP server.** If its link lookup returns coordinates for third-party
+  events, it is the one officially supported way to resolve an arbitrary link
+  without Luma Plus, at the cost of an OAuth session the server must keep.
 
 Rejected: the official API as the primary source (paid, and blind to
-third-party venues); a Luma calendar's iCal feed as the primary source (it
-only covers events added to one calendar, though it is the one officially
-supported feed and remains a good future sync path); geocoding addresses
-ourselves (Luma already provides coordinates, and a geocoder adds a key and a
-terms-of-use question).
+third-party venues); geocoding addresses ourselves (Luma already provides
+coordinates, and a geocoder adds a key and a terms-of-use question); scrapers
+for hire (the same read, bought); fetching from the browser (no CORS).
 
 ### The map
 
@@ -79,6 +113,27 @@ worker next to its own module. `src/map/vendor.ts` names the version, the
 build copies the files into `dist/vendor/`, and the Bun server serves them
 from the package. The tile style is one constant in `src/ui/map/MapView.tsx`,
 so a move to Protomaps or self-hosted tiles is a one-line change.
+
+### Google Maps
+
+Nothing to set up. The new map does not use Google Maps, and a search of the
+new code finds no reference to it. The old map's watermark had a cause that
+can be read in its source: it rendered `<APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_API_KEY || ""}>`
+with a hard-coded `mapId="8c78d816c97d148e"`, and its `.env.example` names no
+Google key, so the deploy ran with an empty key. Google's error documentation
+lists a missing or invalid key and billing not being enabled as the conditions
+that produce "This page can't load Google Maps correctly" and the "for
+development purposes only" watermark. Since 1 March 2025 Google's Dynamic Maps
+SKU gives 10,000 free map loads a month and bills $7 per 1,000 beyond, and a
+Cloud billing account with a payment method is required even to use the free
+allowance. MapLibre with OpenFreeMap has no key, no quota and no bill.
+
+The one Google thing kept is free by design: the Directions button opens
+Google's Maps URLs (`google.com/maps/dir/?api=1&destination=lat,lng`), which
+Google documents as needing no API key at any volume, and which hand off to
+the phone's maps app. Luma's page JSON also carries the venue's
+`geo_address_info.place_id`, which those URLs accept as `destination_place_id`
+for door-exact directions; storing it is a one-column follow-up.
 
 ### Storage
 
@@ -212,6 +267,9 @@ schema, open-source clients, and stub servers rather than live services:
 3. **Tiles** in Safari, Chrome and the Base app's web view.
 4. **Turso** on the Vercel deploy: install it from the Marketplace, set the
    admin key, pin an event.
+5. **The MCP server.** From Claude Code: `claude mcp add --transport http luma https://mcp.luma.com`,
+   sign in, then ask it to look up a third-party event link and see whether
+   the answer carries coordinates and a timezone.
 
 ## Later
 
