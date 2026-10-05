@@ -247,12 +247,7 @@ const dialog = (page: Page) => page.getByRole("dialog")
 async function connectAndSignIn(page: Page) {
   await page
     .getByRole("button", {
-      name: "Add an event",
-    })
-    .click()
-  await dialog(page)
-    .getByRole("button", {
-      name: "Connect wallet",
+      name: "Sign in",
     })
     .click()
   await dialog(page)
@@ -309,6 +304,20 @@ try {
     "the map starts empty",
     (await page.getByText("No upcoming events pinned yet").count()) === 1,
   )
+  check(
+    "a visitor sees no way to add events, only the way in",
+    (await page
+          .getByRole("button", {
+            name: "Add an event",
+          })
+          .count()) === 0
+      && (await page
+          .getByRole("button", {
+            name: "Sign in",
+          })
+          .count()) === 1
+      && (await page.getByLabel("Luma link").count()) === 0,
+  )
 
   const offered = await connectAndSignIn(page)
 
@@ -322,7 +331,10 @@ try {
     timeout: 30_000,
   })
   await shot(page, "03-signed-in")
-  check("the admin wallet is signed in", true)
+  check(
+    "the admin wallet is signed in and gets the form",
+    (await dialog(page).getByLabel("Luma link").count()) === 1,
+  )
 
   await dialog(page).getByLabel("Luma link").fill(
     "https://lu.ma/e2e-demo-day?tk=secret",
@@ -430,12 +442,20 @@ try {
     .click()
   await dialog(again)
     .getByRole("button", {
-      name: "Connect wallet",
+      name: "Test Wallet",
     })
     .waitFor({
-      timeout: 10_000,
+      timeout: 30_000,
     })
-  check("signing out returns the dialog to its signed-out state", true)
+  check(
+    "signing out takes the form away and offers the way back in",
+    (await dialog(again).getByLabel("Luma link").count()) === 0
+      && (await again
+          .getByRole("button", {
+            name: "Sign in",
+          })
+          .count()) === 1,
+  )
   await admin.close()
 
   // A wallet that is nobody: it signs fine, and the server turns it away.
@@ -448,10 +468,16 @@ try {
   })
   await shot(outsider, "07-stranger")
   check(
-    "a wallet that is not an admin is turned away",
+    "a wallet that is not an admin is turned away, and never sees the form",
     (await outsider.getByRole("alert").innerText()).includes(
       "can't add events yet",
-    ),
+    )
+      && (await outsider.getByLabel("Luma link").count()) === 0
+      && (await outsider
+          .getByRole("button", {
+            name: "Add an event",
+          })
+          .count()) === 0,
     await outsider.getByRole("alert").innerText(),
   )
   await stranger.close()

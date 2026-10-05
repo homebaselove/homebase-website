@@ -80,6 +80,15 @@ export const isLocalHost = (host: string): boolean => LocalHost.test(host)
 const DefaultLockRead =
   "function lockedBalanceOf(address account) view returns (uint256)"
 
+/**
+ * The Homebase wallet: the admin wherever HOMEBASE_ADMIN_ADDRESSES names no
+ * one, so a deployment adds events out of the box. A list in the environment
+ * replaces it rather than adding to it.
+ */
+export const DefaultAdmins: readonly string[] = [
+  "0x3D140B892437dD7857701098415deB2daaE03A40",
+]
+
 export function configFrom(
   env: Record<string, string | undefined>,
 ): AuthConfig {
@@ -93,15 +102,17 @@ export function configFrom(
     throw new Error("HOMEBASE_LOCK_CONTRACT is not an address")
   }
 
+  const listed = (env.HOMEBASE_ADMIN_ADDRESSES ?? "")
+    .split(",")
+    .map((address) => address.trim())
+    .filter((address) =>
+      address && Address.validate(address, {
+        strict: false,
+      })
+    )
+
   return {
-    adminAddresses: (env.HOMEBASE_ADMIN_ADDRESSES ?? "")
-      .split(",")
-      .map((address) => address.trim())
-      .filter((address) =>
-        address && Address.validate(address, {
-          strict: false,
-        })
-      ),
+    adminAddresses: listed.length > 0 ? listed : DefaultAdmins,
     lock: contract
       ? {
         contract,
@@ -146,11 +157,6 @@ export function siteAllowed(config: AuthConfig, host: string): boolean {
   return config.siteHosts.size === 0
     ? LocalHost.test(name)
     : config.siteHosts.has(name)
-}
-
-/** Whether anyone can sign in at all, which the UI uses to offer the button. */
-export function walletSignInOpen(config: AuthConfig): boolean {
-  return config.adminAddresses.length > 0 || config.lock !== null
 }
 
 const sha256 = (value: string) =>

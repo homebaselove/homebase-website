@@ -6,6 +6,7 @@ import {
   events,
   loadEvents,
   loadFailed,
+  session,
   token,
 } from "../../map/client.ts"
 import { hasPin, isUpcoming } from "../../map/event.ts"
@@ -210,14 +211,17 @@ export function MapCard() {
             {chip("past", "Past", counts.value.past)}
           </div>
 
+          {/* The form is for a signed-in wallet; everyone else gets the way in. */}
           <button
             type="button"
-            class="btn-brand"
+            class={session.value
+              ? "btn-brand"
+              : "rounded-full border-[1px] border-brand/30 px-3 py-1.5 text-sm text-brand hover:bg-brand/10"}
             onClick={() => {
               adding.value = true
             }}
           >
-            Add an event
+            {session.value ? "Add an event" : "Sign in"}
           </button>
         </div>
       </div>
@@ -287,9 +291,11 @@ export function MapCard() {
             onSelect={selectFromList}
             loading={events.value === null}
             failed={loadFailed.value}
-            empty={filter.value === "upcoming"
+            empty={filter.value !== "upcoming"
+              ? "No past events here yet."
+              : session.value
               ? "No upcoming events pinned yet. Paste a Luma link to add one."
-              : "No past events here yet."}
+              : "No upcoming events pinned yet."}
           />
         </div>
       </div>

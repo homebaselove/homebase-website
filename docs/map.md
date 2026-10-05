@@ -155,7 +155,9 @@ allowance); Postgres (a second dialect to maintain next to SQLite).
 One way in today, built so that the next is a rule added rather than a
 rewrite:
 
-- **Admin wallets.** Addresses in `HOMEBASE_ADMIN_ADDRESSES` sign in with
+- **Admin wallets.** The Homebase wallet,
+  `0x3D140B892437dD7857701098415deB2daaE03A40`, or the list in
+  `HOMEBASE_ADMIN_ADDRESSES` in its place, signs in with
   Ethereum (ERC-4361): the server writes the message, binds it to one of the
   site's own hosts (`HOMEBASE_SITE_HOSTS`, with Vercel's hostnames known on
   their own; a request from any other host gets no message), a single-use
@@ -248,6 +250,8 @@ client through the route manifest. Minified sizes:
 - Scrolling the page over the map never zooms it; touch panning takes two
   fingers. Animations honour reduced-motion.
 - `?event=<slug>` on the home page opens an event, so a pin can be shared.
+- The add form is for a signed-in admin. Everyone else has a sign-in button,
+  and a wallet that is not an admin is told so without ever seeing the form.
 - Mobile gets the map above the list and the details over the map's lower
   edge; desktop gets them side by side.
 
@@ -274,7 +278,7 @@ and `AuthSession`, carry sign-ins.
 | `/map.json?slug=`    | DELETE                        | admin, or the wallet that pinned it | removes the pin                                        |
 | `/map/preview.json`  | POST `{ url }`                | admin or locker                     | reads the link without pinning                         |
 | `/map/refresh.json`  | POST or GET                   | admin, locker, or Vercel's cron     | reads Luma again for aged pins                         |
-| `/auth/nonce.json`   | POST `{ address }`            | anyone, when wallet sign-in is open | the message to sign                                    |
+| `/auth/nonce.json`   | POST `{ address }`            | anyone                              | the message to sign                                    |
 | `/auth/verify.json`  | POST `{ message, signature }` | anyone                              | a session token and role                               |
 | `/auth/session.json` | GET, DELETE                   | bearer                              | who the token is; sign out                             |
 
@@ -288,15 +292,16 @@ address.
 | Variable                                                                                                                     | Where                                                      | Meaning                                                                                                                                                                                    |
 | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`                                                                                     | Vercel (required), Fly (optional)                          | the hosted database; `https://<db>-<org>.turso.io`. Install Turso from the Vercel Marketplace or create one at turso.tech. The Bun server uses it too when set, otherwise its SQLite file. |
-| `HOMEBASE_ADMIN_ADDRESSES`                                                                                                   | both                                                       | comma-separated wallets that may sign in as admins                                                                                                                                         |
+| `HOMEBASE_ADMIN_ADDRESSES`                                                                                                   | both                                                       | comma-separated wallets that may sign in as admins; unset, the Homebase wallet alone                                                                                                       |
 | `HOMEBASE_SITE_HOSTS`                                                                                                        | Fly (required for wallet sign-in), Vercel (custom domains) | comma-separated hostnames the site is served on, which sign-in messages are bound to; Vercel's own hostnames are known without it. Unset, only `localhost` may sign in with a wallet.      |
 | `HOMEBASE_LOCK_CONTRACT`, `HOMEBASE_LOCK_READ`, `HOMEBASE_LOCK_MIN`, `HOMEBASE_LOCK_AMOUNT_INDEX`, `HOMEBASE_LOCK_END_INDEX` | both                                                       | the $home lock gate; unset until the contract is known                                                                                                                                     |
 | `HOMEBASE_BASE_RPC`                                                                                                          | both                                                       | already used by the funding card; also checks smart-wallet signatures and locks                                                                                                            |
 | `CRON_SECRET`                                                                                                                | Vercel                                                     | lets the daily cron call `/api/map-refresh`                                                                                                                                                |
 | `DATA_PATH`                                                                                                                  | Fly                                                        | where the SQLite file lives                                                                                                                                                                |
 
-Without `HOMEBASE_ADMIN_ADDRESSES` or the lock gate the map is read-only and
-the dialog says so.
+There is always an admin, so a deployment is never without a way to add
+events. The form itself is shown to a signed-in wallet alone; everyone else
+sees a sign-in button, and a wallet that is not an admin is told so.
 
 ## Validation
 
@@ -350,11 +355,12 @@ chain, and the refresh job, under `bun test`.
 
 **Driven end to end.** `bun run e2e` starts the Bun server with Luma answered
 from fixtures, opens the site in Chromium, announces a wallet whose key the
-run holds (EIP-6963, the way extensions do), and walks through connecting
-it, signing in, looking up a link, pinning, keeping the session across a
-reload, removing, signing out, a wallet that is not an admin being turned
-away, and a deep link on a phone-sized screen: ten checks, a screenshot of
-each step. The reader, the API, sign-in and the store under it are the ones
+run holds (EIP-6963, the way extensions do), and walks through a visitor
+seeing only the way in, connecting, signing in and getting the form, looking
+up a link, pinning, keeping the session across a reload, removing, signing
+out and losing the form, a wallet that is not an admin being turned away
+without it, and a deep link on a phone-sized screen: eleven checks, a
+screenshot of each step. The reader, the API, sign-in and the store under it are the ones
 the site runs on; only Luma and the tiles are stubbed. A failed run leaves a
 screenshot, the page's text and the server's log.
 

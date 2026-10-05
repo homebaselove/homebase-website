@@ -60,9 +60,6 @@ export const token = signal<string | null>(storedToken())
 
 export const session = signal<Session | null>(null)
 
-/** Whether the server has any wallet to let in at all. */
-export const walletSignIn = signal(false)
-
 async function call<A>(
   path: string,
   init: RequestInit = {},
@@ -121,18 +118,16 @@ export async function loadEvents(): Promise<void> {
   }
 }
 
-/** Learns who the stored token is, and whether wallets may sign in at all. */
+/** Learns who the stored token is. */
 export async function checkSession(): Promise<Failure | null> {
   const answer = await call<{
     actor: Session | null
-    walletSignIn: boolean
   }>("/auth/session.json")
 
   if (isFailure(answer)) {
     return answer
   }
 
-  walletSignIn.value = answer.walletSignIn
   session.value = answer.actor
 
   if (!answer.actor && token.value) {

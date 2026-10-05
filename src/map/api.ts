@@ -475,11 +475,6 @@ const NonceBody = S.Struct({
 
 async function nonce(request: Request, ctx: Context): Promise<Response> {
   const config = Auth.configFrom(ctx.env)
-
-  if (!Auth.walletSignInOpen(config)) {
-    return error(404, "Wallet sign-in isn't open yet.")
-  }
-
   const now = ctx.now()
 
   if (!signIns(clientOf(request), now.getTime())) {
@@ -555,12 +550,10 @@ async function verify(request: Request, ctx: Context): Promise<Response> {
 }
 
 async function session(request: Request, ctx: Context): Promise<Response> {
-  const config = Auth.configFrom(ctx.env)
   const actor = await Auth.authenticate(request, ctx.store, ctx.now())
 
   return json({
     actor,
-    walletSignIn: Auth.walletSignInOpen(config),
   })
 }
 

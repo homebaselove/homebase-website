@@ -14,6 +14,7 @@ import {
   ListCacheControl,
   RefreshAfterMs,
 } from "./api.ts"
+import { configFrom, DefaultAdmins } from "./auth.ts"
 import { sqlClientStore } from "./bun.ts"
 import { apiUrl, pageUrl } from "./luma.ts"
 import * as Repo from "./store.ts"
@@ -885,35 +886,52 @@ async function signIn(
   }
 }
 
-test("wallet sign-in is closed until a wallet is allowed in", async () => {
+test("with no admin list configured the Homebase wallet is the admin, and a list replaces it", async () => {
+  expect(
+    configFrom({}).adminAddresses,
+  )
+    .toEqual([
+      "0x3D140B892437dD7857701098415deB2daaE03A40",
+    ])
+  expect(
+    configFrom({
+      HOMEBASE_ADMIN_ADDRESSES: " ",
+    })
+      .adminAddresses,
+  )
+    .toEqual(DefaultAdmins)
+  expect(
+    configFrom({
+      HOMEBASE_ADMIN_ADDRESSES: `${wallet}, not-an-address`,
+    })
+      .adminAddresses,
+  )
+    .toEqual([
+      wallet,
+    ])
+
   const { ctx } = await site({
     env: {
       HOMEBASE_ADMIN_ADDRESSES: undefined,
     },
   })
+  const stranger = await signIn(ctx)
 
   expect(
-    await answer(
-      await handle(
-        request({
-          method: "POST",
-          path: "/auth/nonce.json",
-          body: {
-            address: wallet,
-          },
-        }),
-        "nonce",
-        ctx,
-      ),
-    ),
+    [
+      stranger.issued.status,
+      stranger.verified?.status,
+      stranger.verified?.body,
+    ],
   )
-    .toEqual({
-      status: 404,
-      body: {
-        error: "Wallet sign-in isn't open yet.",
+    .toEqual([
+      200,
+      403,
+      {
+        error:
+          "This wallet can't add events yet. Homebase admins can now, and $home lockers will be able to soon.",
       },
-      cacheControl: null,
-    })
+    ])
 })
 
 test("an admin wallet signs a message the server wrote and gets a session", async () => {
@@ -999,7 +1017,6 @@ test("an admin wallet signs a message the server wrote and gets a session", asyn
           address: wallet,
           expiresAt: "2026-10-06T12:00:00.000Z",
         },
-        walletSignIn: true,
       },
     ])
 

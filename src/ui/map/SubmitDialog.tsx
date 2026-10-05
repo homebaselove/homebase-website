@@ -12,7 +12,6 @@ import {
   signOut,
   type Wallet,
   walletChoices,
-  walletSignIn,
 } from "../../map/client.ts"
 import type { MapEvent } from "../../map/MapEvent.ts"
 import { describeWhen } from "../../map/time.ts"
@@ -32,7 +31,10 @@ type Busy =
 const shortAddress = (address: string) =>
   `${address.slice(0, 6)}…${address.slice(-4)}`
 
-/** Paste a link, see what Luma says about it, pin it. */
+/**
+ * Sign in with a wallet, then paste a link, see what Luma says about it and
+ * pin it. The form is only there once the server has said who the wallet is.
+ */
 export function SubmitDialog(props: Props) {
   // String() is an empty string without an empty literal, which the class
   // scanner misreads, dropping classes from this file.
@@ -41,11 +43,31 @@ export function SubmitDialog(props: Props) {
   const busy = useSignal<Busy>("idle")
   const problem = useSignal<string | null>(null)
   const wallets = useSignal<Wallet[] | null>(null)
+  const chosen = useSignal<string | null>(null)
   const input = useRef<HTMLInputElement>(null)
 
+  const offerWallets = async () => {
+    busy.value = "signing"
+    problem.value = null
+
+    const answer = await walletChoices()
+
+    busy.value = "idle"
+
+    if (isFailure(answer)) {
+      problem.value = answer.error
+    } else {
+      wallets.value = answer
+    }
+  }
+
   useEffect(() => {
-    input.current?.focus()
     checkSession()
+
+    // Signed out, the dialog is the way in, so the wallets come up at once.
+    if (!session.peek()) {
+      offerWallets()
+    }
 
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -59,6 +81,12 @@ export function SubmitDialog(props: Props) {
   }, [])
 
   const actor = session.value
+
+  useEffect(() => {
+    if (actor) {
+      input.current?.focus()
+    }
+  }, [actor !== null])
 
   const lookUp = async () => {
     busy.value = "looking"
@@ -91,34 +119,29 @@ export function SubmitDialog(props: Props) {
     }
   }
 
-  const offerWallets = async () => {
-    busy.value = "signing"
-    problem.value = null
-
-    const answer = await walletChoices()
-
-    busy.value = "idle"
-
-    if (isFailure(answer)) {
-      problem.value = answer.error
-    } else {
-      wallets.value = answer
-    }
-  }
-
   const withWallet = async (id: string) => {
     busy.value = "signing"
+    chosen.value = id
     problem.value = null
 
     const failure = await signInWith(id)
 
     busy.value = "idle"
+    chosen.value = null
 
     if (failure) {
       problem.value = failure.error
     } else {
       wallets.value = null
     }
+  }
+
+  const leave = async () => {
+    url.value = String()
+    found.value = null
+    problem.value = null
+    await signOut()
+    offerWallets()
   }
 
   return (
@@ -142,11 +165,12 @@ export function SubmitDialog(props: Props) {
               id="submit-heading"
               class="text-2xl font-bold leading-tight"
             >
-              Add a Luma event
+              {actor ? "Add a Luma event" : "Sign in"}
             </h2>
             <p class="text-sm text-gray-500 mt-1">
-              Paste the event’s Luma link. Its time, place and cover come from
-              Luma, and stay in step with it.
+              {actor
+                ? "Paste the event’s Luma link. Its time, place and cover come from Luma, and stay in step with it."
+                : "Homebase admins sign in with their wallet to add events. Once $home locking is wired in, anyone who has locked $home will be able to as well."}
             </p>
           </div>
 
@@ -160,10 +184,10 @@ export function SubmitDialog(props: Props) {
           </button>
         </div>
 
-        <div class="rounded-lg border-[1px] border-gray-200 bg-gray-50 p-3 text-sm flex flex-col gap-2">
-          {actor
-            ? (
-              <div class="flex flex-wrap items-center justify-between gap-2">
+        {actor
+          ? (
+            <>
+              <div class="rounded-lg border-[1px] border-gray-200 bg-gray-50 p-3 text-sm flex flex-wrap items-center justify-between gap-2">
                 <span>
                   Adding as{" "}
                   <strong title={actor.address}>
@@ -175,125 +199,113 @@ export function SubmitDialog(props: Props) {
                 <button
                   type="button"
                   class="text-brand hover:underline"
-                  onClick={() => signOut()}
+                  onClick={leave}
                 >
                   Sign out
                 </button>
               </div>
-            )
-            : (
-              <>
-                <p class="text-gray-600">
-                  {walletSignIn.value
-                    ? "Homebase admins sign in with their wallet to add events. Once $home locking is wired in, anyone who has locked $home will be able to as well."
-                    : "No admin wallet is set up on this deployment yet, so nobody can add events here."}
-                </p>
 
-                {walletSignIn.value && !wallets.value && (
+              <form
+                class="flex flex-col gap-2"
+                onSubmit={(submit) => {
+                  submit.preventDefault()
+
+                  if (url.value.trim()) {
+                    lookUp()
+                  }
+                }}
+              >
+                <label
+                  for="luma-link"
+                  class="text-sm font-semibold"
+                >
+                  Luma link
+                </label>
+
+                <div class="flex gap-2">
+                  <input
+                    id="luma-link"
+                    ref={input}
+                    type="text"
+                    inputMode="url"
+                    placeholder="https://luma.com/your-event"
+                    value={url.value}
+                    class="flex-1 min-w-0 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 focus:outline-none focus:border-brand/40 focus:bg-white"
+                    onInput={(event) => {
+                      url.value = (event.target as HTMLInputElement).value
+                      found.value = null
+                    }}
+                  />
+
+                  <button
+                    type="submit"
+                    class="btn-brand"
+                    disabled={!url.value.trim() || busy.value !== "idle"}
+                  >
+                    {busy.value === "looking"
+                      ? (
+                        <SpinnerIcon
+                          size={18}
+                          class="animate-spin"
+                        />
+                      )
+                      : "Look up"}
+                  </button>
+                </div>
+              </form>
+            </>
+          )
+          : wallets.value
+          ? (
+            <ul
+              class="flex flex-col gap-2"
+              aria-label="Wallets"
+            >
+              {wallets.value.map((wallet) => (
+                <li key={wallet.id}>
                   <button
                     type="button"
-                    class="btn-brand self-start"
+                    class="flex w-full items-center gap-3 rounded-lg border-[1px] border-gray-200 bg-white px-3 py-2 text-left hover:bg-gray-100 disabled:opacity-50"
                     disabled={busy.value === "signing"}
-                    onClick={offerWallets}
+                    onClick={() => withWallet(wallet.id)}
                   >
-                    {busy.value === "signing"
-                      ? "One moment…"
-                      : "Connect wallet"}
+                    {wallet.icon
+                      ? (
+                        <img
+                          src={wallet.icon}
+                          alt={String()}
+                          class="h-6 w-6 rounded"
+                        />
+                      )
+                      : (
+                        <span
+                          class="h-6 w-6 rounded bg-brand/10"
+                          aria-hidden="true"
+                        />
+                      )}
+                    <span class="font-semibold">
+                      {wallet.name}
+                    </span>
+                    {chosen.value === wallet.id && (
+                      <span class="ml-auto text-gray-500">
+                        Check your wallet…
+                      </span>
+                    )}
                   </button>
-                )}
-
-                {walletSignIn.value && wallets.value && (
-                  <ul
-                    class="flex flex-col gap-2"
-                    aria-label="Wallets"
-                  >
-                    {wallets.value.map((wallet) => (
-                      <li key={wallet.id}>
-                        <button
-                          type="button"
-                          class="flex w-full items-center gap-3 rounded-lg border-[1px] border-gray-200 bg-white px-3 py-2 text-left hover:bg-gray-100 disabled:opacity-50"
-                          disabled={busy.value === "signing"}
-                          onClick={() => withWallet(wallet.id)}
-                        >
-                          {wallet.icon
-                            ? (
-                              <img
-                                src={wallet.icon}
-                                alt={String()}
-                                class="h-6 w-6 rounded"
-                              />
-                            )
-                            : (
-                              <span
-                                class="h-6 w-6 rounded bg-brand/10"
-                                aria-hidden="true"
-                              />
-                            )}
-                          <span class="font-semibold">
-                            {wallet.name}
-                          </span>
-                          {busy.value === "signing" && (
-                            <span class="ml-auto text-gray-500">
-                              Check your wallet…
-                            </span>
-                          )}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </>
-            )}
-        </div>
-
-        <form
-          class="flex flex-col gap-2"
-          onSubmit={(submit) => {
-            submit.preventDefault()
-
-            if (actor && url.value.trim()) {
-              lookUp()
-            }
-          }}
-        >
-          <label
-            for="luma-link"
-            class="text-sm font-semibold"
-          >
-            Luma link
-          </label>
-
-          <div class="flex gap-2">
-            <input
-              id="luma-link"
-              ref={input}
-              type="text"
-              inputMode="url"
-              placeholder="https://luma.com/your-event"
-              value={url.value}
-              class="flex-1 min-w-0 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 focus:outline-none focus:border-brand/40 focus:bg-white"
-              onInput={(event) => {
-                url.value = (event.target as HTMLInputElement).value
-                found.value = null
-              }}
-            />
-
+                </li>
+              ))}
+            </ul>
+          )
+          : (
             <button
-              type="submit"
-              class="btn-brand"
-              disabled={!actor || !url.value.trim() || busy.value !== "idle"}
+              type="button"
+              class="btn-brand self-start"
+              disabled={busy.value === "signing"}
+              onClick={offerWallets}
             >
-              {busy.value === "looking"
-                ? (
-                  <SpinnerIcon
-                    size={18}
-                    class="animate-spin"
-                  />
-                )
-                : "Look up"}
+              {busy.value === "signing" ? "One moment…" : "Connect wallet"}
             </button>
-          </div>
-        </form>
+          )}
 
         {problem.value && (
           <p
@@ -304,7 +316,7 @@ export function SubmitDialog(props: Props) {
           </p>
         )}
 
-        {found.value && (
+        {actor && found.value && (
           <PreviewCard
             found={found.value}
             busy={busy.value === "pinning"}
