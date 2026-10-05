@@ -1,0 +1,404 @@
+/** @jsxImportSource preact */
+import { useEffect, useRef } from "preact"
+import { effect, type Signal, useSignal } from "preact/signals"
+import Supercluster from "supercluster"
+import { hasPin } from "../../map/event.ts"
+import type { MapEvent } from "../../map/MapEvent.ts"
+import { vendorPath } from "../../map/vendor.ts"
+import { clusterElement, markerElement } from "./markers.ts"
+
+type MapLibre = typeof import("maplibre-gl")
+
+/** OpenFreeMap's light style: no key, no quotas, attribution added by MapLibre. */
+export const StyleUrl = "https://tiles.openfreemap.org/styles/positron"
+
+let loading: Promise<MapLibre> | null = null
+
+/** MapLibre comes from the vendored files, with its stylesheet, once. */
+export function loadMapLibre(): Promise<MapLibre> {
+  loading ??= (async () => {
+    const stylesheet = document.createElement("link")
+    const styled = new Promise<void>((resolve) => {
+      stylesheet.onload = () => resolve()
+      stylesheet.onerror = () => resolve()
+    })
+
+    stylesheet.rel = "stylesheet"
+    stylesheet.href = vendorPath("maplibre-gl.css")
+    document.head.append(stylesheet)
+
+    const module = (await import(vendorPath("maplibre-gl.mjs"))) as MapLibre
+
+    await styled
+
+    return module
+  })()
+  loading.catch(() => {
+    loading = null
+  })
+
+  return loading
+}
+
+/** Past this zoom a cluster is the same place, so it opens instead of splitting. */
+const SamePlaceZoom = 15
+
+interface Props {
+  readonly events: Signal<MapEvent[]>
+  readonly selected: Signal<string | null>
+  readonly hovered: Signal<string | null>
+  readonly onSelect: (slug: string) => void
+  readonly onUnavailable: () => void
+}
+
+type State =
+  | "waiting"
+  | "loading"
+  | "ready"
+  | "unavailable"
+
+export function MapView(props: Props) {
+  const container = useRef<HTMLDivElement>(null)
+  const state = useSignal<State>("waiting")
+
+  useEffect(() => {
+    const element = container.current
+
+    if (!element) {
+      return
+    }
+
+    let disposed = false
+    let map: import("maplibre-gl").Map | null = null
+    const stops: (() => void)[] = []
+
+    const start = async () => {
+      state.value = "loading"
+
+      let lib: MapLibre
+
+      try {
+        lib = await loadMapLibre()
+      } catch (error) {
+        console.error("MapLibre did not load:", error)
+        state.value = "unavailable"
+        props.onUnavailable()
+
+        return
+      }
+
+      if (disposed) {
+        return
+      }
+
+      try {
+        map = new lib.Map({
+          container: element,
+          style: StyleUrl,
+          center: [
+            10,
+            25,
+          ],
+          zoom: 1.3,
+          minZoom: 1,
+          maxZoom: 17,
+          cooperativeGestures: true,
+          attributionControl: {
+            compact: true,
+          },
+          locale: {
+            "Map.Title": "Map of Homebase events",
+          },
+        })
+      } catch (error) {
+        console.error("The map could not start:", error)
+        state.value = "unavailable"
+        props.onUnavailable()
+
+        return
+      }
+
+      const live = map
+
+      live.addControl(
+        new lib.NavigationControl({
+          showCompass: false,
+        }),
+        "top-right",
+      )
+
+      const index = new Supercluster<
+        {
+          slug: string
+        },
+        {}
+      >({
+        radius: 48,
+        maxZoom: SamePlaceZoom,
+      })
+      const markers = new Map<string, import("maplibre-gl").Marker>()
+      let known = new Map<string, MapEvent>()
+
+      const reflect = () => {
+        for (const [key, marker] of markers) {
+          const slug = key.startsWith("event:") ? key.slice(6) : null
+          const element = marker.getElement()
+
+          element.toggleAttribute(
+            "data-selected",
+            slug === props.selected.value,
+          )
+          element.toggleAttribute("data-hovered", slug === props.hovered.value)
+        }
+      }
+
+      const render = () => {
+        const bounds = live.getBounds()
+        const clusters = index.getClusters(
+          [
+            bounds.getWest(),
+            bounds.getSouth(),
+            bounds.getEast(),
+            bounds.getNorth(),
+          ],
+          Math.floor(live.getZoom()),
+        )
+        const keep = new Set<string>()
+
+        for (const feature of clusters) {
+          const [lng, lat] = feature.geometry.coordinates
+          const properties = feature.properties
+          const key = "cluster" in properties && properties.cluster
+            ? `cluster:${properties.cluster_id}`
+            : `event:${properties.slug}`
+
+          keep.add(key)
+
+          if (markers.has(key)) {
+            continue
+          }
+
+          let element: HTMLElement
+
+          if ("cluster" in properties && properties.cluster) {
+            const id = properties.cluster_id
+
+            element = clusterElement(properties.point_count, () => {
+              const zoom = index.getClusterExpansionZoom(id)
+
+              if (zoom > SamePlaceZoom) {
+                const [first] = index.getLeaves(id, 1)
+
+                if (first) {
+                  props.onSelect(first.properties.slug)
+                }
+              }
+
+              live.easeTo({
+                center: [
+                  lng,
+                  lat,
+                ],
+                zoom: Math.min(zoom, SamePlaceZoom + 1),
+              })
+            })
+          } else {
+            const event = known.get(properties.slug)
+
+            if (!event) {
+              continue
+            }
+
+            element = markerElement(event, () => props.onSelect(event.slug))
+          }
+
+          markers.set(
+            key,
+            new lib.Marker({
+              element,
+              anchor: key.startsWith("cluster:") ? "center" : "bottom",
+            })
+              .setLngLat([
+                lng,
+                lat,
+              ])
+              .addTo(live),
+          )
+        }
+
+        for (const [key, marker] of markers) {
+          if (!keep.has(key)) {
+            marker.remove()
+            markers.delete(key)
+          }
+        }
+
+        reflect()
+      }
+
+      const fit = () => {
+        const pins = [
+          ...known.values(),
+        ]
+          .filter(hasPin)
+
+        if (pins.length === 0) {
+          return
+        }
+
+        if (pins.length === 1) {
+          live.easeTo({
+            center: [
+              pins[0].lng,
+              pins[0].lat,
+            ],
+            zoom: 10,
+          })
+
+          return
+        }
+
+        const bounds = new lib.LngLatBounds(
+          [
+            pins[0].lng,
+            pins[0].lat,
+          ],
+          [
+            pins[0].lng,
+            pins[0].lat,
+          ],
+        )
+
+        for (const pin of pins) {
+          bounds.extend([
+            pin.lng,
+            pin.lat,
+          ])
+        }
+
+        live.fitBounds(bounds, {
+          padding: 56,
+          maxZoom: 12,
+          duration: 700,
+        })
+      }
+
+      live.on("load", () => {
+        state.value = "ready"
+        fit()
+        render()
+      })
+      live.on("moveend", render)
+
+      stops.push(
+        effect(() => {
+          const list = props.events.value
+
+          known = new Map(list.map((event) => [
+            event.slug,
+            event,
+          ]))
+          index.load(
+            list.filter(hasPin).map((event) => ({
+              type: "Feature" as const,
+              properties: {
+                slug: event.slug,
+              },
+              geometry: {
+                type: "Point" as const,
+                coordinates: [
+                  event.lng,
+                  event.lat,
+                ],
+              },
+            })),
+          )
+
+          if (live.loaded()) {
+            for (const marker of markers.values()) {
+              marker.remove()
+            }
+
+            markers.clear()
+            fit()
+            render()
+          }
+        }),
+      )
+      stops.push(
+        effect(() => {
+          const slug = props.selected.value
+          const event = slug ? known.get(slug) : undefined
+
+          reflect()
+
+          if (event && hasPin(event) && live.loaded()) {
+            live.easeTo({
+              center: [
+                event.lng,
+                event.lat,
+              ],
+              zoom: Math.max(live.getZoom(), 11),
+              offset: [
+                0,
+                -60,
+              ],
+            })
+          }
+        }),
+      )
+      stops.push(
+        effect(() => {
+          props.hovered.value
+          reflect()
+        }),
+      )
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          observer.disconnect()
+          start()
+        }
+      },
+      {
+        rootMargin: "200px",
+      },
+    )
+
+    observer.observe(element)
+
+    return () => {
+      disposed = true
+      observer.disconnect()
+      stops.forEach((stop) => stop())
+      map?.remove()
+    }
+  }, [])
+
+  return (
+    <div class="absolute inset-0">
+      {/* Sized in full rather than absolutely: MapLibre's stylesheet sets the container's position itself. */}
+      <div
+        ref={container}
+        class="w-full h-full bg-gray-100"
+      />
+
+      {state.value !== "ready" && state.value !== "unavailable" && (
+        <div
+          class="absolute inset-0 animate-pulse bg-gray-100"
+          aria-hidden="true"
+        />
+      )}
+
+      {state.value === "unavailable" && (
+        <div class="absolute inset-0 flex items-center justify-center p-6 text-center text-gray-600 bg-gray-50">
+          <p>
+            The map can't draw in this browser, but every event is in the list.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}

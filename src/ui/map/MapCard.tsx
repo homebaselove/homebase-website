@@ -1,0 +1,259 @@
+/** @jsxImportSource preact */
+import { useEffect } from "preact"
+import { useComputed, useSignal, useSignalEffect } from "preact/signals"
+import {
+  checkSession,
+  events,
+  loadEvents,
+  loadFailed,
+} from "../../map/client.ts"
+import { hasPin, isUpcoming } from "../../map/event.ts"
+import type { MapEvent } from "../../map/MapEvent.ts"
+import { EventDetails } from "./EventDetails.tsx"
+import { EventList } from "./EventList.tsx"
+import { MapView } from "./MapView.tsx"
+import { SubmitDialog } from "./SubmitDialog.tsx"
+
+type Filter =
+  | "upcoming"
+  | "past"
+
+/** The query parameter that opens an event, so a pin can be linked to. */
+const LinkParam = "event"
+
+function linkedSlug(): string | null {
+  try {
+    return new URL(location.href).searchParams.get(LinkParam)
+  } catch {
+    return null
+  }
+}
+
+function writeLink(slug: string | null) {
+  try {
+    const url = new URL(location.href)
+
+    if (slug) {
+      url.searchParams.set(LinkParam, slug)
+    } else {
+      url.searchParams.delete(LinkParam)
+    }
+
+    // String() is an empty string without an empty literal, which the class
+    // scanner misreads, dropping classes from this file.
+    history.replaceState(history.state, String(), url)
+  } catch {
+    // The address bar is a convenience; the page works without it.
+  }
+}
+
+const byStart = (direction: 1 | -1) => (a: MapEvent, b: MapEvent) =>
+  direction * (Date.parse(a.start) - Date.parse(b.start))
+
+export function MapCard() {
+  const filter = useSignal<Filter>("upcoming")
+  const selected = useSignal<string | null>(linkedSlug())
+  const hovered = useSignal<string | null>(null)
+  const adding = useSignal(false)
+  const mapUnavailable = useSignal(false)
+  const now = useSignal(Date.now())
+
+  useEffect(() => {
+    loadEvents()
+    checkSession()
+
+    const tick = setInterval(() => {
+      now.value = Date.now()
+    }, 60_000)
+
+    return () => clearInterval(tick)
+  }, [])
+
+  const counts = useComputed(() => {
+    const list = events.value ?? []
+    const upcoming = list.filter((event) => isUpcoming(event, now.value)).length
+
+    return {
+      upcoming,
+      past: list.length - upcoming,
+    }
+  })
+
+  const shown = useComputed(() => {
+    const upcoming = filter.value === "upcoming"
+
+    return (events.value ?? [])
+      .filter((event) => isUpcoming(event, now.value) === upcoming)
+      .sort(byStart(upcoming ? 1 : -1))
+  })
+
+  const pinned = useComputed(() => shown.value.filter(hasPin))
+
+  const selectedEvent = useComputed(() =>
+    shown.value.find((event) => event.slug === selected.value) ?? null
+  )
+
+  // A linked event may sit on the other side of the filter, or be gone.
+  useSignalEffect(() => {
+    const slug = selected.value
+    const list = events.value
+
+    if (!slug || !list) {
+      return
+    }
+
+    const event = list.find((candidate) => candidate.slug === slug)
+
+    if (!event) {
+      selected.value = null
+    } else if (!shown.value.some((candidate) => candidate.slug === slug)) {
+      filter.value = isUpcoming(event, now.value) ? "upcoming" : "past"
+    }
+  })
+
+  useSignalEffect(() => {
+    writeLink(selected.value)
+  })
+
+  const select = (slug: string | null) => {
+    selected.value = slug
+  }
+
+  const chip = (value: Filter, label: string, count: number) => (
+    <button
+      type="button"
+      aria-pressed={filter.value === value}
+      class={filter.value === value
+        ? "rounded-full border-[1px] px-3 py-1.5 text-sm transition-colors border-brand/40 bg-brand/10 text-brand"
+        : "rounded-full border-[1px] px-3 py-1.5 text-sm transition-colors border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"}
+      onClick={() => {
+        filter.value = value
+        selected.value = null
+      }}
+    >
+      {label}
+      {events.value && (
+        <span class="ml-1 text-gray-400">
+          {count}
+        </span>
+      )}
+    </button>
+  )
+
+  return (
+    <section
+      class="relative bg-white rounded-lg shadow-md border-[1px] border-gray-200 overflow-hidden"
+      aria-labelledby="map-heading"
+    >
+      <div
+        class="flex flex-wrap items-center justify-between gap-3 border-b-[1px] border-gray-200 p-4"
+        style="background: linear-gradient(to bottom, rgba(245, 245, 245, 1), rgba(255, 255, 255, 1))"
+      >
+        <div>
+          <h2
+            id="map-heading"
+            class="text-3xl max-sm:text-2xl font-bold leading-none"
+          >
+            Homebase map
+          </h2>
+          <p class="text-gray-500 mt-1.5">
+            Where the community gathers next, straight from Luma.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <div
+            role="group"
+            aria-label="Which events to show"
+            class="flex gap-2"
+          >
+            {chip("upcoming", "Upcoming", counts.value.upcoming)}
+            {chip("past", "Past", counts.value.past)}
+          </div>
+
+          <button
+            type="button"
+            class="btn-brand"
+            onClick={() => {
+              adding.value = true
+            }}
+          >
+            Add an event
+          </button>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div
+          class={mapUnavailable.value
+            ? "hidden"
+            : "relative h-[60vh] min-h-[360px] lg:h-[560px]"}
+        >
+          <MapView
+            events={pinned}
+            selected={selected}
+            hovered={hovered}
+            onSelect={select}
+            onUnavailable={() => {
+              mapUnavailable.value = true
+            }}
+          />
+
+          {selectedEvent.value && (
+            <EventDetails
+              key={selectedEvent.value.slug}
+              event={selectedEvent.value}
+              floating={true}
+              onClose={() => select(null)}
+            />
+          )}
+        </div>
+
+        <div class="lg:h-[560px] overflow-y-auto border-t-[1px] lg:border-t-0 lg:border-l-[1px] border-gray-200">
+          <p
+            class="sr-only"
+            aria-live="polite"
+          >
+            {shown.value.length} events listed
+          </p>
+
+          {mapUnavailable.value && selectedEvent.value && (
+            <div class="p-4 border-b-[1px] border-gray-200">
+              <EventDetails
+                key={selectedEvent.value.slug}
+                event={selectedEvent.value}
+                floating={false}
+                onClose={() => select(null)}
+              />
+            </div>
+          )}
+
+          <EventList
+            events={shown}
+            selected={selected}
+            hovered={hovered}
+            onSelect={select}
+            loading={events.value === null}
+            failed={loadFailed.value}
+            empty={filter.value === "upcoming"
+              ? "No upcoming events pinned yet. Paste a Luma link to add one."
+              : "No past events here yet."}
+          />
+        </div>
+      </div>
+
+      {adding.value && (
+        <SubmitDialog
+          onClose={() => {
+            adding.value = false
+          }}
+          onPinned={(event) => {
+            adding.value = false
+            filter.value = isUpcoming(event, now.value) ? "upcoming" : "past"
+            select(event.slug)
+          }}
+        />
+      )}
+    </section>
+  )
+}
