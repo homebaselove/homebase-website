@@ -365,36 +365,36 @@ function ChapterCard(props: {
 }
 
 /**
- * The photos on top of a card. One photo fills the width; two sit side by
- * side at one height on wider screens and stack on phones, each kept whole
- * so a screenshot stays readable. Each photo opens its source.
+ * The photos on top of a card. One photo fills the width. Two share the
+ * width in proportion to their aspect ratios, so they stand at one height
+ * with no margins between or beside them, and stack on phones. Each photo
+ * opens its source.
  */
 function Cover(props: { photos: CoverPhoto[] }) {
   const pair = props.photos.length > 1
 
   return (
-    <div
-      class={pair
-        ? "flex max-sm:flex-col sm:h-52 gap-1 bg-gray-100 sm:justify-center"
-        : "bg-gray-100"}
-    >
+    <div class={pair ? "story-pair bg-gray-100" : "bg-gray-100"}>
       {props.photos.map((photo) => (
         <a
           key={photo.src}
           href={photo.href}
           target="_blank"
           rel="noopener"
-          class={pair
-            ? "block min-w-0 sm:h-full transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/60"
-            : "block transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/60"}
+          style={pair
+            ? `--aspect: ${(photo.width / photo.height).toFixed(4)}`
+            : undefined}
+          class="block min-w-0 transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/60"
         >
           <img
             src={photo.src}
+            width={photo.width}
+            height={photo.height}
             alt={photo.alt}
             loading="lazy"
             draggable={false}
             class={pair
-              ? "max-sm:w-full sm:h-full sm:w-auto max-w-full object-contain"
+              ? "w-full h-auto"
               : "w-full h-52 max-sm:h-44 object-cover"}
           />
         </a>

@@ -13,9 +13,15 @@ export interface StoryLink {
   href: string
 }
 
-/** A photo on the cover of a chapter; clicking it opens href. */
+/**
+ * A photo on the cover of a chapter; clicking it opens href. The pixel size
+ * sets its share of the cover beside another photo and holds its space
+ * while it loads.
+ */
 export interface CoverPhoto {
   src: string
+  width: number
+  height: number
   alt: string
   href: string
 }
@@ -59,14 +65,18 @@ export const Chapters: Chapter[] = [
     cover: [
       {
         src: JesseHappyToFund,
+        width: 820,
+        height: 564,
         alt:
           "samuellhuber.eth asks on Farcaster whether there is a Base house at ETHDenver, and jessepollak replies: happy to fund one if you want to get a crew together",
         href: LetterToJesseV1Url,
       },
       {
         src: LetterToJesseCast,
+        width: 1094,
+        height: 1022,
         alt:
-          "rafi casts: Dear jessepollak, we want to build a Based House at ETHDenver with luciano and samuellhuber.eth. Will you help us? Below, an envelope reads Dear Jesse, we got the crew, and Jesse replies: happy to fund one",
+          "rafi casts: Dear jessepollak, we want to build a Based House at ETHDenver with luciano and samuellhuber.eth. Will you help us? Below, a letter in an envelope reads Dear Jesse, we got the crew. Based Crew",
         href: LetterToJesseV1Url,
       },
     ],
@@ -88,6 +98,8 @@ export const Chapters: Chapter[] = [
     cover: [
       {
         src: BasedHouseEthDenver,
+        width: 800,
+        height: 510,
         alt:
           "Residents gathered in the living room of Based House ETHDenver under the words Welcome to Base",
         href:

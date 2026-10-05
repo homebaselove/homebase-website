@@ -81,6 +81,24 @@
     }
   }
 
+  /* Two cover photos: each grows in proportion to its aspect ratio, which
+     lands them at the same height across the full width of the card. */
+  .story-pair {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  @media (min-width: 40rem) {
+    .story-pair {
+      flex-direction: row;
+    }
+
+    .story-pair > a {
+      flex: var(--aspect) 1 0%;
+    }
+  }
+
   .story-reel::-webkit-scrollbar {
     display: none;
   }
