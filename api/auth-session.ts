@@ -5,4 +5,6 @@ const session = handler("session")
 
 export const GET = session
 
+export const HEAD = session
+
 export const DELETE = session

@@ -14,13 +14,13 @@ import { Either, Schema as S } from "effect"
 import { eventUrl } from "./event.ts"
 import type { LumaEvent, Placement } from "./MapEvent.ts"
 
-export const LumaHosts = [
+const LumaHosts = [
   "lu.ma",
   "luma.com",
 ]
 
 /** Where event pages are read from. luma.com is Luma's current canonical host. */
-export const PageOrigin = "https://luma.com"
+const PageOrigin = "https://luma.com"
 
 /**
  * The endpoint the Luma app itself reads event pages from, on every host it
@@ -449,7 +449,7 @@ export function readEmbedded(html: string, link: Link): Resolution | null {
 }
 
 /** Luma's endpoint answers for a slug with a kind, and for an id with the data alone. */
-export function readApi(text: string, link: Link): Resolution | null {
+function readApi(text: string, link: Link): Resolution | null {
   let parsed: unknown
 
   try {

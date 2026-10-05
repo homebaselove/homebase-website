@@ -1345,6 +1345,199 @@ test("a wallet with enough $home locked gets an hour as a locker", async () => {
     ])
 })
 
+test("a locker can remove the pins they added, and no others", async () => {
+  const web = stubWeb({
+    locked: 5n * 10n ** 18n,
+    luma: {
+      [
+        pageUrl({
+          kind: "slug",
+          slug: "mine",
+        })
+      ]: () => pageFor(lumaEvent("mine")),
+      [
+        pageUrl({
+          kind: "slug",
+          slug: "theirs",
+        })
+      ]: () => pageFor(lumaEvent("theirs")),
+    },
+  })
+  const { ctx } = await site({
+    web,
+    env: {
+      HOMEBASE_LOCK_CONTRACT: LockContract,
+      HOMEBASE_LOCK_MIN: "1",
+    },
+  })
+  const locker: string = (await signIn(ctx)).verified!.body.token
+  const post = (token: string, name: string) =>
+    handle(
+      request({
+        method: "POST",
+        token,
+        body: {
+          url: `https://luma.com/${name}`,
+        },
+      }),
+      "map",
+      ctx,
+    )
+  const remove = (token: string, name: string) =>
+    handle(
+      request({
+        method: "DELETE",
+        path: `/map.json?slug=${name}`,
+        token,
+      }),
+      "map",
+      ctx,
+    )
+
+  await post(locker, "mine")
+  await post(AdminKey, "theirs")
+
+  expect(
+    [
+      await answer(await remove(locker, "theirs")),
+      (await remove(locker, "mine")).status,
+      (await remove(AdminKey, "theirs")).status,
+    ],
+  )
+    .toEqual([
+      {
+        status: 403,
+        body: {
+          error:
+            "Only the wallet that added an event, or an admin, can remove it.",
+        },
+        cacheControl: null,
+      },
+      200,
+      200,
+    ])
+})
+
+test("a refresh keeps a pin Luma is silent about, and keeps the venue of one only the markup answers for", async () => {
+  const slug = (name: string) => ({
+    kind: "slug" as const,
+    slug: name,
+  })
+  const web = stubWeb({
+    luma: {
+      [pageUrl(slug("silent"))]: () => pageFor(lumaEvent("silent")),
+      [pageUrl(slug("marked"))]: () => pageFor(lumaEvent("marked")),
+    },
+  })
+  const { ctx, store } = await site({
+    web,
+    env: {
+      CRON_SECRET: "cron-secret",
+    },
+  })
+  const add = (name: string) =>
+    handle(
+      request({
+        method: "POST",
+        token: AdminKey,
+        body: {
+          url: `https://luma.com/${name}`,
+        },
+      }),
+      "map",
+      ctx,
+    )
+
+  await add("silent")
+  await add("marked")
+
+  // The endpoint hosts answer 404 by default, which never retires a pin.
+  web.answer({
+    luma: {
+      [pageUrl(slug("silent"))]: () =>
+        new Response("busy", {
+          status: 503,
+        }),
+      [pageUrl(slug("marked"))]: () =>
+        new Response(
+          `<html><script type="application/ld+json">${
+            JSON.stringify({
+              "@type": "Event",
+              name: "Event marked, renamed",
+              startDate: "2026-11-02T18:00:00Z",
+            })
+          }</script></html>`,
+          {
+            headers: {
+              "content-type": "text/html",
+            },
+          },
+        ),
+    },
+  })
+
+  const later = new Date(Now.getTime() + RefreshAfterMs + 1)
+  const report = await answer(
+    await handle(
+      request({
+        method: "POST",
+        path: "/map/refresh.json",
+        token: "cron-secret",
+      }),
+      "refresh",
+      {
+        ...ctx,
+        now: () => later,
+      },
+    ),
+  )
+  const silent = await Repo.getEvent(store, "silent")
+  const marked = await Repo.getEvent(store, "marked")
+
+  expect(
+    [
+      report.body,
+      silent && [
+        silent.status,
+        silent.checkedAt,
+        silent.title,
+      ],
+      marked && [
+        marked.title,
+        marked.start,
+        marked.lumaId,
+        marked.timezone,
+        marked.venue,
+        marked.lat,
+        marked.placement,
+      ],
+    ],
+  )
+    .toEqual([
+      {
+        checked: 2,
+        updated: 1,
+        gone: 0,
+        failed: 1,
+        remaining: 0,
+      },
+      [
+        "live",
+        later.toISOString(),
+        "Event silent",
+      ],
+      [
+        "Event marked, renamed",
+        "2026-11-02T18:00:00.000Z",
+        "evt-marked",
+        "Europe/Lisbon",
+        "The venue",
+        38.7,
+        "venue",
+      ],
+    ])
+})
+
 test("a lock that has ended no longer counts, under a multi-value read", async () => {
   const env = {
     HOMEBASE_LOCK_CONTRACT: LockContract,

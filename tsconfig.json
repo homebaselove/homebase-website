@@ -8,7 +8,6 @@
 
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": false,
     "noEmit": true,
 

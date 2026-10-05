@@ -28,7 +28,7 @@ let remote: Promise<Store> | null = null
  * Turso when TURSO_DATABASE_URL is set, so one database serves every deploy;
  * the local file otherwise. The remote schema is made sure of once.
  */
-export const store: Effect.Effect<Store, never, SqlClient.SqlClient> = Effect
+const store: Effect.Effect<Store, never, SqlClient.SqlClient> = Effect
   .gen(function*() {
     const url = yield* Config
       .option(Config.nonEmptyString("TURSO_DATABASE_URL"))

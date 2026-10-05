@@ -5,7 +5,7 @@
 import type { LumaEvent } from "./MapEvent.ts"
 
 /** What an event without an end time is taken to last. */
-export const DefaultDurationMs = 3 * 60 * 60_000
+const DefaultDurationMs = 3 * 60 * 60_000
 
 export function endOf(event: Pick<LumaEvent, "start" | "end">): number {
   return event.end

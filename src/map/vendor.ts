@@ -15,6 +15,9 @@ export const VendorFiles = [
 
 export type VendorFile = (typeof VendorFiles)[number]
 
-export const VendorDir = `/vendor/maplibre-gl@${MapLibreVersion}`
+/** Where the files are mounted, on both deploys. */
+export const VendorMount = "/vendor"
+
+export const VendorDir = `${VendorMount}/maplibre-gl@${MapLibreVersion}`
 
 export const vendorPath = (file: VendorFile) => `${VendorDir}/${file}`

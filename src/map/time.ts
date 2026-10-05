@@ -4,7 +4,7 @@
  */
 import type { LumaEvent } from "./MapEvent.ts"
 
-export function viewerZone(): string {
+function viewerZone(): string {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
   } catch {

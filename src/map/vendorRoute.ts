@@ -7,7 +7,7 @@ import { RouteNotFound } from "@effect/platform/HttpServerError"
 import { Effect, Layer } from "effect"
 import * as NPath from "node:path"
 import * as NUrl from "node:url"
-import { MapLibreVersion, VendorDir, VendorFiles } from "./vendor.ts"
+import { MapLibreVersion, VendorFiles, VendorMount } from "./vendor.ts"
 
 const dist = NPath.dirname(
   NUrl.fileURLToPath(import.meta.resolve("maplibre-gl/dist/maplibre-gl.mjs")),
@@ -19,9 +19,10 @@ const types: Record<string, string> = {
 }
 
 /** Serves MapLibre's files from the package, as the Vercel build copies them. */
-export const app = Effect.gen(function*() {
+const app = Effect.gen(function*() {
   const request = yield* HttpServerRequest.HttpServerRequest
-  const path = request.url.split("?")[0].replace(/^\/vendor/, "")
+  // The router hands a mounted app the path after the mount.
+  const path = request.url.split("?")[0]
   const file = VendorFiles.find((name) =>
     path === `/maplibre-gl@${MapLibreVersion}/${name}`
   )
@@ -50,9 +51,6 @@ export const layer = Layer.effectDiscard(
   Effect.gen(function*() {
     const router = yield* HttpRouter.Default
 
-    yield* router.mountApp(
-      VendorDir.split("/").slice(0, 2).join("/") as `/${string}`,
-      app,
-    )
+    yield* router.mountApp(VendorMount, app)
   }),
 )

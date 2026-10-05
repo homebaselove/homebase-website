@@ -22,16 +22,16 @@ import { BaseRpcUrl } from "../../api/funding.ts"
 import * as Repo from "./store.ts"
 import type { Store } from "./store.ts"
 
-export const BaseChainId = 8453
+const BaseChainId = 8453
 
 /** What the wallet is asked to sign. */
-export const Statement = "Sign in to Homebase to add events to the map."
+const Statement = "Sign in to Homebase to add events to the map."
 
-export const NonceTtlMs = 10 * 60_000
+const NonceTtlMs = 10 * 60_000
 
-export const AdminSessionMs = 24 * 60 * 60_000
+const AdminSessionMs = 24 * 60 * 60_000
 
-export const LockerSessionMs = 60 * 60_000
+const LockerSessionMs = 60 * 60_000
 
 export type Role =
   | "admin"
@@ -77,10 +77,12 @@ const hostOf = (value: string): string | null => {
   return host && /^[a-z0-9.\-\[\]:]+$/.test(host) ? host : null
 }
 
-const LocalHost = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/
+const LocalHost = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i
+
+export const isLocalHost = (host: string): boolean => LocalHost.test(host)
 
 /** The default lock read: one balance per wallet, in the token's base units. */
-export const DefaultLockRead =
+const DefaultLockRead =
   "function lockedBalanceOf(address account) view returns (uint256)"
 
 export function configFrom(
@@ -161,7 +163,7 @@ const sha256 = (value: string) =>
   NCrypto.createHash("sha256").update(value).digest()
 
 /** Compares in constant time; hashing first keeps the lengths equal. */
-export function sameSecret(presented: string, configured: string): boolean {
+function sameSecret(presented: string, configured: string): boolean {
   return NCrypto.timingSafeEqual(sha256(presented), sha256(configured))
 }
 
@@ -476,7 +478,7 @@ export async function verifySignIn(
 }
 
 /** The admin list first, then the lock, when one is configured. */
-export async function authorizeAddress(
+async function authorizeAddress(
   address: string,
   config: AuthConfig,
   deps: Pick<VerifyDeps, "fetch" | "now">,
@@ -568,7 +570,7 @@ const Validator = AbiConstructor.fromAbi(
  * counterfactual wallet inside the call if the signature asks for it, asks a
  * deployed wallet through ERC-1271, and falls back to recovery otherwise.
  */
-export async function validSignatureOnBase(
+async function validSignatureOnBase(
   rpc: string,
   signer: string,
   payload: Hex.Hex,
@@ -599,7 +601,7 @@ export async function validSignatureOnBase(
 }
 
 /** Whether the wallet's lock reaches the configured minimum and has not ended. */
-export async function hasLock(
+async function hasLock(
   lock: LockConfig,
   rpc: string,
   address: string,

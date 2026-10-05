@@ -5,4 +5,6 @@ const refresh = handler("refresh")
 
 export const GET = refresh
 
+export const HEAD = refresh
+
 export const POST = refresh

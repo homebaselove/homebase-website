@@ -15,12 +15,12 @@ import { clusterElement, markerElement } from "./markers.ts"
 type MapLibre = typeof import("maplibre-gl")
 
 /** The OpenFreeMap light style: no key, no quotas, attribution added by MapLibre. */
-export const StyleUrl = "https://tiles.openfreemap.org/styles/positron"
+const StyleUrl = "https://tiles.openfreemap.org/styles/positron"
 
 let loading: Promise<MapLibre> | null = null
 
 /** MapLibre comes from the vendored files, with its stylesheet, once. */
-export function loadMapLibre(): Promise<MapLibre> {
+function loadMapLibre(): Promise<MapLibre> {
   loading ??= (async () => {
     const stylesheet = document.createElement("link")
     const styled = new Promise<void>((resolve) => {

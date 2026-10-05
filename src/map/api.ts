@@ -37,13 +37,13 @@ export const ListCacheControl =
 export const RefreshAfterMs = 6 * 60 * 60_000
 
 /** How long after an event ends refreshes stop caring about it. */
-export const RefreshGraceMs = 24 * 60 * 60_000
+const RefreshGraceMs = 24 * 60 * 60_000
 
 /** Pins a refresh pass may read; the time budget below usually stops it first. */
-export const RefreshBatch = 100
+const RefreshBatch = 100
 
 /** How long a refresh pass may run, inside the minute a Vercel function gets. */
-export const RefreshBudgetMs = 45_000
+const RefreshBudgetMs = 45_000
 
 /** Pins read at once during a refresh. */
 const RefreshParallel = 4
@@ -80,80 +80,49 @@ const error = (status: number, message: string) =>
     status,
   )
 
-const methodNotAllowed = (allowed: string[]) =>
-  json(
-    {
-      error: `Use ${allowed.join(" or ")} here.`,
-    },
-    405,
-    {
-      allow: allowed.join(", "),
-    },
-  )
+type Handler = (request: Request, ctx: Context) => Promise<Response>
+
+/** What each route serves, by method. Both deploys export exactly these. */
+const routes: Record<Route, Partial<Record<string, Handler>>> = {
+  map: {
+    GET: (_, ctx) => list(ctx),
+    POST: (request, ctx) => submit(request, ctx, false),
+    DELETE: remove,
+  },
+  preview: {
+    POST: (request, ctx) => submit(request, ctx, true),
+  },
+  refresh: {
+    GET: refresh,
+    POST: refresh,
+  },
+  nonce: {
+    POST: nonce,
+  },
+  verify: {
+    POST: verify,
+  },
+  session: {
+    GET: session,
+    DELETE: signOut,
+  },
+}
 
 export async function handle(
   request: Request,
   route: Route,
   ctx: Context,
 ): Promise<Response> {
-  // A HEAD is answered like the GET it stands for.
+  // A HEAD is answered like the GET it stands for; the body is dropped downstream.
   const method = request.method === "HEAD" ? "GET" : request.method
+  const serve = routes[route][method]
+
+  if (!serve) {
+    return error(405, "That method isn't served here.")
+  }
 
   try {
-    switch (route) {
-      case "map":
-        switch (method) {
-          case "GET":
-            return await list(ctx)
-          case "POST":
-            return await submit(request, ctx, false)
-          case "DELETE":
-            return await remove(request, ctx)
-          default:
-            return methodNotAllowed([
-              "GET",
-              "POST",
-              "DELETE",
-            ])
-        }
-      case "preview":
-        return method === "POST"
-          ? await submit(request, ctx, true)
-          : methodNotAllowed([
-            "POST",
-          ])
-      case "refresh":
-        return method === "POST" || method === "GET"
-          ? await refresh(request, ctx)
-          : methodNotAllowed([
-            "GET",
-            "POST",
-          ])
-      case "nonce":
-        return method === "POST"
-          ? await nonce(request, ctx)
-          : methodNotAllowed([
-            "POST",
-          ])
-      case "verify":
-        return method === "POST"
-          ? await verify(request, ctx)
-          : methodNotAllowed([
-            "POST",
-          ])
-      case "session":
-        switch (method) {
-          case "GET":
-            return await session(request, ctx)
-          case "DELETE":
-            return await signOut(request, ctx)
-          default:
-            return methodNotAllowed([
-              "GET",
-              "DELETE",
-            ])
-        }
-    }
+    return await serve(request, ctx)
   } catch (cause) {
     console.error(`The map's ${route} endpoint failed:`, cause)
 
@@ -185,9 +154,8 @@ function siteOf(request: Request, config: Auth.AuthConfig) {
     )
   }
 
-  const local = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(domain)
   const scheme = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim()
-    || (local ? "http" : "https")
+    || (Auth.isLocalHost(domain) ? "http" : "https")
 
   return {
     domain,
@@ -376,7 +344,7 @@ type Found = Extract<
  * everything, so they replace what was known; the markup carries less, so
  * what it cannot say is kept from the last full reading rather than blanked.
  */
-export function reconcile(
+function reconcile(
   existing: MapEvent | null,
   found: Found,
   stamp: {
@@ -604,8 +572,4 @@ async function signOut(request: Request, ctx: Context): Promise<Response> {
   return json({
     signedOut: true,
   })
-}
-
-export type {
-  MapEvent,
 }
