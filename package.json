@@ -9,7 +9,8 @@
   "scripts": {
     "start": "bun src/server.ts",
     "dev": "bun --watch src/server.ts",
-    "build": "bun scripts/build.ts"
+    "build": "bun scripts/build.ts",
+    "check:classes": "bun scripts/check-classes.ts"
   },
   "devDependencies": {
     "@effect/language-service": "^0.24.1",

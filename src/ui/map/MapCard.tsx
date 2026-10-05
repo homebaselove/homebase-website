@@ -1,11 +1,12 @@
 /** @jsxImportSource preact */
-import { useEffect } from "preact"
+import { useEffect, useRef } from "preact"
 import { useComputed, useSignal, useSignalEffect } from "preact/signals"
 import {
   checkSession,
   events,
   loadEvents,
   loadFailed,
+  token,
 } from "../../map/client.ts"
 import { hasPin, isUpcoming } from "../../map/event.ts"
 import type { MapEvent } from "../../map/MapEvent.ts"
@@ -60,7 +61,10 @@ export function MapCard() {
 
   useEffect(() => {
     loadEvents()
-    checkSession()
+
+    if (token.value) {
+      checkSession()
+    }
 
     const tick = setInterval(() => {
       now.value = Date.now()
@@ -93,6 +97,23 @@ export function MapCard() {
     shown.value.find((event) => event.slug === selected.value) ?? null
   )
 
+  const sharingPin = useComputed(() => {
+    const event = selectedEvent.value
+
+    if (!event || !hasPin(event)) {
+      return []
+    }
+
+    return shown.value.filter((other) =>
+      other.slug !== event.slug
+      && hasPin(other)
+      && other.lat === event.lat
+      && other.lng === event.lng
+    )
+  })
+
+  const cardBox = useRef<HTMLDivElement>(null)
+
   // A linked event may sit on the other side of the filter, or be gone.
   useSignalEffect(() => {
     const slug = selected.value
@@ -117,6 +138,24 @@ export function MapCard() {
 
   const select = (slug: string | null) => {
     selected.value = slug
+  }
+
+  const frame = useRef<HTMLDivElement>(null)
+
+  // On a phone the list sits under the map, so a chosen row brings the map back.
+  const selectFromList = (slug: string | null) => {
+    select(slug)
+
+    const box = frame.current?.getBoundingClientRect()
+
+    if (slug && box && (box.top < 0 || box.bottom > innerHeight)) {
+      frame.current?.scrollIntoView({
+        block: "nearest",
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      })
+    }
   }
 
   const chip = (value: Filter, label: string, count: number) => (
@@ -185,6 +224,7 @@ export function MapCard() {
 
       <div class="grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div
+          ref={frame}
           class={mapUnavailable.value
             ? "hidden"
             : "relative h-[60vh] min-h-[360px] lg:h-[560px]"}
@@ -197,15 +237,25 @@ export function MapCard() {
             onUnavailable={() => {
               mapUnavailable.value = true
             }}
+            covered={() =>
+              cardBox.current?.firstElementChild?.getBoundingClientRect()
+                ?? null}
           />
 
           {selectedEvent.value && (
-            <EventDetails
-              key={selectedEvent.value.slug}
-              event={selectedEvent.value}
-              floating={true}
-              onClose={() => select(null)}
-            />
+            <div
+              ref={cardBox}
+              class="contents"
+            >
+              <EventDetails
+                key={selectedEvent.value.slug}
+                event={selectedEvent.value}
+                others={sharingPin.value}
+                floating={true}
+                onSelect={select}
+                onClose={() => select(null)}
+              />
+            </div>
           )}
         </div>
 
@@ -222,7 +272,9 @@ export function MapCard() {
               <EventDetails
                 key={selectedEvent.value.slug}
                 event={selectedEvent.value}
+                others={sharingPin.value}
                 floating={false}
+                onSelect={select}
                 onClose={() => select(null)}
               />
             </div>
@@ -232,7 +284,7 @@ export function MapCard() {
             events={shown}
             selected={selected}
             hovered={hovered}
-            onSelect={select}
+            onSelect={selectFromList}
             loading={events.value === null}
             failed={loadFailed.value}
             empty={filter.value === "upcoming"

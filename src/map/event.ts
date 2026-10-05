@@ -20,9 +20,9 @@ export function isUpcoming(
   return endOf(event) >= now
 }
 
-export function hasPin(
-  event: Pick<LumaEvent, "lat" | "lng">,
-): event is typeof event & {
+export function hasPin<T extends Pick<LumaEvent, "lat" | "lng">>(
+  event: T,
+): event is T & {
   lat: number
   lng: number
 } {

@@ -23,13 +23,15 @@ export const LumaHosts = [
 export const PageOrigin = "https://luma.com"
 
 /**
- * The endpoint the Luma app itself reads event pages from, on both hosts it
- * has answered on. A host that is retired answers 404 for everything, so no
- * single host's 404 is taken as the event being gone.
+ * The endpoint the Luma app itself reads event pages from, on every host it
+ * has answered on; they are asked together and the first answer wins. A host
+ * Luma retires answers 404 for everything, so no host's 404 says anything
+ * about the event: only the page's does.
  */
 export const ApiOrigins = [
   "https://api.lu.ma",
   "https://api.luma.com",
+  "https://api2.luma.com",
 ]
 
 const SlugPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,98}$/
@@ -209,8 +211,18 @@ export type Resolution =
 
 export interface Deps {
   readonly fetch: typeof fetch
+  /** How long the page may take to answer. */
   readonly timeoutMs?: number
+  /** How long each of the endpoint's hosts may take; they are asked together. */
+  readonly apiTimeoutMs?: number
 }
+
+const PageTimeoutMs = 10_000
+
+const ApiTimeoutMs = 8_000
+
+const onLuma = (hostname: string) =>
+  LumaHosts.some((host) => hostname === host || hostname.endsWith(`.${host}`))
 
 export const pageUrl = (link: Link) =>
   link.kind === "slug"
@@ -236,6 +248,7 @@ type Fetched =
 async function fetchText(
   url: string,
   accept: string,
+  timeoutMs: number,
   deps: Deps,
 ): Promise<Fetched> {
   try {
@@ -245,8 +258,16 @@ async function fetchText(
         "user-agent": UserAgent,
       },
       redirect: "follow",
-      signal: AbortSignal.timeout(deps.timeoutMs ?? 10_000),
+      signal: AbortSignal.timeout(timeoutMs),
     })
+
+    // A redirect that leaves Luma is not Luma's answer.
+    if (response.url && !onLuma(new URL(response.url).hostname)) {
+      return {
+        ok: false,
+        status: null,
+      }
+    }
 
     if (!response.ok) {
       return {
@@ -271,13 +292,18 @@ async function fetchText(
 const isGone = (status: number | null) => status === 404 || status === 410
 
 /**
- * The page first, then Luma's endpoint on each of its hosts, then the page's
+ * The page first, then Luma's endpoint on every host at once, then the page's
  * markup. A 404 from the page means Luma no longer shows the event: cancelling
- * one deletes it, and private events answer the same way. The endpoint only
- * gets to say so when every host agrees and no page exists to contradict it.
+ * one deletes it, and private events answer the same way. Nothing else counts
+ * as gone, so a retired host or a bad hour at Luma leaves pins standing.
  */
 export async function resolve(link: Link, deps: Deps): Promise<Resolution> {
-  const page = await fetchText(pageUrl(link), "text/html", deps)
+  const page = await fetchText(
+    pageUrl(link),
+    "text/html",
+    deps.timeoutMs ?? PageTimeoutMs,
+    deps,
+  )
 
   if (!page.ok && isGone(page.status)) {
     return {
@@ -293,32 +319,29 @@ export async function resolve(link: Link, deps: Deps): Promise<Resolution> {
     }
   }
 
+  const answers = await Promise.all(
+    ApiOrigins.map((origin) =>
+      fetchText(
+        apiUrl(link, origin),
+        "application/json",
+        deps.apiTimeoutMs ?? ApiTimeoutMs,
+        deps,
+      )
+    ),
+  )
   let answered = false
-  let gone = 0
 
-  for (const origin of ApiOrigins) {
-    const api = await fetchText(apiUrl(link, origin), "application/json", deps)
-
-    if (api.ok) {
-      answered = true
-
-      const read = readApi(api.text, link)
-
-      if (read) {
-        return read
-      }
-
-      break
+  for (const api of answers) {
+    if (!api.ok) {
+      continue
     }
 
-    if (isGone(api.status)) {
-      gone += 1
-    }
-  }
+    answered = true
 
-  if (!page.ok && gone === ApiOrigins.length) {
-    return {
-      kind: "not-found",
+    const read = readApi(api.text, link)
+
+    if (read) {
+      return read
     }
   }
 

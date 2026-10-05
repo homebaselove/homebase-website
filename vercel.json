@@ -2,6 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "bun run build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/map-refresh.ts": {
+      "maxDuration": 60
+    }
+  },
   "crons": [
     {
       "path": "/api/map-refresh",

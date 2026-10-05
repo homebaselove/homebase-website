@@ -1,12 +1,17 @@
 /** @jsxImportSource preact */
-import { useEffect } from "preact"
-import type { Signal } from "preact/signals"
+import { useMemo } from "preact"
+import {
+  type ReadonlySignal,
+  type Signal,
+  useComputed,
+  useSignalEffect,
+} from "preact/signals"
 import { hasPin } from "../../map/event.ts"
 import type { MapEvent } from "../../map/MapEvent.ts"
 import { describeWhen } from "../../map/time.ts"
 
 interface Props {
-  readonly events: Signal<MapEvent[]>
+  readonly events: ReadonlySignal<MapEvent[]>
   readonly selected: Signal<string | null>
   readonly hovered: Signal<string | null>
   readonly onSelect: (slug: string) => void
@@ -19,9 +24,9 @@ const reducedMotion = () =>
   typeof matchMedia === "function"
   && matchMedia("(prefers-reduced-motion: reduce)").matches
 
-/** The list is the map's other half: the same events, readable by anyone. */
+/** The list is the other half of the map: the same events, readable by anyone. */
 export function EventList(props: Props) {
-  useEffect(() => {
+  useSignalEffect(() => {
     const slug = props.selected.value
 
     if (slug) {
@@ -32,9 +37,7 @@ export function EventList(props: Props) {
           behavior: reducedMotion() ? "auto" : "smooth",
         })
     }
-  }, [
-    props.selected.value,
-  ])
+  })
 
   if (props.loading) {
     return (
@@ -57,7 +60,7 @@ export function EventList(props: Props) {
   if (props.failed && props.events.value.length === 0) {
     return (
       <p class="p-6 text-center text-gray-600">
-        The events couldn't be loaded. Refresh to try again.
+        The events couldn’t be loaded. Refresh to try again.
       </p>
     )
   }
@@ -76,12 +79,9 @@ export function EventList(props: Props) {
         <EventRow
           key={event.slug}
           event={event}
-          selected={props.selected.value === event.slug}
-          hovered={props.hovered.value === event.slug}
+          selected={props.selected}
+          hovered={props.hovered}
           onSelect={() => props.onSelect(event.slug)}
-          onHover={(on) => {
-            props.hovered.value = on ? event.slug : null
-          }}
         />
       ))}
     </ul>
@@ -90,13 +90,19 @@ export function EventList(props: Props) {
 
 function EventRow(props: {
   event: MapEvent
-  selected: boolean
-  hovered: boolean
+  selected: Signal<string | null>
+  hovered: Signal<string | null>
   onSelect: () => void
-  onHover: (on: boolean) => void
 }) {
   const { event } = props
-  const when = describeWhen(event)
+  // Each row watches only its own answer, so a hover redraws two rows, not all.
+  const selected = useComputed(() => props.selected.value === event.slug)
+  const hovered = useComputed(() => props.hovered.value === event.slug)
+  const when = useMemo(() => describeWhen(event), [
+    event.start,
+    event.end,
+    event.timezone,
+  ])
   const where = event.placement === "online"
     ? "Online"
     : [
@@ -109,9 +115,9 @@ function EventRow(props: {
   return (
     <li
       id={`event-${event.slug}`}
-      class={props.selected
+      class={selected.value
         ? "bg-brand/5"
-        : props.hovered
+        : hovered.value
         ? "bg-gray-50"
         : "bg-white"}
     >
@@ -119,7 +125,7 @@ function EventRow(props: {
         class="flex gap-3 p-4 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         role="button"
         tabIndex={0}
-        aria-pressed={props.selected}
+        aria-pressed={selected.value}
         onClick={props.onSelect}
         onKeyDown={(key) => {
           if (key.key === "Enter" || key.key === " ") {
@@ -127,10 +133,18 @@ function EventRow(props: {
             props.onSelect()
           }
         }}
-        onMouseEnter={() => props.onHover(true)}
-        onMouseLeave={() => props.onHover(false)}
-        onFocus={() => props.onHover(true)}
-        onBlur={() => props.onHover(false)}
+        onMouseEnter={() => {
+          props.hovered.value = event.slug
+        }}
+        onMouseLeave={() => {
+          props.hovered.value = null
+        }}
+        onFocus={() => {
+          props.hovered.value = event.slug
+        }}
+        onBlur={() => {
+          props.hovered.value = null
+        }}
       >
         {event.cover
           ? (

@@ -10,8 +10,11 @@ import { CloseIcon } from "../Icons.tsx"
 
 interface Props {
   readonly event: MapEvent
-  /** Over the map's lower edge, or in the flow of the list when there is no map. */
+  /** Other listed events at the same spot, which share its pin. */
+  readonly others: readonly MapEvent[]
+  /** Over the lower edge of the map, or in the flow of the list when there is no map. */
   readonly floating: boolean
+  readonly onSelect: (slug: string) => void
   readonly onClose: () => void
 }
 
@@ -27,7 +30,10 @@ export function EventDetails(props: Props) {
 
   useEffect(() => {
     const onKey = (key: KeyboardEvent) => {
-      if (key.key === "Escape") {
+      if (
+        key.key === "Escape"
+        && !document.querySelector("[role=dialog][aria-modal=true]")
+      ) {
         props.onClose()
       }
     }
@@ -72,7 +78,7 @@ export function EventDetails(props: Props) {
 
       <div class="flex flex-col gap-3 p-4">
         <div>
-          <p class="text-sm text-brand font-semibold">
+          <p class="text-sm text-brand font-semibold pr-8">
             {when.date}
             <span class="text-gray-500 font-normal">
               {" · "}
@@ -120,6 +126,32 @@ export function EventDetails(props: Props) {
           </p>
         )}
 
+        {props.others.length > 0 && (
+          <div class="text-sm border-t-[1px] border-gray-100 pt-3">
+            <p class="text-gray-500 mb-1">
+              Also at this spot
+            </p>
+            <ul class="flex flex-col gap-1">
+              {props.others.map((other) => (
+                <li key={other.slug}>
+                  <button
+                    type="button"
+                    class="text-left text-brand hover:underline"
+                    onClick={() =>
+                      props.onSelect(other.slug)}
+                  >
+                    {other.title}
+                  </button>
+                  <span class="text-gray-500 whitespace-nowrap">
+                    {" · "}
+                    {describeWhen(other).date}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div class="flex flex-wrap gap-2">
           <a
             href={event.url}
@@ -140,8 +172,8 @@ export function EventDetails(props: Props) {
           </a>
 
           {hasPin(event) && event.placement === "venue" && (
-            // Google's Maps URLs need no key and no billing, unlike the API
-            // behind the old map, and open the phone's maps app.
+            // Google Maps URLs need no key and no billing, unlike the API behind
+            // the old map, and on a phone they open the maps app.
             <a
               href={`https://www.google.com/maps/dir/?api=1&destination=${event.lat},${event.lng}`}
               target="_blank"

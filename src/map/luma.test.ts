@@ -11,6 +11,7 @@ import {
   readMarkup,
   resolve,
 } from "./luma.ts"
+import type { LumaEvent } from "./MapEvent.ts"
 
 /** Luma's event JSON as its page embeds it, with a venue in Lisbon. */
 function payload(event: Record<string, unknown> = {}) {
@@ -90,7 +91,7 @@ function payload(event: Record<string, unknown> = {}) {
   }
 }
 
-const Lisbon = {
+const Lisbon: LumaEvent = {
   slug: "lisbon-base-workshop",
   lumaId: "evt-AbCdEf0123456789",
   url: "https://luma.com/lisbon-base-workshop",
@@ -625,7 +626,7 @@ test("a host that has retired the endpoint does not make the event gone", async 
     })
 })
 
-test("every host saying gone is gone, unless the page says otherwise", async () => {
+test("the endpoint cannot retire an event; only its page can", async () => {
   const gone = () =>
     new Response("gone", {
       status: 404,
@@ -634,6 +635,11 @@ test("every host saying gone is gone, unless the page says otherwise", async () 
     new Response("busy", {
       status: 503,
     })
+  const everywhere = (reply: () => Response) =>
+    Object.fromEntries(ApiOrigins.map((origin) => [
+      apiUrl(link, origin),
+      reply,
+    ]))
 
   expect(
     [
@@ -641,23 +647,22 @@ test("every host saying gone is gone, unless the page says otherwise", async () 
         link,
         stubLuma({
           [page]: busy,
-          [api]: gone,
-          [apiUrl(link, ApiOrigins[1])]: gone,
+          ...everywhere(gone),
         }),
       ),
       await resolve(
         link,
         stubLuma({
           [page]: () => html("<html>app shell</html>"),
-          [api]: gone,
-          [apiUrl(link, ApiOrigins[1])]: gone,
+          ...everywhere(gone),
         }),
       ),
     ],
   )
     .toEqual([
       {
-        kind: "not-found",
+        kind: "unavailable",
+        message: "Luma didn't answer. Try again in a minute.",
       },
       {
         kind: "unavailable",
@@ -665,6 +670,31 @@ test("every host saying gone is gone, unless the page says otherwise", async () 
           "Luma's event page changed shape and couldn't be read. Try again later.",
       },
     ])
+})
+
+test("a redirect away from Luma is not an answer", async () => {
+  const elsewhere = () =>
+    Object.assign(html(pageHtml(answer("event", payload()))), {
+      url: "https://evil.example/landing",
+    })
+  const luma = stubLuma({
+    [page]: elsewhere,
+    ...Object.fromEntries(ApiOrigins.map((origin) => [
+      apiUrl(link, origin),
+      () =>
+        new Response("down", {
+          status: 500,
+        }),
+    ])),
+  })
+
+  expect(
+    await resolve(link, luma),
+  )
+    .toEqual({
+      kind: "unavailable",
+      message: "Luma didn't answer. Try again in a minute.",
+    })
 })
 
 test("a calendar link is named as one", async () => {

@@ -91,6 +91,10 @@ settings are the environment variables:
 - `HOMEBASE_MAP_ADMIN_KEY` — the key that lets an admin add events on the map.
 - `HOMEBASE_ADMIN_ADDRESSES` — optional. Wallets that may sign in to add
   events, comma-separated.
+- `HOMEBASE_SITE_HOSTS` — the hostnames the site is served on, comma-separated,
+  which wallet sign-in messages are bound to. Vercel's own hostnames are known
+  without it; set it for a custom domain and on Fly. Unset, only `localhost`
+  can sign in with a wallet.
 - `CRON_SECRET` — optional. Lets Vercel's daily cron call `/api/map-refresh`.
 - `HOMEBASE_LOCK_CONTRACT` and the other `HOMEBASE_LOCK_*` variables —
   optional, for the $home lock gate once SeedMe's contract is known; see

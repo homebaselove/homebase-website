@@ -39,8 +39,14 @@ export const RefreshAfterMs = 6 * 60 * 60_000
 /** How long after an event ends refreshes stop caring about it. */
 export const RefreshGraceMs = 24 * 60 * 60_000
 
-/** Pins read per refresh pass, so one pass stays well inside a function's time. */
-export const RefreshBatch = 25
+/** Pins a refresh pass may read; the time budget below usually stops it first. */
+export const RefreshBatch = 100
+
+/** How long a refresh pass may run, inside the minute a Vercel function gets. */
+export const RefreshBudgetMs = 45_000
+
+/** Pins read at once during a refresh. */
+const RefreshParallel = 4
 
 const signIns = createLimiter({
   limit: 10,
@@ -90,10 +96,13 @@ export async function handle(
   route: Route,
   ctx: Context,
 ): Promise<Response> {
+  // A HEAD is answered like the GET it stands for.
+  const method = request.method === "HEAD" ? "GET" : request.method
+
   try {
     switch (route) {
       case "map":
-        switch (request.method) {
+        switch (method) {
           case "GET":
             return await list(ctx)
           case "POST":
@@ -108,31 +117,32 @@ export async function handle(
             ])
         }
       case "preview":
-        return request.method === "POST"
+        return method === "POST"
           ? await submit(request, ctx, true)
           : methodNotAllowed([
             "POST",
           ])
       case "refresh":
-        return request.method === "POST" || request.method === "GET"
+        return method === "POST" || method === "GET"
           ? await refresh(request, ctx)
           : methodNotAllowed([
+            "GET",
             "POST",
           ])
       case "nonce":
-        return request.method === "POST"
+        return method === "POST"
           ? await nonce(request, ctx)
           : methodNotAllowed([
             "POST",
           ])
       case "verify":
-        return request.method === "POST"
+        return method === "POST"
           ? await verify(request, ctx)
           : methodNotAllowed([
             "POST",
           ])
       case "session":
-        switch (request.method) {
+        switch (method) {
           case "GET":
             return await session(request, ctx)
           case "DELETE":
@@ -156,15 +166,26 @@ const clientOf = (request: Request) =>
   || request.headers.get("x-real-ip")
   || "local"
 
-function siteOf(request: Request) {
+/**
+ * The host a sign-in message is written for. Headers name it, and a proxy may
+ * pass a caller's own along, so only a host the configuration knows is used.
+ */
+function siteOf(request: Request, config: Auth.AuthConfig) {
   const domain = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim()
     || request.headers.get("host")
 
   if (!domain) {
-    return null
+    return error(400, "The request names no host.")
   }
 
-  const local = /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(domain)
+  if (!Auth.siteAllowed(config, domain)) {
+    return error(
+      400,
+      "Wallet sign-in isn't set up for this address of the site. Add its hostname to HOMEBASE_SITE_HOSTS.",
+    )
+  }
+
+  const local = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(domain)
   const scheme = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim()
     || (local ? "http" : "https")
 
@@ -278,15 +299,18 @@ async function submit(
     })
   }
 
+  // An organizer can rename a link, so the pin may sit under an older slug.
   const existing = await Repo.getEvent(ctx.store, resolution.event.slug)
-  const nowIso = now.toISOString()
-  const stored = await Repo.putEvent(ctx.store, {
-    ...resolution.event,
-    status: "live",
-    addedBy: existing?.addedBy ?? actor.address ?? "admin",
-    addedAt: existing?.addedAt ?? nowIso,
-    checkedAt: nowIso,
-  })
+    ?? (resolution.event.lumaId
+      ? await Repo.getEventByLumaId(ctx.store, resolution.event.lumaId)
+      : null)
+  const stored = await Repo.putEvent(
+    ctx.store,
+    reconcile(existing, resolution, {
+      addedBy: actor.address ?? "admin",
+      now: now.toISOString(),
+    }),
+  )
 
   return json(
     {
@@ -336,59 +360,133 @@ export interface RefreshReport {
   readonly updated: number
   readonly gone: number
   readonly failed: number
+  /** Stale pins the pass did not get to before its time ran out. */
+  readonly remaining: number
 }
 
-/** Reads Luma again for pins whose reading has aged, one batch at a time. */
+type Found = Extract<
+  Luma.Resolution,
+  {
+    kind: "event"
+  }
+>
+
+/**
+ * What to store for an event read again. The page and the endpoint carry
+ * everything, so they replace what was known; the markup carries less, so
+ * what it cannot say is kept from the last full reading rather than blanked.
+ */
+export function reconcile(
+  existing: MapEvent | null,
+  found: Found,
+  stamp: {
+    readonly addedBy: string
+    readonly now: string
+  },
+): MapEvent {
+  const read = found.event
+  const kept = existing && found.source === "markup"
+    ? {
+      lumaId: read.lumaId ?? existing.lumaId,
+      timezone: read.timezone ?? existing.timezone,
+      hosts: read.hosts.length > 0 ? read.hosts : existing.hosts,
+      calendar: read.calendar ?? existing.calendar,
+      cover: read.cover ?? existing.cover,
+      description: read.description ?? existing.description,
+      ...(read.placement === "unknown" && existing.placement !== "unknown"
+        ? {
+          venue: existing.venue,
+          address: existing.address,
+          city: existing.city,
+          lat: existing.lat,
+          lng: existing.lng,
+          placement: existing.placement,
+        }
+        : {}),
+    }
+    : {}
+
+  return {
+    ...read,
+    ...kept,
+    status: "live",
+    addedBy: existing?.addedBy ?? stamp.addedBy,
+    addedAt: existing?.addedAt ?? stamp.now,
+    checkedAt: stamp.now,
+  }
+}
+
+/**
+ * Reads Luma again for pins whose reading has aged, a few at a time, until
+ * the batch or the time budget runs out.
+ */
 export async function refreshStale(ctx: Context): Promise<RefreshReport> {
-  const now = ctx.now()
-  const stale = await Repo.staleEvents(ctx.store, {
-    checkedBefore: new Date(now.getTime() - RefreshAfterMs).toISOString(),
-    endedAfter: new Date(now.getTime() - RefreshGraceMs).toISOString(),
+  const started = ctx.now().getTime()
+  const queue = await Repo.staleEvents(ctx.store, {
+    checkedBefore: new Date(started - RefreshAfterMs).toISOString(),
+    endedAfter: new Date(started - RefreshGraceMs).toISOString(),
     limit: RefreshBatch,
   })
   const report = {
-    checked: stale.length,
+    checked: 0,
     updated: 0,
     gone: 0,
     failed: 0,
+    remaining: queue.length,
   }
 
-  for (const event of stale) {
-    const checkedAt = ctx.now().toISOString()
-    const resolution = await Luma.resolve(
-      {
-        kind: "slug",
-        slug: event.slug,
-      },
-      {
-        fetch: ctx.fetch,
-      },
-    )
+  const pass = async () => {
+    while (
+      queue.length > 0 && ctx.now().getTime() - started < RefreshBudgetMs
+    ) {
+      const event = queue.shift()!
 
-    switch (resolution.kind) {
-      case "event": {
-        await Repo.putEvent(ctx.store, {
-          ...event,
-          ...resolution.event,
-          status: "live",
-          checkedAt,
-        })
-        report.updated += 1
-        break
-      }
-      case "not-found":
-      case "calendar": {
-        await Repo.markGone(ctx.store, event.slug, checkedAt)
-        report.gone += 1
-        break
-      }
-      case "unavailable": {
-        await Repo.touchEvent(ctx.store, event.slug, checkedAt)
-        report.failed += 1
-        break
+      report.remaining -= 1
+      report.checked += 1
+
+      const checkedAt = ctx.now().toISOString()
+      const resolution = await Luma.resolve(
+        {
+          kind: "slug",
+          slug: event.slug,
+        },
+        {
+          fetch: ctx.fetch,
+        },
+      )
+
+      switch (resolution.kind) {
+        case "event": {
+          await Repo.putEvent(
+            ctx.store,
+            reconcile(event, resolution, {
+              addedBy: event.addedBy,
+              now: checkedAt,
+            }),
+          )
+          report.updated += 1
+          break
+        }
+        case "not-found":
+        case "calendar": {
+          await Repo.markGone(ctx.store, event.slug, checkedAt)
+          report.gone += 1
+          break
+        }
+        case "unavailable": {
+          await Repo.touchEvent(ctx.store, event.slug, checkedAt)
+          report.failed += 1
+          break
+        }
       }
     }
   }
+
+  await Promise.all(
+    Array.from({
+      length: RefreshParallel,
+    }, pass),
+  )
 
   return report
 }
@@ -422,10 +520,10 @@ async function nonce(request: Request, ctx: Context): Promise<Response> {
     return error(429, "Too many sign-in attempts. Try again in a minute.")
   }
 
-  const site = siteOf(request)
+  const site = siteOf(request, config)
 
-  if (!site) {
-    return error(400, "The request names no host.")
+  if (site instanceof Response) {
+    return site
   }
 
   const input = await body(request, NonceBody)
@@ -462,10 +560,10 @@ async function verify(request: Request, ctx: Context): Promise<Response> {
     return error(429, "Too many sign-in attempts. Try again in a minute.")
   }
 
-  const site = siteOf(request)
+  const site = siteOf(request, config)
 
-  if (!site) {
-    return error(400, "The request names no host.")
+  if (site instanceof Response) {
+    return site
   }
 
   const input = await body(request, VerifyBody)

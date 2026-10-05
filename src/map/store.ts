@@ -134,6 +134,17 @@ export async function getEvent(
   return rows.length ? toEvent(rows[0]) : null
 }
 
+export async function getEventByLumaId(
+  store: Store,
+  lumaId: string,
+): Promise<MapEvent | null> {
+  const rows = await store.run(`select * from "MapEvent" where "lumaId" = ?`, [
+    lumaId,
+  ])
+
+  return rows.length ? toEvent(rows[0]) : null
+}
+
 /**
  * Writes an event in, replacing what the same slug held. An organizer can
  * rename an event's link, so a pin that carries the same Luma id under an

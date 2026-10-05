@@ -1,7 +1,12 @@
 /** @jsxImportSource preact */
 import { useEffect, useRef } from "preact"
-import { effect, type Signal, useSignal } from "preact/signals"
-import Supercluster from "supercluster"
+import {
+  effect,
+  type ReadonlySignal,
+  type Signal,
+  useSignal,
+} from "preact/signals"
+import Supercluster, { type ClusterProperties } from "supercluster"
 import { hasPin } from "../../map/event.ts"
 import type { MapEvent } from "../../map/MapEvent.ts"
 import { vendorPath } from "../../map/vendor.ts"
@@ -9,7 +14,7 @@ import { clusterElement, markerElement } from "./markers.ts"
 
 type MapLibre = typeof import("maplibre-gl")
 
-/** OpenFreeMap's light style: no key, no quotas, attribution added by MapLibre. */
+/** The OpenFreeMap light style: no key, no quotas, attribution added by MapLibre. */
 export const StyleUrl = "https://tiles.openfreemap.org/styles/positron"
 
 let loading: Promise<MapLibre> | null = null
@@ -43,12 +48,29 @@ export function loadMapLibre(): Promise<MapLibre> {
 /** Past this zoom a cluster is the same place, so it opens instead of splitting. */
 const SamePlaceZoom = 15
 
+interface PinProperties {
+  readonly slug: string
+}
+
+const isCluster = (
+  properties: PinProperties | ClusterProperties,
+): properties is ClusterProperties =>
+  "cluster" in properties && properties.cluster === true
+
+/** The height of a pin above its anchor, which the camera keeps clear of the top edge. */
+const PinHeight = 44
+
+/** Room beside the details card that is enough to show the pin there rather than above it. */
+const BesideWidth = 200
+
 interface Props {
-  readonly events: Signal<MapEvent[]>
+  readonly events: ReadonlySignal<MapEvent[]>
   readonly selected: Signal<string | null>
   readonly hovered: Signal<string | null>
   readonly onSelect: (slug: string) => void
   readonly onUnavailable: () => void
+  /** Where the details card lies over the map, so the selected pin is kept out from under it. */
+  readonly covered?: () => DOMRect | null
 }
 
 type State =
@@ -127,17 +149,19 @@ export function MapView(props: Props) {
         "top-right",
       )
 
-      const index = new Supercluster<
-        {
-          slug: string
-        },
-        {}
-      >({
+      const index = new Supercluster<PinProperties, Record<never, never>>({
         radius: 48,
         maxZoom: SamePlaceZoom,
       })
       const markers = new Map<string, import("maplibre-gl").Marker>()
       let known = new Map<string, MapEvent>()
+      // The pins the index holds, so a list that only re-sorted does not reset the view.
+      let indexed = String()
+      // The pin the camera was last sent to, so a refreshed list does not send it again.
+      let focused: string | null = null
+      // The loaded() method of MapLibre is false whenever a tile is still on its way,
+      // so readiness is the load event, which fires once.
+      let ready = false
 
       const reflect = () => {
         for (const [key, marker] of markers) {
@@ -168,7 +192,7 @@ export function MapView(props: Props) {
         for (const feature of clusters) {
           const [lng, lat] = feature.geometry.coordinates
           const properties = feature.properties
-          const key = "cluster" in properties && properties.cluster
+          const key = isCluster(properties)
             ? `cluster:${properties.cluster_id}`
             : `event:${properties.slug}`
 
@@ -180,7 +204,7 @@ export function MapView(props: Props) {
 
           let element: HTMLElement
 
-          if ("cluster" in properties && properties.cluster) {
+          if (isCluster(properties)) {
             const id = properties.cluster_id
 
             element = clusterElement(properties.point_count, () => {
@@ -191,6 +215,8 @@ export function MapView(props: Props) {
 
                 if (first) {
                   props.onSelect(first.properties.slug)
+
+                  return
                 }
               }
 
@@ -277,15 +303,115 @@ export function MapView(props: Props) {
         }
 
         live.fitBounds(bounds, {
-          padding: 56,
+          // a pin stands on its anchor, so the top needs its height on top of the margin
+          padding: {
+            top: 96,
+            bottom: 64,
+            left: 64,
+            right: 64,
+          },
           maxZoom: 12,
           duration: 700,
         })
       }
 
+      /**
+       * The pixel offset that puts a pin in the part of the map the details
+       * card leaves open: beside it when the map is wide enough, else above it.
+       */
+      const clearance = (): [number, number] => {
+        const card = props.covered?.()
+        const frame = element.getBoundingClientRect()
+
+        if (!card || card.width === 0) {
+          return [
+            0,
+            PinHeight / 2,
+          ]
+        }
+
+        if (frame.right - card.right >= BesideWidth) {
+          return [
+            (card.right - frame.left) / 2,
+            PinHeight / 2,
+          ]
+        }
+
+        return [
+          0,
+          (card.top - frame.bottom) / 2 + PinHeight / 2,
+        ]
+      }
+
+      /** Whether the pin stands on its own at a zoom, rather than inside a cluster. */
+      const alone = (
+        event: MapEvent & {
+          lat: number
+          lng: number
+        },
+        zoom: number,
+      ) =>
+        index
+          .getClusters(
+            [
+              event.lng - 1e-7,
+              event.lat - 1e-7,
+              event.lng + 1e-7,
+              event.lat + 1e-7,
+            ],
+            Math.floor(zoom),
+          )
+          .some((found) =>
+            !isCluster(found.properties) && found.properties.slug === event.slug
+          )
+
+      const focus = (
+        event: MapEvent & {
+          lat: number
+          lng: number
+        },
+      ) => {
+        let zoom = Math.max(live.getZoom(), 11)
+
+        // Close enough that the pin is its own marker; the events of one venue stack past SamePlaceZoom.
+        while (zoom <= SamePlaceZoom && !alone(event, zoom)) {
+          zoom += 1
+        }
+
+        focused = event.slug
+
+        // The card renders after this signal settles, and the camera needs its size.
+        requestAnimationFrame(() => {
+          if (disposed) {
+            return
+          }
+
+          live.easeTo({
+            center: [
+              event.lng,
+              event.lat,
+            ],
+            zoom,
+            offset: clearance(),
+          })
+        })
+      }
+
+      const settle = () => {
+        const slug = props.selected.peek()
+        const event = slug ? known.get(slug) : undefined
+
+        if (event && hasPin(event)) {
+          focus(event)
+        } else {
+          fit()
+        }
+      }
+
       live.on("load", () => {
+        ready = true
         state.value = "ready"
-        fit()
+        settle()
         render()
       })
       live.on("moveend", render)
@@ -298,6 +424,17 @@ export function MapView(props: Props) {
             event.slug,
             event,
           ]))
+
+          const pins = list
+            .filter(hasPin)
+            .map((event) => `${event.slug}@${event.lat},${event.lng}`)
+            .join(" ")
+
+          if (pins === indexed) {
+            return
+          }
+
+          indexed = pins
           index.load(
             list.filter(hasPin).map((event) => ({
               type: "Feature" as const,
@@ -314,13 +451,13 @@ export function MapView(props: Props) {
             })),
           )
 
-          if (live.loaded()) {
+          if (ready) {
             for (const marker of markers.values()) {
               marker.remove()
             }
 
             markers.clear()
-            fit()
+            settle()
             render()
           }
         }),
@@ -332,18 +469,10 @@ export function MapView(props: Props) {
 
           reflect()
 
-          if (event && hasPin(event) && live.loaded()) {
-            live.easeTo({
-              center: [
-                event.lng,
-                event.lat,
-              ],
-              zoom: Math.max(live.getZoom(), 11),
-              offset: [
-                0,
-                -60,
-              ],
-            })
+          if (!slug) {
+            focused = null
+          } else if (event && hasPin(event) && ready && slug !== focused) {
+            focus(event)
           }
         }),
       )
@@ -379,7 +508,7 @@ export function MapView(props: Props) {
 
   return (
     <div class="absolute inset-0">
-      {/* Sized in full rather than absolutely: MapLibre's stylesheet sets the container's position itself. */}
+      {/* Sized in full rather than absolutely: the MapLibre stylesheet positions the container itself. */}
       <div
         ref={container}
         class="w-full h-full bg-gray-100"
@@ -395,7 +524,7 @@ export function MapView(props: Props) {
       {state.value === "unavailable" && (
         <div class="absolute inset-0 flex items-center justify-center p-6 text-center text-gray-600 bg-gray-50">
           <p>
-            The map can't draw in this browser, but every event is in the list.
+            The map can’t draw in this browser, but every event is in the list.
           </p>
         </div>
       )}

@@ -11,6 +11,13 @@ export const layer = Layer.effectDiscard(
   Effect.gen(function*() {
     const router = yield* HttpRouter.Default
 
-    yield* router.get("/", BundleHttp.entrypoint("index.html"))
+    // The bundle is in the app's context at request time, as it is for the
+    // bundle's own routes; the Default router's type does not carry it.
+    yield* router.get(
+      "/",
+      BundleHttp.entrypoint("index.html") as unknown as Parameters<
+        typeof router.get
+      >[1],
+    )
   }),
 )

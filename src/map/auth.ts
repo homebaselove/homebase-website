@@ -49,7 +49,7 @@ export interface Actor {
 
 export interface LockConfig {
   readonly contract: string
-  readonly read: ReturnType<typeof AbiFunction.from>
+  readonly read: AbiFunction.AbiFunction
   readonly amountIndex: number
   readonly endIndex: number | null
   readonly min: bigint
@@ -61,7 +61,23 @@ export interface AuthConfig {
   readonly lock: LockConfig | null
   readonly rpc: string
   readonly cronSecret: string | null
+  /**
+   * The hostnames the site is served on, which sign-in messages are bound to.
+   * A request from any other host gets no message, so a page elsewhere cannot
+   * have the server write one in its own name.
+   */
+  readonly siteHosts: ReadonlySet<string>
 }
+
+/** A hostname as a browser sends it: lower case, no scheme, no path, a port kept. */
+const hostOf = (value: string): string | null => {
+  const host =
+    value.trim().toLowerCase().replace(/^[a-z]+:\/\//, "").split("/")[0]
+
+  return host && /^[a-z0-9.\-\[\]:]+$/.test(host) ? host : null
+}
+
+const LocalHost = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/
 
 /** The default lock read: one balance per wallet, in the token's base units. */
 export const DefaultLockRead =
@@ -95,7 +111,7 @@ export function configFrom(
         contract,
         read: AbiFunction.from(
           env.HOMEBASE_LOCK_READ?.trim() || DefaultLockRead,
-        ),
+        ) as AbiFunction.AbiFunction,
         amountIndex: Number(env.HOMEBASE_LOCK_AMOUNT_INDEX ?? 0),
         endIndex: env.HOMEBASE_LOCK_END_INDEX
           ? Number(env.HOMEBASE_LOCK_END_INDEX)
@@ -105,7 +121,35 @@ export function configFrom(
       : null,
     rpc: env.HOMEBASE_BASE_RPC || BaseRpcUrl,
     cronSecret: env.CRON_SECRET?.trim() || null,
+    siteHosts: new Set(
+      [
+        ...(env.HOMEBASE_SITE_HOSTS ?? "").split(","),
+        // Vercel names its own hosts, so a deployment there needs no setting.
+        env.VERCEL_PROJECT_PRODUCTION_URL ?? "",
+        env.VERCEL_BRANCH_URL ?? "",
+        env.VERCEL_URL ?? "",
+      ]
+        .map(hostOf)
+        .filter((host): host is string => host !== null),
+    ),
   }
+}
+
+/**
+ * Whether a sign-in may be issued and accepted for a host. With no hosts
+ * configured only the local ones pass, so a deployment that forgot the setting
+ * fails closed instead of binding messages to whatever a request names.
+ */
+export function siteAllowed(config: AuthConfig, host: string): boolean {
+  const name = hostOf(host)
+
+  if (!name) {
+    return false
+  }
+
+  return config.siteHosts.size === 0
+    ? LocalHost.test(name)
+    : config.siteHosts.has(name)
 }
 
 /** Whether anyone can sign in at all, which the UI uses to offer the button. */

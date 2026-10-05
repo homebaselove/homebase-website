@@ -18,9 +18,7 @@ function knownZone(zone: string | null): string | null {
   }
 
   try {
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: zone,
-    })
+    formatter(zone, {})
 
     return zone
   } catch {
@@ -28,21 +26,37 @@ function knownZone(zone: string | null): string | null {
   }
 }
 
+const formatters = new Map<string, Intl.DateTimeFormat>()
+
+/** Formatters are costly to make, and the same few serve every row. */
+function formatter(
+  zone: string,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  const key = `${zone} ${JSON.stringify(options)}`
+  let made = formatters.get(key)
+
+  if (!made) {
+    made = new Intl.DateTimeFormat("en-US", {
+      timeZone: zone,
+      ...options,
+    })
+    formatters.set(key, made)
+  }
+
+  return made
+}
+
 function format(
   date: Date,
   zone: string,
   options: Intl.DateTimeFormatOptions,
 ): string {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: zone,
-    ...options,
-  })
-    .format(date)
+  return formatter(zone, options).format(date)
 }
 
 function zoneName(date: Date, zone: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: zone,
+  return formatter(zone, {
     timeZoneName: "short",
   })
     .formatToParts(date)

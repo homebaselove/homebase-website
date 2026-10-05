@@ -53,5 +53,3 @@ export const MapEvent = S.Struct({
 })
 
 export type MapEvent = typeof MapEvent.Type
-
-export * from "./event.ts"

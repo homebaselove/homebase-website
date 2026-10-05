@@ -157,10 +157,12 @@ Two ways in today, with one design for what comes next:
 - **Admin key.** `HOMEBASE_MAP_ADMIN_KEY`, pasted once into the dialog and
   kept in the browser. Compared in constant time.
 - **Admin wallets.** Addresses in `HOMEBASE_ADMIN_ADDRESSES` sign in with
-  Ethereum (ERC-4361): the server writes the message, binds it to the site's
-  host, a single-use nonce and Base's chain id, and checks the signature by
-  recovery for plain wallets or through ERC-6492's universal validator for
-  smart wallets (Base Account, Safe), in one deployless call on Base. A
+  Ethereum (ERC-4361): the server writes the message, binds it to one of the
+  site's own hosts (`HOMEBASE_SITE_HOSTS`, with Vercel's hostnames known on
+  their own; a request from any other host gets no message), a single-use
+  nonce and Base's chain id, and checks the signature by recovery for plain
+  wallets or through ERC-6492's universal validator for smart wallets (Base
+  Account, Safe), in one deployless call on Base. A
   session is a random token stored hashed, sent as a bearer header, which
   also works inside the Farcaster mini app's frame where cookies do not.
 - **$home lockers, next.** The same sign-in gains a second rule: a wallet
@@ -186,12 +188,16 @@ mini app).
 ### The experience
 
 - The list is the map's other half: hovering a row lifts its pin, selecting
-  one opens its details and centers it; selecting a pin scrolls its row into
-  view. Every event is in the list, pinned or not.
+  one opens its details and brings its pin into the part of the map the card
+  leaves open, beside it on a wide screen and above it on a phone, where the
+  map also scrolls back into view; selecting a pin scrolls its row into view.
+  Every event is in the list, pinned or not.
 - Times read in the event's timezone, the way Luma shows them, with the
   viewer's own time alongside when it differs.
 - Clusters show a count and split when zoomed; a cluster that will not split
-  is one venue, and opens its first event instead.
+  is one venue, and opens its first event instead. Opening an event zooms
+  until its pin stands on its own, and its card links the other events at
+  the same spot.
 - A guests-only address pins the city and says so. Online events are listed
   under their own label.
 - Scrolling the page over the map never zooms it; touch panning takes two
@@ -234,17 +240,68 @@ address.
 
 ## Configuration
 
-| Variable                                                                                                                     | Where                             | Meaning                                                                                                                                                                                    |
-| ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`                                                                                     | Vercel (required), Fly (optional) | the hosted database; `https://<db>-<org>.turso.io`. Install Turso from the Vercel Marketplace or create one at turso.tech. The Bun server uses it too when set, otherwise its SQLite file. |
-| `HOMEBASE_MAP_ADMIN_KEY`                                                                                                     | both                              | the shared admin key; unset means no key sign-in                                                                                                                                           |
-| `HOMEBASE_ADMIN_ADDRESSES`                                                                                                   | both                              | comma-separated wallets that may sign in as admins                                                                                                                                         |
-| `HOMEBASE_LOCK_CONTRACT`, `HOMEBASE_LOCK_READ`, `HOMEBASE_LOCK_MIN`, `HOMEBASE_LOCK_AMOUNT_INDEX`, `HOMEBASE_LOCK_END_INDEX` | both                              | the $home lock gate; unset until the contract is known                                                                                                                                     |
-| `HOMEBASE_BASE_RPC`                                                                                                          | both                              | already used by the funding card; also checks smart-wallet signatures and locks                                                                                                            |
-| `CRON_SECRET`                                                                                                                | Vercel                            | lets the daily cron call `/api/map-refresh`                                                                                                                                                |
-| `DATA_PATH`                                                                                                                  | Fly                               | where the SQLite file lives                                                                                                                                                                |
+| Variable                                                                                                                     | Where                                                      | Meaning                                                                                                                                                                                    |
+| ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`                                                                                     | Vercel (required), Fly (optional)                          | the hosted database; `https://<db>-<org>.turso.io`. Install Turso from the Vercel Marketplace or create one at turso.tech. The Bun server uses it too when set, otherwise its SQLite file. |
+| `HOMEBASE_MAP_ADMIN_KEY`                                                                                                     | both                                                       | the shared admin key; unset means no key sign-in                                                                                                                                           |
+| `HOMEBASE_ADMIN_ADDRESSES`                                                                                                   | both                                                       | comma-separated wallets that may sign in as admins                                                                                                                                         |
+| `HOMEBASE_SITE_HOSTS`                                                                                                        | Fly (required for wallet sign-in), Vercel (custom domains) | comma-separated hostnames the site is served on, which sign-in messages are bound to; Vercel's own hostnames are known without it. Unset, only `localhost` may sign in with a wallet.      |
+| `HOMEBASE_LOCK_CONTRACT`, `HOMEBASE_LOCK_READ`, `HOMEBASE_LOCK_MIN`, `HOMEBASE_LOCK_AMOUNT_INDEX`, `HOMEBASE_LOCK_END_INDEX` | both                                                       | the $home lock gate; unset until the contract is known                                                                                                                                     |
+| `HOMEBASE_BASE_RPC`                                                                                                          | both                                                       | already used by the funding card; also checks smart-wallet signatures and locks                                                                                                            |
+| `CRON_SECRET`                                                                                                                | Vercel                                                     | lets the daily cron call `/api/map-refresh`                                                                                                                                                |
+| `DATA_PATH`                                                                                                                  | Fly                                                        | where the SQLite file lives                                                                                                                                                                |
 
 Without any of the admin settings the map is read-only and the dialog says so.
+
+## Validation
+
+The design was checked three ways before this was called done.
+
+**Rendered from the code.** Headless Chromium drove the built site against a
+seeded database, an offline basemap in place of OpenFreeMap and a stub in
+place of Luma, through eleven screens: the page, the overview, a pin whose
+address is guests-only, the card closed, a one-venue cluster, the past view,
+the dialog signed out, the admin key, a look-up, the pin it made, and the
+phone layout with and without a card. What that found, and what changed:
+
+- The details card had lost its width and position: the Tailwind plugin in
+  effect-start pairs every quote character in a component file, and an
+  apostrophe in a comment had shifted the pairing. The components are now
+  written without stray quotes, and `bun run check:classes` reports a file
+  at risk before it reaches a build.
+- The chosen pin sat under its own card, at the card's edge on a wide screen
+  and behind it on a phone. The camera now measures the card and keeps the
+  pin beside it, or above it when there is no room beside.
+- A one-venue cluster opened an event but kept the count on the map and said
+  nothing of the others; it now zooms until the pin is its own marker and the
+  card lists the events at the same spot.
+- A newly pinned event was listed but the map stayed where it was; it now
+  moves to the pin.
+- The list refreshes every minute to move events from upcoming to past, and
+  each refresh reset the view; the map now ignores a list whose pins have
+  not changed.
+- On a phone, a row chosen from the list opened a card out of sight above;
+  the map now scrolls back into view.
+
+**Reviewed for security.** A review of the branch, with each finding checked
+again for exploitability, raised one issue below the bar it sets for
+blocking: the host a sign-in message was bound to came from request headers,
+so a page elsewhere could have had the server write a message in its own
+name, which a wallet would then sign without its usual domain warning. Sign-in
+now serves the hosts in `HOMEBASE_SITE_HOSTS` (and Vercel's own) alone, and
+`localhost` when nothing is set. The rest was checked and clean: every SQL
+value is a bound parameter; the vendor route serves an exact allow-list of
+files; no Luma text reaches `innerHTML`; the resolver only ever fetches
+Luma's own hosts and drops a redirect elsewhere; nonces are single-use and
+sessions stored hashed; bearer headers leave no room for CSRF; a pin is
+removed by an admin or the wallet that added it. One trade-off stands:
+`addedBy` in the public list names the wallets that pinned events, which are
+pseudonymous and already public on chain.
+
+**Tested.** Sixty-seven tests cover the resolver against Luma's three page
+shapes and its endpoints, the API's rules, the sign-in flow with a plain
+wallet, a smart wallet and a forged signature, the lock gate against a stub
+chain, and the refresh job, under `bun test`.
 
 ## What still needs a hand
 
@@ -267,9 +324,14 @@ schema, open-source clients, and stub servers rather than live services:
 3. **Tiles** in Safari, Chrome and the Base app's web view.
 4. **Turso** on the Vercel deploy: install it from the Marketplace, set the
    admin key, pin an event.
-5. **The MCP server.** From Claude Code: `claude mcp add --transport http luma https://mcp.luma.com`,
-   sign in, then ask it to look up a third-party event link and see whether
-   the answer carries coordinates and a timezone.
+5. **The MCP server.** The sandbox's network policy refused every Luma host,
+   `mcp.luma.com` included, so its lookup is untested here. From Claude Code:
+   `claude mcp add --transport http luma https://mcp.luma.com`, sign in, then
+   ask it to look up a third-party event link and see whether the answer
+   carries coordinates and a timezone. Third-party write-ups show a lookup
+   returning the name, cover and times; none shows coordinates. If they are
+   there, the server could read links through it with a Luma account instead
+   of the page.
 
 ## Later
 

@@ -29,7 +29,8 @@ export interface Failure {
   readonly status: number
 }
 
-export const isFailure = (value: object): value is Failure => "error" in value
+export const isFailure = (value: unknown): value is Failure =>
+  typeof value === "object" && value !== null && "error" in value
 
 const TokenKey = "homebase.map.token"
 
@@ -85,7 +86,8 @@ async function call<A>(
     const response = await fetch(path, {
       ...init,
       headers,
-      signal: AbortSignal.timeout?.(20_000),
+      // Past the server's own worst case: a slow page and slow endpoints.
+      signal: AbortSignal.timeout?.(30_000),
     })
     const body = await response.json().catch(() => ({}))
 
@@ -121,14 +123,15 @@ export async function loadEvents(): Promise<void> {
   }
 }
 
-export async function checkSession(): Promise<void> {
+/** Learns who the stored token is, and whether wallets may sign in at all. */
+export async function checkSession(): Promise<Failure | null> {
   const answer = await call<{
     actor: Session | null
     walletSignIn: boolean
   }>("/auth/session.json")
 
   if (isFailure(answer)) {
-    return
+    return answer
   }
 
   walletSignIn.value = answer.walletSignIn
@@ -138,13 +141,21 @@ export async function checkSession(): Promise<void> {
     token.value = null
     storeToken(null)
   }
+
+  return null
 }
 
-/** Tries the admin key; a wrong one is dropped again. */
+/** Tries the admin key; a wrong one is dropped again, a failed check is said as such. */
 export async function useAdminKey(key: string): Promise<Failure | null> {
   token.value = key.trim()
 
-  await checkSession()
+  const failure = await checkSession()
+
+  if (failure) {
+    token.value = null
+
+    return failure
+  }
 
   if (session.value) {
     storeToken(token.value)

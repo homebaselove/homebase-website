@@ -178,7 +178,7 @@ function stubWeb(initial: {
   }
 }
 
-const runtimes: ManagedRuntime.ManagedRuntime<SqlClient.SqlClient, never>[] = []
+const runtimes: ManagedRuntime.ManagedRuntime<any, any>[] = []
 
 async function openStore(): Promise<Store> {
   const runtime = ManagedRuntime.make(
@@ -212,6 +212,7 @@ async function site(options: {
     env: {
       HOMEBASE_MAP_ADMIN_KEY: AdminKey,
       HOMEBASE_BASE_RPC: Rpc,
+      HOMEBASE_SITE_HOSTS: "homebase.test",
       ...options.env,
     },
     fetch: web.fetch,
@@ -236,13 +237,14 @@ interface Call {
   token?: string
   body?: unknown
   ip?: string
+  host?: string
 }
 
 function request(call: Call): Request {
   return new Request(`https://homebase.test${call.path ?? "/map.json"}`, {
     method: call.method ?? "GET",
     headers: {
-      "x-forwarded-host": "homebase.test",
+      "x-forwarded-host": call.host ?? "homebase.test",
       "x-forwarded-proto": "https",
       "x-forwarded-for": call.ip ?? client(),
       ...(call.token
@@ -758,6 +760,7 @@ test("a refresh reads aged pins again and retires the ones Luma dropped", async 
           updated: 2,
           gone: 1,
           failed: 0,
+          remaining: 0,
         },
         cacheControl: null,
       },
@@ -1045,6 +1048,97 @@ test("a signed message is good once, and web calls never reach the chain for a p
         cacheControl: null,
       },
       0,
+    ])
+})
+
+test("a request naming another host gets no message and no session, so a page elsewhere cannot have one written in its name", async () => {
+  const { ctx } = await site({
+    env: {
+      HOMEBASE_ADMIN_ADDRESSES: wallet,
+    },
+  })
+  const { message } = await signIn(ctx)
+  const forHost = async (host: string, path: string, body: unknown) =>
+    answer(
+      await handle(
+        request({
+          method: "POST",
+          path,
+          host,
+          body,
+        }),
+        path === "/auth/nonce.json" ? "nonce" : "verify",
+        ctx,
+      ),
+    )
+  const refused = {
+    status: 400,
+    body: {
+      error:
+        "Wallet sign-in isn't set up for this address of the site. Add its hostname to HOMEBASE_SITE_HOSTS.",
+    },
+    cacheControl: null,
+  }
+
+  expect(
+    [
+      await forHost("evil.test", "/auth/nonce.json", {
+        address: wallet,
+      }),
+      await forHost("evil.test", "/auth/verify.json", {
+        message,
+        signature: sign(message!),
+      }),
+      await forHost("homebase.test:443", "/auth/nonce.json", {
+        address: wallet,
+      }),
+    ],
+  )
+    .toEqual([
+      refused,
+      refused,
+      refused,
+    ])
+})
+
+test("with no hosts configured, sign-in serves the local host alone", async () => {
+  const { ctx } = await site({
+    env: {
+      HOMEBASE_ADMIN_ADDRESSES: wallet,
+      HOMEBASE_SITE_HOSTS: undefined,
+    },
+  })
+  const ask = (host: string) =>
+    handle(
+      request({
+        method: "POST",
+        path: "/auth/nonce.json",
+        host,
+        body: {
+          address: wallet,
+        },
+      }),
+      "nonce",
+      ctx,
+    )
+  const local = await ask("localhost:3000")
+  const remote = await ask("homebase.test")
+
+  expect(
+    [
+      local.status,
+      (await local.json() as {
+        message: string
+      })
+        .message
+        .split("\n")[0],
+      remote.status,
+    ],
+  )
+    .toEqual([
+      200,
+      "localhost:3000 wants you to sign in with your Ethereum account:",
+      400,
     ])
 })
 

@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "preact"
 import { useSignal } from "preact/signals"
 import {
+  checkSession,
   isFailure,
   pin,
   type Preview,
@@ -44,6 +45,7 @@ export function SubmitDialog(props: Props) {
 
   useEffect(() => {
     input.current?.focus()
+    checkSession()
 
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -140,7 +142,7 @@ export function SubmitDialog(props: Props) {
               Add a Luma event
             </h2>
             <p class="text-sm text-gray-500 mt-1">
-              Paste the event's Luma link. Its time, place and cover come from
+              Paste the event’s Luma link. Its time, place and cover come from
               Luma, and stay in step with it.
             </p>
           </div>
@@ -262,7 +264,7 @@ export function SubmitDialog(props: Props) {
             <input
               id="luma-link"
               ref={input}
-              type="url"
+              type="text"
               inputMode="url"
               placeholder="https://luma.com/your-event"
               value={url.value}
