@@ -115,10 +115,34 @@ export function BasedHouseStory() {
         </p>
       </div>
 
-      <Rail
-        active={active.value}
-        goTo={goTo}
-      />
+      <div class="w-full max-w-[860px] mx-auto flex items-start gap-2">
+        <ArrowButton
+          direction="left"
+          label="Previous chapter"
+          disabled={active.value === 0}
+          onClick={() => goTo(active.value - 1)}
+        />
+
+        <Rail
+          active={active.value}
+          goTo={goTo}
+        />
+
+        <ArrowButton
+          direction="right"
+          label="Next chapter"
+          disabled={active.value === last}
+          onClick={() => goTo(active.value + 1)}
+        />
+      </div>
+
+      <span
+        aria-live="polite"
+        class="sr-only"
+      >
+        Chapter {active.value + 1} of {Chapters.length}:{" "}
+        {Chapters[active.value].title}
+      </span>
 
       <ol
         ref={reel}
@@ -148,34 +172,6 @@ export function BasedHouseStory() {
         />
       </ol>
 
-      <div class="flex items-center justify-center gap-5">
-        <button
-          type="button"
-          aria-label="Previous chapter"
-          disabled={active.value === 0}
-          class="rounded-full border-[1px] p-2.5 transition-colors border-gray-200 text-gray-600 hover:border-brand/40 hover:bg-brand/10 hover:text-brand disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-600"
-          onClick={() => goTo(active.value - 1)}
-        >
-          <ArrowIcon direction="left" />
-        </button>
-
-        <span
-          aria-live="polite"
-          class="text-sm text-gray-500 tabular-nums"
-        >
-          {active.value + 1} of {Chapters.length}
-        </span>
-
-        <button
-          type="button"
-          aria-label="Next chapter"
-          disabled={active.value === last}
-          class="rounded-full border-[1px] p-2.5 transition-colors border-gray-200 text-gray-600 hover:border-brand/40 hover:bg-brand/10 hover:text-brand disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-600"
-          onClick={() => goTo(active.value + 1)}
-        >
-          <ArrowIcon direction="right" />
-        </button>
-      </div>
     </section>
   )
 }
@@ -190,16 +186,16 @@ function Rail(props: { active: number; goTo: (index: number) => void }) {
   const filled = count > 1 ? props.active / (count - 1) : 0
 
   return (
-    <div class="relative max-w-[720px] w-full mx-auto">
+    <div class="relative flex-1 min-w-0 pt-3.5">
       <div
         aria-hidden="true"
-        class="absolute top-[7px] h-0.5 bg-gray-200"
+        class="absolute top-[21px] h-0.5 bg-gray-200"
         style={`left: ${inset}; right: ${inset}`}
       />
 
       <div
         aria-hidden="true"
-        class="absolute top-[7px] h-0.5 bg-brand transition-[width] duration-300 motion-reduce:transition-none"
+        class="absolute top-[21px] h-0.5 bg-brand transition-[width] duration-300 motion-reduce:transition-none"
         style={`left: ${inset}; width: calc((100% - ${inset} * 2) * ${filled})`}
       />
 
@@ -220,7 +216,7 @@ function Rail(props: { active: number; goTo: (index: number) => void }) {
                 type="button"
                 aria-label={`${chapter.when}: ${chapter.title}`}
                 aria-current={focused ? "step" : undefined}
-                class="group flex flex-col items-center gap-2 px-1 focus:outline-none"
+                class="group flex flex-col items-center gap-2 px-1 w-full min-h-11 focus:outline-none"
                 onClick={() => props.goTo(index)}
               >
                 <span
@@ -247,6 +243,25 @@ function Rail(props: { active: number; goTo: (index: number) => void }) {
   )
 }
 
+function ArrowButton(props: {
+  direction: "left" | "right"
+  label: string
+  disabled: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={props.label}
+      disabled={props.disabled}
+      class="shrink-0 rounded-full border-[1px] p-3 transition-colors border-gray-200 text-gray-600 hover:border-brand/40 hover:bg-brand/10 hover:text-brand disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-600"
+      onClick={props.onClick}
+    >
+      <ArrowIcon direction={props.direction} />
+    </button>
+  )
+}
+
 function ChapterCard(props: {
   chapter: Chapter
   index: number
@@ -263,8 +278,8 @@ function ChapterCard(props: {
       aria-roledescription="slide"
       aria-label={`${props.index + 1} of ${Chapters.length}: ${chapter.title}`}
       class={focused
-        ? "shrink-0 snap-center flex transition-[transform,opacity] duration-300 motion-reduce:transition-none scale-100 opacity-100"
-        : "shrink-0 snap-center flex transition-[transform,opacity] duration-300 motion-reduce:transition-none scale-[0.92] sm:scale-[0.88] opacity-50 cursor-pointer"}
+        ? "shrink-0 snap-center snap-always flex transition-[transform,opacity] duration-300 motion-reduce:transition-none scale-100 opacity-100"
+        : "shrink-0 snap-center snap-always flex transition-[transform,opacity] duration-300 motion-reduce:transition-none scale-[0.92] sm:scale-[0.88] opacity-50 hover:opacity-75 cursor-pointer"}
       style="width: var(--story-card)"
       onClick={() => {
         if (!focused) {
@@ -300,7 +315,7 @@ function ChapterCard(props: {
             {chapter.stats.map((stat) => (
               <div
                 key={stat.label}
-                class="sm:flex-1 sm:basis-0 max-sm:odd:last:col-span-2 rounded-lg bg-gray-50 border-[1px] border-gray-200 px-3 py-2"
+                class="sm:flex-1 sm:basis-0 max-sm:odd:last:col-span-2 rounded-lg bg-gray-50 px-3 py-2.5"
               >
                 <dd class="text-2xl font-bold leading-none text-brand">
                   {stat.value}
@@ -322,14 +337,36 @@ function ChapterCard(props: {
               rel={link.href.startsWith("#") ? undefined : "noopener"}
               class={today
                 ? "btn-brand text-sm"
-                : "rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand"}
+                : "inline-flex items-center gap-1.5 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand"}
             >
               {link.label}
+              {!link.href.startsWith("#") && (
+                <OutwardIcon />
+              )}
             </a>
           ))}
         </div>
       </article>
     </li>
+  )
+}
+
+function OutwardIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M7 17 17 7" />
+      <path d="M8 7h9v9" />
+    </svg>
   )
 }
 

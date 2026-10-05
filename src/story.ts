@@ -77,7 +77,7 @@ export const Chapters: Chapter[] = [
     ],
     links: [
       {
-        label: "Retrospective: proof of work + OG vision",
+        label: "Retrospective",
         href:
           "https://docs.google.com/presentation/d/1HMOmPOZU0LBbKLtSVmbBxai4nk2YIlB8kAK7C_c8YBA/edit?usp=sharing",
       },
@@ -107,11 +107,11 @@ export const Chapters: Chapter[] = [
     ],
     links: [
       {
-        label: "Base Batches workshops",
+        label: "Workshops",
         href: "https://farcaster.xyz/rafi/0xdb995f78",
       },
       {
-        label: "New York Base Batches event",
+        label: "New York event",
         href: "https://farcaster.xyz/luciano/0x2aeb8061",
       },
       {
@@ -152,7 +152,7 @@ export const Chapters: Chapter[] = [
         href: LetterToJesseV2Url,
       },
       {
-        label: "Retrospective: proof of work + updated vision",
+        label: "Retrospective",
         href:
           "https://docs.google.com/presentation/d/1gnJNH1Xijv3xO3tQ3cOg5QIYwq7PfdwLwEH6YvuNfm0/edit?usp=sharing",
       },
@@ -176,7 +176,7 @@ export const Chapters: Chapter[] = [
         href: "https://x.com/homebasedotlove/status/2029929738454847972",
       },
       {
-        label: "Retrospective: proof of work",
+        label: "Retrospective",
         href:
           "https://docs.google.com/document/d/1Zh5SZ2i44QdsJQrmp3wf7bxBDFygjLjFnZvh9FwDBAU/edit?usp=sharing",
       },
