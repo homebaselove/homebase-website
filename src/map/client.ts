@@ -1,27 +1,25 @@
 /**
  * The browser's view of the map: the pins, who is signed in, and the calls
  * that change either. Sessions ride in a bearer token rather than a cookie,
- * which also works inside the Farcaster mini app's frame.
+ * which also works inside the Farcaster mini app's frame. The wallet code
+ * is fetched on its own the first time someone presses Connect.
  */
 import { signal } from "preact/signals"
-import {
-  findProvider,
-  personalSign,
-  requestAccount,
-  WalletError,
-} from "../wallet/provider.ts"
+import type { EIP1193Provider } from "viem"
+import type { Wallet } from "../wallet/wagmi.ts"
 import type { Source } from "./luma.ts"
 import type { LumaEvent, MapEvent } from "./MapEvent.ts"
+
+export type {
+  Wallet,
+}
 
 export interface Session {
   readonly role:
     | "admin"
     | "locker"
-  readonly address: string | null
-  readonly via:
-    | "key"
-    | "wallet"
-  readonly expiresAt: string | null
+  readonly address: string
+  readonly expiresAt: string
 }
 
 export interface Failure {
@@ -62,7 +60,7 @@ export const token = signal<string | null>(storedToken())
 
 export const session = signal<Session | null>(null)
 
-/** Whether the server lets wallets sign in at all. */
+/** Whether the server has any wallet to let in at all. */
 export const walletSignIn = signal(false)
 
 async function call<A>(
@@ -145,96 +143,171 @@ export async function checkSession(): Promise<Failure | null> {
   return null
 }
 
-/** Tries the admin key; a wrong one is dropped again, a failed check is said as such. */
-export async function useAdminKey(key: string): Promise<Failure | null> {
-  token.value = key.trim()
+type WalletModule = typeof import("../wallet/wagmi.ts")
 
-  const failure = await checkSession()
+/**
+ * Where the wallet bundle is served from. It is built apart from the page,
+ * so the address is a value here rather than an import the bundler would
+ * fold into the page.
+ */
+const WalletUrl = "/wallet/wagmi.js"
 
-  if (failure) {
-    token.value = null
+let wallet: Promise<WalletModule> | null = null
 
-    return failure
-  }
+/** The wallet bundle, fetched once, the first time it is needed. */
+function walletModule(): Promise<WalletModule> {
+  wallet ??= import(WalletUrl) as Promise<WalletModule>
+  wallet.catch(() => {
+    wallet = null
+  })
 
-  if (session.value) {
-    storeToken(token.value)
+  return wallet
+}
 
-    return null
-  }
+const NotLoaded: Failure = {
+  error:
+    "The wallet code couldn't be loaded. Check your connection and try again.",
+  status: 0,
+}
 
-  token.value = null
+let hosting: Promise<EIP1193Provider | null> | null = null
 
-  return {
-    error: "That key isn't the admin key.",
-    status: 401,
+/**
+ * The wallet of the app hosting the page, inside a Farcaster mini app; the
+ * page already carries that SDK for its ready call. Nothing anywhere else.
+ */
+function hostedWallet(): Promise<EIP1193Provider | null> {
+  hosting ??= (async () => {
+    try {
+      const { sdk } = await import("@farcaster/frame-sdk")
+
+      if (!(await sdk.isInMiniApp())) {
+        return null
+      }
+
+      return (await sdk.wallet.getEthereumProvider()) as
+        | EIP1193Provider
+        | undefined ?? null
+    } catch {
+      return null
+    }
+  })()
+
+  return hosting
+}
+
+/** The wallets this browser can offer. */
+export async function walletChoices(): Promise<Wallet[] | Failure> {
+  try {
+    const [lib, host] = await Promise.all([
+      walletModule(),
+      hostedWallet(),
+    ])
+
+    return await lib.wallets(host)
+  } catch (error) {
+    console.error("The wallet code did not load:", error)
+
+    return NotLoaded
   }
 }
 
-export async function signInWithWallet(): Promise<Failure | null> {
+/** A wallet's "no" is error code 4001, which viem wraps for the caller. */
+function rejected(error: unknown): boolean {
+  const seen = error as {
+    code?: number
+    name?: string
+    cause?: unknown
+  } | null
+
+  return !!seen && (
+    seen.code === 4001
+    || seen.name === "UserRejectedRequestError"
+    || rejected(seen.cause)
+  )
+}
+
+/**
+ * Connects the chosen wallet, has it sign the message the server wrote for
+ * its address, and opens a session with the signature.
+ */
+export async function signInWith(walletId: string): Promise<Failure | null> {
+  let lib: WalletModule
+
   try {
-    const provider = await findProvider()
+    lib = await walletModule()
+  } catch {
+    return NotLoaded
+  }
 
-    if (!provider) {
-      return {
-        error: "No wallet was found in this browser.",
-        status: 0,
-      }
-    }
+  let address: string
 
-    const address = await requestAccount(provider)
-    const issued = await call<{
-      message: string
-    }>("/auth/nonce.json", {
-      method: "POST",
-      body: JSON.stringify({
-        address,
-      }),
-    })
-
-    if (isFailure(issued)) {
-      return issued
-    }
-
-    const signature = await personalSign(provider, issued.message, address)
-    const verified = await call<
-      Session & {
-        token: string
-      }
-    >("/auth/verify.json", {
-      method: "POST",
-      body: JSON.stringify({
-        message: issued.message,
-        signature,
-      }),
-    })
-
-    if (isFailure(verified)) {
-      return verified
-    }
-
-    token.value = verified.token
-    storeToken(verified.token)
-    session.value = {
-      role: verified.role,
-      address: verified.address,
-      via: verified.via,
-      expiresAt: verified.expiresAt,
-    }
-
-    return null
+  try {
+    address = await lib.connectWallet(walletId)
   } catch (error) {
     return {
-      error: error instanceof WalletError
-        ? error.message
-        : "The wallet didn't go through with the sign-in.",
+      error: rejected(error)
+        ? "You closed the wallet before connecting."
+        : "The wallet didn't connect. Try again, or try another wallet.",
       status: 0,
     }
   }
+
+  const issued = await call<{
+    message: string
+  }>("/auth/nonce.json", {
+    method: "POST",
+    body: JSON.stringify({
+      address,
+    }),
+  })
+
+  if (isFailure(issued)) {
+    return issued
+  }
+
+  let signature: string
+
+  try {
+    signature = await lib.signInMessage(issued.message)
+  } catch (error) {
+    return {
+      error: rejected(error)
+        ? "You didn't sign the message."
+        : "The wallet didn't sign the message.",
+      status: 0,
+    }
+  }
+
+  const verified = await call<
+    Session & {
+      token: string
+    }
+  >("/auth/verify.json", {
+    method: "POST",
+    body: JSON.stringify({
+      message: issued.message,
+      signature,
+    }),
+  })
+
+  if (isFailure(verified)) {
+    return verified
+  }
+
+  token.value = verified.token
+  storeToken(verified.token)
+  session.value = {
+    role: verified.role,
+    address: verified.address,
+    expiresAt: verified.expiresAt,
+  }
+
+  return null
 }
 
 export async function signOut(): Promise<void> {
-  if (session.value?.via === "wallet") {
+  if (session.value) {
     await call("/auth/session.json", {
       method: "DELETE",
     })
@@ -243,6 +316,10 @@ export async function signOut(): Promise<void> {
   token.value = null
   session.value = null
   storeToken(null)
+
+  if (wallet) {
+    await (await wallet).disconnectWallet()
+  }
 }
 
 export interface Preview {

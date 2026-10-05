@@ -55,9 +55,15 @@ reads the event from its public page, and the pin is up for everyone within a
 minute. [docs/map.md](docs/map.md) has the design, the research it rests on, the
 endpoints, and what is left to verify against live services.
 
-Locally, set `HOMEBASE_MAP_ADMIN_KEY` before `bun run dev` and use the key in
-the map's "Add an event" dialog. The map draws on OpenFreeMap's tiles and needs
-no key of its own.
+Admins sign in with their wallet. Locally, set `HOMEBASE_ADMIN_ADDRESSES` to
+your address before `bun run dev`, press "Add an event" and connect; on
+`localhost` sign-in needs nothing else. The map draws on OpenFreeMap's tiles
+and needs no key of its own.
+
+`bun run e2e` drives the whole flow in a real browser: the server with Luma
+answered from fixtures, a wallet the run holds the key to, connecting, signing
+in, pinning, removing, signing out and a wallet that is turned away. It needs
+port 3000 free and, once, `bunx playwright install chromium`.
 
 ## 📦 Deployment
 
@@ -88,9 +94,8 @@ settings are the environment variables:
 - `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` — the map's database, from the
   Turso integration on the Vercel Marketplace. Without them `/map.json`
   answers with a 503 and the site shows an empty map.
-- `HOMEBASE_MAP_ADMIN_KEY` — the key that lets an admin add events on the map.
-- `HOMEBASE_ADMIN_ADDRESSES` — optional. Wallets that may sign in to add
-  events, comma-separated.
+- `HOMEBASE_ADMIN_ADDRESSES` — the wallets that may sign in to add events on
+  the map, comma-separated. Without it the map is read-only.
 - `HOMEBASE_SITE_HOSTS` — the hostnames the site is served on, comma-separated,
   which wallet sign-in messages are bound to. Vercel's own hostnames are known
   without it; set it for a custom domain and on Fly. Unset, only `localhost`

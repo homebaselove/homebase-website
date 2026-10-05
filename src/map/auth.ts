@@ -1,8 +1,8 @@
 /**
- * Who may pin events. Today that is anyone holding the admin key, and any
- * wallet on the admin list that signs in with Ethereum. The sign-in is the
- * road to the next step: once SeedMe's lock contract is configured, a wallet
- * with enough $home locked signs in the same way and gets the locker role.
+ * Who may pin events: the wallets on the admin list, signed in with Ethereum.
+ * The sign-in is the road to the next step: once SeedMe's lock contract is
+ * configured, a wallet with enough $home locked signs in the same way and
+ * gets the locker role.
  *
  * Signatures are checked for plain wallets by recovery and for smart wallets
  * (Base Account, Safe) through ERC-6492's universal validator, which handles
@@ -39,12 +39,8 @@ export type Role =
 
 export interface Actor {
   readonly role: Role
-  /** Null for the shared admin key, which belongs to no wallet. */
-  readonly address: string | null
-  readonly via:
-    | "key"
-    | "wallet"
-  readonly expiresAt: string | null
+  readonly address: string
+  readonly expiresAt: string
 }
 
 export interface LockConfig {
@@ -56,7 +52,6 @@ export interface LockConfig {
 }
 
 export interface AuthConfig {
-  readonly adminKey: string | null
   readonly adminAddresses: readonly string[]
   readonly lock: LockConfig | null
   readonly rpc: string
@@ -99,7 +94,6 @@ export function configFrom(
   }
 
   return {
-    adminKey: env.HOMEBASE_MAP_ADMIN_KEY?.trim() || null,
     adminAddresses: (env.HOMEBASE_ADMIN_ADDRESSES ?? "")
       .split(",")
       .map((address) => address.trim())
@@ -178,29 +172,15 @@ function bearer(request: Request): string | null {
   return match ? match[1] : null
 }
 
-/** The admin key, or a wallet session, from the Authorization header. */
+/** The wallet session behind the Authorization header, if it is live. */
 export async function authenticate(
   request: Request,
   store: Store,
-  config: AuthConfig,
   now: Date,
 ): Promise<Actor | null> {
   const token = bearer(request)
 
-  if (!token) {
-    return null
-  }
-
-  if (config.adminKey && sameSecret(token, config.adminKey)) {
-    return {
-      role: "admin",
-      address: null,
-      via: "key",
-      expiresAt: null,
-    }
-  }
-
-  if (!SessionToken.test(token)) {
+  if (!token || !SessionToken.test(token)) {
     return null
   }
 
@@ -214,7 +194,6 @@ export async function authenticate(
     ? {
       role: session.role as Role,
       address: session.address,
-      via: "wallet",
       expiresAt: session.expiresAt,
     }
     : null
@@ -470,7 +449,6 @@ export async function verifySignIn(
     actor: {
       role,
       address,
-      via: "wallet",
       expiresAt,
     },
     token,

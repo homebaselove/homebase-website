@@ -228,9 +228,8 @@ async function submit(
   ctx: Context,
   preview: boolean,
 ): Promise<Response> {
-  const config = Auth.configFrom(ctx.env)
   const now = ctx.now()
-  const actor = await Auth.authenticate(request, ctx.store, config, now)
+  const actor = await Auth.authenticate(request, ctx.store, now)
 
   if (!actor) {
     return error(401, "Sign in to add events.")
@@ -275,7 +274,7 @@ async function submit(
   const stored = await Repo.putEvent(
     ctx.store,
     reconcile(existing, resolution, {
-      addedBy: actor.address ?? "admin",
+      addedBy: actor.address,
       now: now.toISOString(),
     }),
   )
@@ -290,8 +289,7 @@ async function submit(
 }
 
 async function remove(request: Request, ctx: Context): Promise<Response> {
-  const config = Auth.configFrom(ctx.env)
-  const actor = await Auth.authenticate(request, ctx.store, config, ctx.now())
+  const actor = await Auth.authenticate(request, ctx.store, ctx.now())
 
   if (!actor) {
     return error(401, "Sign in to remove events.")
@@ -462,7 +460,7 @@ export async function refreshStale(ctx: Context): Promise<RefreshReport> {
 async function refresh(request: Request, ctx: Context): Promise<Response> {
   const config = Auth.configFrom(ctx.env)
   const allowed = Auth.isCron(request, config)
-    || await Auth.authenticate(request, ctx.store, config, ctx.now())
+    || await Auth.authenticate(request, ctx.store, ctx.now())
 
   if (!allowed) {
     return error(401, "Sign in to refresh events.")
@@ -558,7 +556,7 @@ async function verify(request: Request, ctx: Context): Promise<Response> {
 
 async function session(request: Request, ctx: Context): Promise<Response> {
   const config = Auth.configFrom(ctx.env)
-  const actor = await Auth.authenticate(request, ctx.store, config, ctx.now())
+  const actor = await Auth.authenticate(request, ctx.store, ctx.now())
 
   return json({
     actor,

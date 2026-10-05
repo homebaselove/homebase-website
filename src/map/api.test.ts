@@ -196,8 +196,6 @@ async function openStore(): Promise<Store> {
   return store
 }
 
-const AdminKey = "correct-horse-battery-staple"
-
 const Now = new Date("2026-10-05T12:00:00.000Z")
 
 async function site(options: {
@@ -210,7 +208,7 @@ async function site(options: {
   const ctx: Context = {
     store,
     env: {
-      HOMEBASE_MAP_ADMIN_KEY: AdminKey,
+      HOMEBASE_ADMIN_ADDRESSES: adminWallet,
       HOMEBASE_BASE_RPC: Rpc,
       HOMEBASE_SITE_HOSTS: "homebase.test",
       ...options.env,
@@ -219,10 +217,14 @@ async function site(options: {
     now: options.now ?? (() => Now),
   }
 
+  // An admin session for most tests; an unusable token when the site lets no wallet in.
+  const admin = (await adminToken(ctx)) ?? "no-admin"
+
   return {
     ctx,
     store,
     web,
+    admin,
   }
 }
 
@@ -299,7 +301,7 @@ test("the map starts empty and is cached for a minute", async () => {
     })
 })
 
-test("adding an event takes the admin key and nothing less", async () => {
+test("adding an event takes a signed-in wallet and nothing less", async () => {
   const { ctx } = await site()
   const body = {
     url: "https://luma.com/abc123",
@@ -356,14 +358,14 @@ test("a pasted link becomes a pin, and pasting it again changes nothing", async 
       ]: () => pageFor(lumaEvent("abc123")),
     },
   })
-  const { ctx } = await site({
+  const { ctx, admin } = await site({
     web,
   })
   const first = await answer(
     await handle(
       request({
         method: "POST",
-        token: AdminKey,
+        token: admin,
         body: {
           url: "https://lu.ma/abc123?tk=secret",
         },
@@ -399,7 +401,7 @@ test("a pasted link becomes a pin, and pasting it again changes nothing", async 
           hosts: [],
           calendar: null,
           status: "live",
-          addedBy: "admin",
+          addedBy: adminWallet,
           addedAt: Now.toISOString(),
           checkedAt: Now.toISOString(),
         },
@@ -412,7 +414,7 @@ test("a pasted link becomes a pin, and pasting it again changes nothing", async 
     await handle(
       request({
         method: "POST",
-        token: AdminKey,
+        token: admin,
         body: {
           url: "https://luma.com/abc123",
         },
@@ -454,7 +456,7 @@ test("a preview reads the event without pinning it", async () => {
       ]: () => pageFor(lumaEvent("abc123")),
     },
   })
-  const { ctx } = await site({
+  const { ctx, admin } = await site({
     web,
   })
   const preview = await answer(
@@ -462,7 +464,7 @@ test("a preview reads the event without pinning it", async () => {
       request({
         method: "POST",
         path: "/map/preview.json",
-        token: AdminKey,
+        token: admin,
         body: {
           url: "https://luma.com/abc123",
         },
@@ -514,7 +516,7 @@ test("what Luma says about a link comes back as the reason", async () => {
       [slugUrls("flaky").api]: down,
     },
   })
-  const { ctx } = await site({
+  const { ctx, admin } = await site({
     web,
   })
   const post = async (url: string) =>
@@ -522,7 +524,7 @@ test("what Luma says about a link comes back as the reason", async () => {
       await handle(
         request({
           method: "POST",
-          token: AdminKey,
+          token: admin,
           body: {
             url,
           },
@@ -586,14 +588,14 @@ test("an admin can take an event off the map", async () => {
       ]: () => pageFor(lumaEvent("abc123")),
     },
   })
-  const { ctx } = await site({
+  const { ctx, admin } = await site({
     web,
   })
 
   await handle(
     request({
       method: "POST",
-      token: AdminKey,
+      token: admin,
       body: {
         url: "https://luma.com/abc123",
       },
@@ -617,7 +619,7 @@ test("an admin can take an event off the map", async () => {
         request({
           method: "DELETE",
           path: "/map.json?slug=nope",
-          token: AdminKey,
+          token: admin,
         }),
         "map",
         ctx,
@@ -628,7 +630,7 @@ test("an admin can take an event off the map", async () => {
           request({
             method: "DELETE",
             path: "/map.json?slug=abc123",
-            token: AdminKey,
+            token: admin,
           }),
           "map",
           ctx,
@@ -663,7 +665,7 @@ test("a refresh reads aged pins again and retires the ones Luma dropped", async 
       [pageUrl(slug("leaves"))]: () => pageFor(lumaEvent("leaves")),
     },
   })
-  const { ctx, store } = await site({
+  const { ctx, store, admin } = await site({
     web,
     env: {
       CRON_SECRET: "cron-secret",
@@ -673,7 +675,7 @@ test("a refresh reads aged pins again and retires the ones Luma dropped", async 
     handle(
       request({
         method: "POST",
-        token: AdminKey,
+        token: admin,
         body: {
           url: `https://luma.com/${name}`,
         },
@@ -800,21 +802,40 @@ test("a refresh reads aged pins again and retires the ones Luma dropped", async 
     .toBe(0)
 })
 
-const privateKey = Secp256k1.randomPrivateKey()
+const addressOf = (privateKey: Hex.Hex) =>
+  Address.checksum(
+    Address.fromPublicKey(Secp256k1.getPublicKey({
+      privateKey,
+    })),
+  )
 
-const wallet = Address.checksum(
-  Address.fromPublicKey(Secp256k1.getPublicKey({
-    privateKey,
-  })),
-)
-
-const sign = (message: string) =>
+const signAs = (privateKey: Hex.Hex) => (message: string) =>
   Signature.toHex(
     Secp256k1.sign({
       payload: PersonalMessage.getSignPayload(Hex.fromString(message)),
       privateKey,
     }),
   )
+
+/** The wallet on the admin list, unless a test says otherwise. */
+const adminPrivateKey = Secp256k1.randomPrivateKey()
+
+const adminWallet = addressOf(adminPrivateKey)
+
+/** A second wallet, an admin only where a test puts it on the list. */
+const privateKey = Secp256k1.randomPrivateKey()
+
+const wallet = addressOf(privateKey)
+
+const sign = signAs(privateKey)
+
+async function adminToken(ctx: Context): Promise<string | null> {
+  const signedIn = await signIn(ctx, adminWallet, signAs(adminPrivateKey))
+
+  return signedIn.verified?.status === 200
+    ? signedIn.verified.body.token
+    : null
+}
 
 async function signIn(
   ctx: Context,
@@ -865,7 +886,11 @@ async function signIn(
 }
 
 test("wallet sign-in is closed until a wallet is allowed in", async () => {
-  const { ctx } = await site()
+  const { ctx } = await site({
+    env: {
+      HOMEBASE_ADMIN_ADDRESSES: undefined,
+    },
+  })
 
   expect(
     await answer(
@@ -928,7 +953,6 @@ test("an admin wallet signs a message the server wrote and gets a session", asyn
         token: expect.stringMatching(/^[0-9a-f]{64}$/),
         role: "admin",
         address: wallet,
-        via: "wallet",
         expiresAt: "2026-10-06T12:00:00.000Z",
       },
       cacheControl: null,
@@ -973,7 +997,6 @@ test("an admin wallet signs a message the server wrote and gets a session", asyn
         actor: {
           role: "admin",
           address: wallet,
-          via: "wallet",
           expiresAt: "2026-10-06T12:00:00.000Z",
         },
         walletSignIn: true,
@@ -1363,7 +1386,7 @@ test("a locker can remove the pins they added, and no others", async () => {
       ]: () => pageFor(lumaEvent("theirs")),
     },
   })
-  const { ctx } = await site({
+  const { ctx, admin } = await site({
     web,
     env: {
       HOMEBASE_LOCK_CONTRACT: LockContract,
@@ -1395,13 +1418,13 @@ test("a locker can remove the pins they added, and no others", async () => {
     )
 
   await post(locker, "mine")
-  await post(AdminKey, "theirs")
+  await post(admin, "theirs")
 
   expect(
     [
       await answer(await remove(locker, "theirs")),
       (await remove(locker, "mine")).status,
-      (await remove(AdminKey, "theirs")).status,
+      (await remove(admin, "theirs")).status,
     ],
   )
     .toEqual([
@@ -1429,7 +1452,7 @@ test("a refresh keeps a pin Luma is silent about, and keeps the venue of one onl
       [pageUrl(slug("marked"))]: () => pageFor(lumaEvent("marked")),
     },
   })
-  const { ctx, store } = await site({
+  const { ctx, store, admin } = await site({
     web,
     env: {
       CRON_SECRET: "cron-secret",
@@ -1439,7 +1462,7 @@ test("a refresh keeps a pin Luma is silent about, and keeps the venue of one onl
     handle(
       request({
         method: "POST",
-        token: AdminKey,
+        token: admin,
         body: {
           url: `https://luma.com/${name}`,
         },
@@ -1634,7 +1657,7 @@ test("a HEAD is answered like the GET it stands for", async () => {
 })
 
 test("a body that is not what the endpoint expects is refused before anything else", async () => {
-  const { ctx } = await site()
+  const { ctx, admin } = await site()
 
   expect(
     [
@@ -1642,7 +1665,7 @@ test("a body that is not what the endpoint expects is refused before anything el
         new Request("https://homebase.test/map.json", {
           method: "POST",
           headers: {
-            authorization: `Bearer ${AdminKey}`,
+            authorization: `Bearer ${admin}`,
             "x-forwarded-for": client(),
           },
           body: "not json",
@@ -1654,7 +1677,7 @@ test("a body that is not what the endpoint expects is refused before anything el
       (await handle(
         request({
           method: "POST",
-          token: AdminKey,
+          token: admin,
           body: {
             link: "https://luma.com/abc123",
           },

@@ -152,10 +152,9 @@ allowance); Postgres (a second dialect to maintain next to SQLite).
 
 ### Who may add events
 
-Two ways in today, with one design for what comes next:
+One way in today, built so that the next is a rule added rather than a
+rewrite:
 
-- **Admin key.** `HOMEBASE_MAP_ADMIN_KEY`, pasted once into the dialog and
-  kept in the browser. Compared in constant time.
 - **Admin wallets.** Addresses in `HOMEBASE_ADMIN_ADDRESSES` sign in with
   Ethereum (ERC-4361): the server writes the message, binds it to one of the
   site's own hosts (`HOMEBASE_SITE_HOSTS`, with Vercel's hostnames known on
@@ -179,11 +178,57 @@ ask the SeedMe team, or perform a small lock on seedme.xyz/lock and read the
 view function's signature from the verified source. `$home` itself is
 `0xB9A1E52f3ED678B01Ff5e256fDe43f26f9C01bA3` on Base.
 
-Rejected: a shared key alone (no per-person identity, nothing to build the
-lock gate on); Sign In with Farcaster as the primary identity (it proves a
+Removed: the shared admin key the first cut also took, `HOMEBASE_MAP_ADMIN_KEY`
+(no per-person identity, nothing to build the lock gate on, one more secret
+to keep and to paste). Rejected: Sign In with Farcaster as the primary identity (it proves a
 Farcaster account, not the wallet that holds $home, and the Base app no
 longer invokes it); cookies as the session transport (third-party inside the
 mini app).
+
+### Connecting a wallet
+
+The page runs on Preact, which rules out every connect kit: `wagmi` (the
+hooks), RainbowKit, ConnectKit and OnchainKit all require React 18 and
+TanStack Query. `@wagmi/core` 3.6.5 is the framework-free layer beneath them:
+it peers on `viem` 2.x alone (its other peers, `@tanstack/query-core`, the
+Tempo `accounts` SDK and `typescript`, are optional) and depends on `mipd`,
+`zustand` and `eventemitter3`. It gives `connect`, `signMessage` and
+`disconnect` over any EIP-1193 provider, which is all sign-in needs.
+
+Every wallet reaches it through its `injected` connector with a provider
+handed in:
+
+- wallets that announce themselves on the page (EIP-6963), which wagmi lists
+  with their own names and icons, and a `window.ethereum` fallback for one
+  that only does that;
+- Coinbase's smart wallet through `@coinbase/wallet-sdk` 4.4.0, which opens a
+  passkey flow for people with no extension, so a Base user needs nothing
+  installed; offered unless an announced wallet is already Coinbase's;
+- inside a Farcaster mini app, the host's wallet from
+  `sdk.wallet.getEthereumProvider()`, through the `@farcaster/frame-sdk` the
+  page already carries for its ready call; there it is the only wallet
+  offered.
+
+Not used: `@wagmi/connectors`, whose optional peers (every wallet SDK it
+wraps) the bundler would have had to resolve; WalletConnect, which needs a
+Reown project id and its relay; the Farcaster wagmi connector packages,
+written for wagmi v2's connector shape.
+
+The wallet code is a bundle of its own at `/wallet/wagmi.js`, built by
+`Bun.build` with code splitting from `src/wallet/wagmi.ts`: the page fetches
+it the first time Connect is pressed, and the Coinbase SDK is a chunk inside
+it, fetched only when that wallet is chosen. On Vercel the build writes it to
+`dist/wallet`; the Bun server builds it in memory as it starts and serves it
+from the same path (`src/wallet/walletRoute.ts`). Bundled into the page
+instead, wagmi's config module was dropped by effect-start's in-memory
+bundler, and turning on splitting there pulled the server routes into the
+client through the route manifest. Minified sizes:
+
+| Fetched                                | Raw    | Gzipped |
+| -------------------------------------- | ------ | ------- |
+| the page, as before                    | 507 KB | 151 KB  |
+| the wallet entry and its shared chunks | 115 KB | 35 KB   |
+| the Coinbase chunk, on choosing it     | 111 KB | 35 KB   |
 
 ### The experience
 
@@ -217,8 +262,8 @@ One table, `MapEvent`, keyed by the Luma slug (the path on luma.com, which is
 also the public id in `?event=`), with Luma's event id kept unique when known
 so a renamed link replaces its older self. `lat` and `lng` are null for
 online events and for events Luma could not place; `placement` says which.
-`addedBy` is the wallet that pinned the event, or `admin` for the key. Two
-small tables, `AuthNonce` and `AuthSession`, carry sign-ins.
+`addedBy` is the wallet that pinned the event. Two small tables, `AuthNonce`
+and `AuthSession`, carry sign-ins.
 
 ## Endpoints
 
@@ -243,7 +288,6 @@ address.
 | Variable                                                                                                                     | Where                                                      | Meaning                                                                                                                                                                                    |
 | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`                                                                                     | Vercel (required), Fly (optional)                          | the hosted database; `https://<db>-<org>.turso.io`. Install Turso from the Vercel Marketplace or create one at turso.tech. The Bun server uses it too when set, otherwise its SQLite file. |
-| `HOMEBASE_MAP_ADMIN_KEY`                                                                                                     | both                                                       | the shared admin key; unset means no key sign-in                                                                                                                                           |
 | `HOMEBASE_ADMIN_ADDRESSES`                                                                                                   | both                                                       | comma-separated wallets that may sign in as admins                                                                                                                                         |
 | `HOMEBASE_SITE_HOSTS`                                                                                                        | Fly (required for wallet sign-in), Vercel (custom domains) | comma-separated hostnames the site is served on, which sign-in messages are bound to; Vercel's own hostnames are known without it. Unset, only `localhost` may sign in with a wallet.      |
 | `HOMEBASE_LOCK_CONTRACT`, `HOMEBASE_LOCK_READ`, `HOMEBASE_LOCK_MIN`, `HOMEBASE_LOCK_AMOUNT_INDEX`, `HOMEBASE_LOCK_END_INDEX` | both                                                       | the $home lock gate; unset until the contract is known                                                                                                                                     |
@@ -251,7 +295,8 @@ address.
 | `CRON_SECRET`                                                                                                                | Vercel                                                     | lets the daily cron call `/api/map-refresh`                                                                                                                                                |
 | `DATA_PATH`                                                                                                                  | Fly                                                        | where the SQLite file lives                                                                                                                                                                |
 
-Without any of the admin settings the map is read-only and the dialog says so.
+Without `HOMEBASE_ADMIN_ADDRESSES` or the lock gate the map is read-only and
+the dialog says so.
 
 ## Validation
 
@@ -261,8 +306,8 @@ The design was checked three ways before this was called done.
 seeded database, an offline basemap in place of OpenFreeMap and a stub in
 place of Luma, through eleven screens: the page, the overview, a pin whose
 address is guests-only, the card closed, a one-venue cluster, the past view,
-the dialog signed out, the admin key, a look-up, the pin it made, and the
-phone layout with and without a card. What that found, and what changed:
+the dialog signed out, signed in, a look-up, the pin it made, and the phone
+layout with and without a card. What that found, and what changed:
 
 - The details card had lost its width and position: the Tailwind plugin in
   effect-start pairs every quote character in a component file, and an
@@ -303,6 +348,16 @@ shapes and its endpoints, the API's rules, the sign-in flow with a plain
 wallet, a smart wallet and a forged signature, the lock gate against a stub
 chain, and the refresh job, under `bun test`.
 
+**Driven end to end.** `bun run e2e` starts the Bun server with Luma answered
+from fixtures, opens the site in Chromium, announces a wallet whose key the
+run holds (EIP-6963, the way extensions do), and walks through connecting
+it, signing in, looking up a link, pinning, keeping the session across a
+reload, removing, signing out, a wallet that is not an admin being turned
+away, and a deep link on a phone-sized screen: ten checks, a screenshot of
+each step. The reader, the API, sign-in and the store under it are the ones
+the site runs on; only Luma and the tiles are stubbed. A failed run leaves a
+screenshot, the page's text and the server's log.
+
 ## What still needs a hand
 
 The sandbox this was built in could not reach Luma, Base, OpenFreeMap or
@@ -317,13 +372,17 @@ schema, open-source clients, and stub servers rather than live services:
    curl -s "https://api.lu.ma/url?url=$SLUG" | head -c 600
    ```
 
-   Then paste the link into the dialog on a deploy with the admin key set.
-   `source` in the preview answer says which reader answered.
+   Then paste the link into the dialog on a deploy whose
+   `HOMEBASE_ADMIN_ADDRESSES` lists your wallet. `source` in the preview
+   answer says which reader answered.
 2. **Wallet sign-in** with a plain wallet, with Coinbase Smart Wallet (which
-   exercises the ERC-6492 path), and inside the Farcaster mini app.
+   exercises the ERC-6492 path), and inside the Farcaster mini app. The
+   end-to-end suite covers the flow with a wallet it holds the key to; what
+   it cannot stand in for is a real wallet's own side: the extension's
+   prompts, Coinbase's passkey popup, and the host's wallet in the mini app.
 3. **Tiles** in Safari, Chrome and the Base app's web view.
-4. **Turso** on the Vercel deploy: install it from the Marketplace, set the
-   admin key, pin an event.
+4. **Turso** on the Vercel deploy: install it from the Marketplace, list your
+   wallet in `HOMEBASE_ADMIN_ADDRESSES`, pin an event.
 5. **The MCP server.** The sandbox's network policy refused every Luma host,
    `mcp.luma.com` included, so its lookup is untested here. From Claude Code:
    `claude mcp add --transport http luma https://mcp.luma.com`, sign in, then

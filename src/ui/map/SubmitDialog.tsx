@@ -8,9 +8,10 @@ import {
   type Preview,
   preview,
   session,
-  signInWithWallet,
+  signInWith,
   signOut,
-  useAdminKey,
+  type Wallet,
+  walletChoices,
   walletSignIn,
 } from "../../map/client.ts"
 import type { MapEvent } from "../../map/MapEvent.ts"
@@ -39,8 +40,7 @@ export function SubmitDialog(props: Props) {
   const found = useSignal<Preview | null>(null)
   const busy = useSignal<Busy>("idle")
   const problem = useSignal<string | null>(null)
-  const key = useSignal(String())
-  const keyOpen = useSignal(false)
+  const wallets = useSignal<Wallet[] | null>(null)
   const input = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -91,30 +91,33 @@ export function SubmitDialog(props: Props) {
     }
   }
 
-  const withWallet = async () => {
+  const offerWallets = async () => {
     busy.value = "signing"
     problem.value = null
 
-    const failure = await signInWithWallet()
+    const answer = await walletChoices()
 
     busy.value = "idle"
 
-    if (failure) {
-      problem.value = failure.error
+    if (isFailure(answer)) {
+      problem.value = answer.error
+    } else {
+      wallets.value = answer
     }
   }
 
-  const withKey = async () => {
+  const withWallet = async (id: string) => {
     busy.value = "signing"
     problem.value = null
 
-    const failure = await useAdminKey(key.value)
+    const failure = await signInWith(id)
 
     busy.value = "idle"
-    key.value = String()
 
     if (failure) {
       problem.value = failure.error
+    } else {
+      wallets.value = null
     }
   }
 
@@ -163,8 +166,8 @@ export function SubmitDialog(props: Props) {
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <span>
                   Adding as{" "}
-                  <strong>
-                    {actor.address ? shortAddress(actor.address) : "admin"}
+                  <strong title={actor.address}>
+                    {shortAddress(actor.address)}
                   </strong>
                   {actor.role === "locker" && " ($home locker)"}
                 </span>
@@ -181,63 +184,63 @@ export function SubmitDialog(props: Props) {
             : (
               <>
                 <p class="text-gray-600">
-                  Homebase admins can add events today. Once $home locking is
-                  wired in, anyone who has locked $home will be able to as well.
+                  {walletSignIn.value
+                    ? "Homebase admins sign in with their wallet to add events. Once $home locking is wired in, anyone who has locked $home will be able to as well."
+                    : "No admin wallet is set up on this deployment yet, so nobody can add events here."}
                 </p>
 
-                <div class="flex flex-wrap items-center gap-2">
-                  {walletSignIn.value && (
-                    <button
-                      type="button"
-                      class="btn-brand"
-                      disabled={busy.value === "signing"}
-                      onClick={withWallet}
-                    >
-                      {busy.value === "signing"
-                        ? "Check your wallet…"
-                        : "Sign in with wallet"}
-                    </button>
-                  )}
-
+                {walletSignIn.value && !wallets.value && (
                   <button
                     type="button"
-                    class="text-brand hover:underline"
-                    aria-expanded={keyOpen.value}
-                    onClick={() => {
-                      keyOpen.value = !keyOpen.value
-                    }}
+                    class="btn-brand self-start"
+                    disabled={busy.value === "signing"}
+                    onClick={offerWallets}
                   >
-                    I have an admin key
+                    {busy.value === "signing"
+                      ? "One moment…"
+                      : "Connect wallet"}
                   </button>
-                </div>
+                )}
 
-                {keyOpen.value && (
-                  <form
-                    class="flex gap-2"
-                    onSubmit={(submit) => {
-                      submit.preventDefault()
-                      withKey()
-                    }}
+                {walletSignIn.value && wallets.value && (
+                  <ul
+                    class="flex flex-col gap-2"
+                    aria-label="Wallets"
                   >
-                    <input
-                      type="password"
-                      autoComplete="off"
-                      placeholder="Admin key"
-                      aria-label="Admin key"
-                      value={key.value}
-                      class="flex-1 min-w-0 rounded-full border-[1px] border-gray-200 bg-white px-3 py-2 focus:outline-none focus:border-brand/40"
-                      onInput={(event) => {
-                        key.value = (event.target as HTMLInputElement).value
-                      }}
-                    />
-                    <button
-                      type="submit"
-                      class="btn-brand"
-                      disabled={!key.value || busy.value === "signing"}
-                    >
-                      Use key
-                    </button>
-                  </form>
+                    {wallets.value.map((wallet) => (
+                      <li key={wallet.id}>
+                        <button
+                          type="button"
+                          class="flex w-full items-center gap-3 rounded-lg border-[1px] border-gray-200 bg-white px-3 py-2 text-left hover:bg-gray-100 disabled:opacity-50"
+                          disabled={busy.value === "signing"}
+                          onClick={() => withWallet(wallet.id)}
+                        >
+                          {wallet.icon
+                            ? (
+                              <img
+                                src={wallet.icon}
+                                alt={String()}
+                                class="h-6 w-6 rounded"
+                              />
+                            )
+                            : (
+                              <span
+                                class="h-6 w-6 rounded bg-brand/10"
+                                aria-hidden="true"
+                              />
+                            )}
+                          <span class="font-semibold">
+                            {wallet.name}
+                          </span>
+                          {busy.value === "signing" && (
+                            <span class="ml-auto text-gray-500">
+                              Check your wallet…
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </>
             )}

@@ -4,6 +4,7 @@ import * as NFs from "node:fs/promises"
 import * as NPath from "node:path"
 import * as BunUuidPlugin from "../src/BunUuidPlugin.ts"
 import { MapLibreVersion, VendorDir, VendorFiles } from "../src/map/vendor.ts"
+import { buildWallet, WalletDir } from "../src/wallet/build.ts"
 
 /**
  * Builds the client into static files for hosts that cannot run the Bun
@@ -72,4 +73,9 @@ for (const file of VendorFiles) {
   )
 }
 
-console.log(`Built ${result.outputs.length} files into ${OutDir}/`)
+/** The wallet is its own bundle, fetched by the page when someone presses Connect. */
+const wallet = await buildWallet(NPath.join(OutDir, WalletDir))
+
+console.log(
+  `Built ${result.outputs.length + wallet.length} files into ${OutDir}/`,
+)

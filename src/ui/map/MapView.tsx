@@ -155,8 +155,9 @@ export function MapView(props: Props) {
       })
       const markers = new Map<string, import("maplibre-gl").Marker>()
       let known = new Map<string, MapEvent>()
-      // The pins the index holds, so a list that only re-sorted does not reset the view.
-      let indexed = String()
+      // The pins the index holds, so a list that only re-sorted does not reset
+      // the view; null until the first list, which must load even when empty.
+      let indexed: string | null = null
       // The pin the camera was last sent to, so a refreshed list does not send it again.
       let focused: string | null = null
       // The loaded() method of MapLibre is false whenever a tile is still on its way,
