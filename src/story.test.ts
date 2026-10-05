@@ -57,12 +57,22 @@ test("a cover holds at most two photos, each sized and described", () => {
         true,
       ],
       [
+        "letter-v2",
+        true,
+        true,
+      ],
+      [
         "devconnect-2025",
         true,
         true,
       ],
       [
         "ethdenver-2026",
+        true,
+        true,
+      ],
+      [
+        "today",
         true,
         true,
       ],

@@ -4,12 +4,14 @@
  * where it stands today. The figures come from each house's retrospective.
  */
 
+import DevconnectCrew from "../assets/story/DevconnectCrew.webp"
 import DevconnectRecapCast from "../assets/story/DevconnectRecapCast.webp"
 import EthDenverCrew from "../assets/story/EthDenverCrew.webp"
 import EthDenverReturnCrew from "../assets/story/EthDenverReturnCrew.webp"
 import JesseHappyToFund from "../assets/story/JesseHappyToFund.webp"
 import LetterToJesseCast from "../assets/story/LetterToJesseCast.webp"
 import LetterToJesseV2Cast from "../assets/story/LetterToJesseV2Cast.webp"
+import MumbaiAnnouncement from "../assets/story/MumbaiAnnouncement.webp"
 
 export interface StoryLink {
   label: string
@@ -65,6 +67,9 @@ export const DevconnectRecapUrl = "https://farcaster.xyz/luciano/0x78eb1ae0"
 
 export const EthDenverReturnRecapUrl =
   "https://x.com/homebasedotlove/status/2029929738454847972"
+
+/** Where applications for the next house go. */
+export const BasedHouseMumbaiApplyUrl = "https://forms.gle/vXRkM4qnAVeQpX"
 
 export const Chapters: Chapter[] = [
   {
@@ -186,11 +191,11 @@ export const Chapters: Chapter[] = [
     ],
   },
   {
-    id: "devconnect-2025",
-    month: "2025-11",
-    when: "Nov 2025",
-    kicker: "2nd Based House",
-    title: "Based House Devconnect",
+    id: "letter-v2",
+    month: "2025-09",
+    when: "Fall 2025",
+    kicker: "Second letter",
+    title: "A second letter to Jesse",
     cover: [
       {
         src: LetterToJesseV2Cast,
@@ -210,7 +215,32 @@ export const Chapters: Chapter[] = [
       },
     ],
     summary:
-      "Another letter to Jesse, then ten days in Buenos Aires with Kismet Casa for Devconnect. Fifteen residents, most of them Zora artists, curated the Onchain Art Hub for five days, hosted a Base meetup and the Based Asado, and shipped five miniapps and eleven artworks.",
+      "With the first house proven, Luciano wrote to Jesse again, as a miniapp: the crew was back together to build another Based House, this time in Argentina for Devconnect, with leaolmos.eth and rafi. Shall we run it back? The answer became the second house.",
+    links: [
+      {
+        label: "Letter to Jesse V2",
+        href: LetterToJesseV2Url,
+      },
+    ],
+  },
+  {
+    id: "devconnect-2025",
+    month: "2025-11",
+    when: "Nov 2025",
+    kicker: "2nd Based House",
+    title: "Based House Devconnect",
+    cover: [
+      {
+        src: DevconnectCrew,
+        width: 2000,
+        height: 1200,
+        alt:
+          "The Based House Devconnect crew packed onto and around a sofa in Buenos Aires, with the Based House Devconnect logo on the screen behind them",
+        href: DevconnectRecapUrl,
+      },
+    ],
+    summary:
+      "Ten days in Buenos Aires with Kismet Casa for Devconnect. Fifteen residents, most of them Zora artists, curated the Onchain Art Hub for five days, hosted a Base meetup and the Based Asado, and shipped five miniapps and eleven artworks.",
     stats: [
       {
         value: "15",
@@ -230,10 +260,6 @@ export const Chapters: Chapter[] = [
       },
     ],
     links: [
-      {
-        label: "Letter to Jesse V2",
-        href: LetterToJesseV2Url,
-      },
       {
         label: "Retrospective",
         href:
@@ -285,9 +311,23 @@ export const Chapters: Chapter[] = [
     when: "Today",
     kicker: "Where we are",
     title: "Based House Mumbai",
+    cover: [
+      {
+        src: MumbaiAnnouncement,
+        width: 980,
+        height: 184,
+        alt:
+          "Homebase posts on X: Announcing Based House Mumbai. Apply to Based House Mumbai at forms.gle/vXRkM4qnAVeQpX",
+        href: BasedHouseMumbaiApplyUrl,
+      },
+    ],
     summary:
-      "The next house is headed to Mumbai, and the community funds it directly: every creator fee $home earns goes to Based House Mumbai. Founders in residence keep launching through SeedMe, and locking $home grants access to their claims. Welcome home. Welcome to Base.",
+      "The next house is headed to Mumbai, and the community funds it directly: every creator fee $home earns goes to Based House Mumbai. Applications are open, founders in residence keep launching through SeedMe, and locking $home grants access to their claims. Welcome home. Welcome to Base.",
     links: [
+      {
+        label: "Apply to Based House Mumbai",
+        href: BasedHouseMumbaiApplyUrl,
+      },
       {
         label: "Fund Based House Mumbai",
         href: "#top",
