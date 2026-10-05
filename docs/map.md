@@ -298,7 +298,7 @@ removed by an admin or the wallet that added it. One trade-off stands:
 `addedBy` in the public list names the wallets that pinned events, which are
 pseudonymous and already public on chain.
 
-**Tested.** Sixty-seven tests cover the resolver against Luma's three page
+**Tested.** Seventy tests cover the resolver against Luma's three page
 shapes and its endpoints, the API's rules, the sign-in flow with a plain
 wallet, a smart wallet and a forged signature, the lock gate against a stub
 chain, and the refresh job, under `bun test`.
