@@ -159,8 +159,9 @@ rewrite:
   `0x3D140B892437dD7857701098415deB2daaE03A40`, or the list in
   `HOMEBASE_ADMIN_ADDRESSES` in its place, signs in with
   Ethereum (ERC-4361): the server writes the message, binds it to one of the
-  site's own hosts (`HOMEBASE_SITE_HOSTS`, with Vercel's hostnames known on
-  their own; a request from any other host gets no message), a single-use
+  site's own hosts (`homebase.love` and `www.homebase.love` unless
+  `HOMEBASE_SITE_HOSTS` names others, with Vercel's hostnames known on their
+  own; a request from any other host gets no message), a single-use
   nonce and Base's chain id, and checks the signature by recovery for plain
   wallets or through ERC-6492's universal validator for smart wallets (Base
   Account, Safe), in one deployless call on Base. A
@@ -289,15 +290,15 @@ address.
 
 ## Configuration
 
-| Variable                                                                                                                     | Where                                                      | Meaning                                                                                                                                                                                    |
-| ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`                                                                                     | Vercel (required), Fly (optional)                          | the hosted database; `https://<db>-<org>.turso.io`. Install Turso from the Vercel Marketplace or create one at turso.tech. The Bun server uses it too when set, otherwise its SQLite file. |
-| `HOMEBASE_ADMIN_ADDRESSES`                                                                                                   | both                                                       | comma-separated wallets that may sign in as admins; unset, the Homebase wallet alone                                                                                                       |
-| `HOMEBASE_SITE_HOSTS`                                                                                                        | Fly (required for wallet sign-in), Vercel (custom domains) | comma-separated hostnames the site is served on, which sign-in messages are bound to; Vercel's own hostnames are known without it. Unset, only `localhost` may sign in with a wallet.      |
-| `HOMEBASE_LOCK_CONTRACT`, `HOMEBASE_LOCK_READ`, `HOMEBASE_LOCK_MIN`, `HOMEBASE_LOCK_AMOUNT_INDEX`, `HOMEBASE_LOCK_END_INDEX` | both                                                       | the $home lock gate; unset until the contract is known                                                                                                                                     |
-| `HOMEBASE_BASE_RPC`                                                                                                          | both                                                       | already used by the funding card; also checks smart-wallet signatures and locks                                                                                                            |
-| `CRON_SECRET`                                                                                                                | Vercel                                                     | lets the daily cron call `/api/map-refresh`                                                                                                                                                |
-| `DATA_PATH`                                                                                                                  | Fly                                                        | where the SQLite file lives                                                                                                                                                                |
+| Variable                                                                                                                     | Where                             | Meaning                                                                                                                                                                                    |
+| ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`                                                                                     | Vercel (required), Fly (optional) | the hosted database; `https://<db>-<org>.turso.io`. Install Turso from the Vercel Marketplace or create one at turso.tech. The Bun server uses it too when set, otherwise its SQLite file. |
+| `HOMEBASE_ADMIN_ADDRESSES`                                                                                                   | both                              | comma-separated wallets that may sign in as admins; unset, the Homebase wallet alone                                                                                                       |
+| `HOMEBASE_SITE_HOSTS`                                                                                                        | both, optional                    | comma-separated hostnames the site is served on, which sign-in messages are bound to; unset, `homebase.love` and `www.homebase.love`, Vercel's own hostnames, and `localhost`.             |
+| `HOMEBASE_LOCK_CONTRACT`, `HOMEBASE_LOCK_READ`, `HOMEBASE_LOCK_MIN`, `HOMEBASE_LOCK_AMOUNT_INDEX`, `HOMEBASE_LOCK_END_INDEX` | both                              | the $home lock gate; unset until the contract is known                                                                                                                                     |
+| `HOMEBASE_BASE_RPC`                                                                                                          | both                              | already used by the funding card; also checks smart-wallet signatures and locks                                                                                                            |
+| `CRON_SECRET`                                                                                                                | Vercel                            | lets the daily cron call `/api/map-refresh`                                                                                                                                                |
+| `DATA_PATH`                                                                                                                  | Fly                               | where the SQLite file lives                                                                                                                                                                |
 
 There is always an admin, so a deployment is never without a way to add
 events. The form itself is shown to a signed-in wallet alone; everyone else
@@ -338,8 +339,8 @@ again for exploitability, raised one issue below the bar it sets for
 blocking: the host a sign-in message was bound to came from request headers,
 so a page elsewhere could have had the server write a message in its own
 name, which a wallet would then sign without its usual domain warning. Sign-in
-now serves the hosts in `HOMEBASE_SITE_HOSTS` (and Vercel's own) alone, and
-`localhost` when nothing is set. The rest was checked and clean: every SQL
+now serves the site's own hosts (and Vercel's own) alone, `localhost` too
+while `HOMEBASE_SITE_HOSTS` is unset. The rest was checked and clean: every SQL
 value is a bound parameter; the vendor route serves an exact allow-list of
 files; no Luma text reaches `innerHTML`; the resolver only ever fetches
 Luma's own hosts and drops a redirect elsewhere; nonces are single-use and
@@ -401,8 +402,7 @@ schema, open-source clients, and stub servers rather than live services:
    `@libsql/client/web` the way it does on Vercel.
    Install Turso from the Vercel Marketplace (Storage, Create Database,
    Turso), which puts `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` on the
-   project; set `HOMEBASE_SITE_HOSTS` to `homebase.love,www.homebase.love`;
-   redeploy; then check that `curl -s https://homebase.love/map.json` answers
+   project; redeploy; then check that `curl -s https://homebase.love/map.json` answers
    with an event list. The tables are created on the first request. Then
    sign in and pin an event.
 5. **The MCP server.** The sandbox's network policy refused every Luma host,

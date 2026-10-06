@@ -108,11 +108,10 @@ settings are the environment variables:
   events on the map, comma-separated. Unset, the Homebase wallet
   `0x3D140B892437dD7857701098415deB2daaE03A40` is the one admin; a list
   replaces it.
-- `HOMEBASE_SITE_HOSTS` — the hostnames the site is served on, comma-separated,
-  which wallet sign-in messages are bound to: `homebase.love,www.homebase.love`
-  on Vercel, where its own hostnames are known only when the project exposes
-  its system variables, and on Fly. Unset, only `localhost` can sign in with a
-  wallet.
+- `HOMEBASE_SITE_HOSTS` — optional. The hostnames the site is served on,
+  comma-separated, which wallet sign-in messages are bound to. Unset, they are
+  `homebase.love` and `www.homebase.love`, plus Vercel's own hostnames and
+  `localhost`; a list replaces the first two and drops `localhost`.
 - `CRON_SECRET` — optional. Lets Vercel's daily cron call `/api/map-refresh`.
 - `HOMEBASE_LOCK_CONTRACT` and the other `HOMEBASE_LOCK_*` variables —
   optional, for the $home lock gate once SeedMe's contract is known; see
@@ -124,10 +123,10 @@ The deploy reads its own gaps back: `/map.json` and the `/auth/*` calls
 answering 503 means the Turso variables are missing (the answer says so) or
 the store could not be reached (the function's log says why), `/events.json`
 answering 500 means `HOMEBASE_LIVE_ICAL` is missing, and the sign-in dialog
-saying sign-in isn't set up for this address of the site means
-`HOMEBASE_SITE_HOSTS` needs the hostname. Each takes effect on the next
-deployment, and a variable added for Production alone is not there on a
-preview deployment of a branch.
+saying sign-in isn't set up for this address of the site means the site is
+served under a hostname `HOMEBASE_SITE_HOSTS` must name. Each takes effect on
+the next deployment, and a variable added for Production alone is not there
+on a preview deployment of a branch.
 
 $home's creator fees accrue in its pool's fee ledger, a Doppler hook on Base,
 and only reach the address when someone claims them. The card reads that
