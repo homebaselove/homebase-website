@@ -121,6 +121,71 @@ build copies the files into `dist/vendor/`, and the Bun server serves them
 from the package. The tile style is one constant in `src/ui/map/MapView.tsx`,
 so a move to Protomaps or self-hosted tiles is a one-line change.
 
+### From the world to an event
+
+The map opens on the whole world, so a visitor sees at a glance where the
+community is gathering, and a pin flies the camera down to its event. Closing
+the event flies back out. The design was settled from MapLibre 6.12's own
+typings and source, renders of the alternatives with the site's markers, and
+what the maps people use every day do at their top level.
+
+**Flat world rather than globe.** MapLibre 6 draws a globe with one style
+property, and its `globe` projection is a sphere up to zoom 11 that turns into
+the flat map by zoom 12, so a flight down to a street would cross over on its
+own. Google Maps has shown a globe at its top level on desktop since 2018 and
+Apple Maps since iOS 15, so a globe is the convention for a map you navigate.
+This map is a map of pins, and a globe hides the half of them on its far side:
+rendered at the map's desktop size with pins in San Francisco, New York,
+London, Lisbon, Mumbai, Buenos Aires and Singapore, the globe centred on the
+Atlantic showed five of seven, and MapLibre fades markers behind the horizon to
+a fifth of their opacity by default. The flat world shows every pin at once,
+reads as the familiar world map, and is what was asked for. The globe is one
+line away (the style's `projection`, a `GlobeControl`, and markers with
+`opacityWhenCovered: 0`) and would suit a phone, where a sphere fills the
+width better than a strip; it is listed under Later.
+
+**The overview is computed, not fitted.** MapLibre draws the world 512 pixels
+wide at zoom zero and twice as wide per level, so the zoom that lays the whole
+world across the map follows from the map's width: `src/ui/map/camera.ts`,
+with tests. `fitBounds` on a box spanning the whole world came back a tenth of
+a level out in either direction in the renders, with the padding ignored, so it
+is not used for this. World copies are off, so one world sits edge to edge
+with nothing rolling in at the sides, and the camera is centred between the
+top of Greenland and the Antarctic coast, so a wide map crops the poles rather
+than the people. The overview is also the floor under zooming out, set again
+when the map resizes. `maxBounds` was weighed and dropped: it raises the floor
+until the world fills the map and forbids panning up to the poles.
+
+**Flights, not zooms.** Coming in from the world to a town is a change of some
+eleven levels, and easing that is a zoom down a well. The camera flies instead:
+MapLibre's `flyTo` follows van Wijk and Nuij's path, arcing out and back in,
+with a curve of 1.42, the value the participants in their study chose on
+average. The flight down takes 1.8 seconds and the flight back out 1.2, and the
+arc may not dip below the overview. A move of three levels or fewer, such as a
+cluster splitting or a second event in the same city, eases in the ordinary
+way, and a shared link opens on its event at once, with no flight to sit
+through. MapLibre turns every one of these into a jump when the viewer has
+asked for reduced motion. Markers are placed at subpixel precision, since
+whole pixels make a marker stutter along a flight.
+
+**Whose camera it is.** A drag, a wheel, a pinch, a key or a zoom button marks
+the camera as the viewer's, after which closing a card and a refreshed list
+leave it alone until something flies it. A world button under the zoom buttons
+brings the whole world back; it only shows once the camera has left the world,
+so the overview carries no control it does not need. The map is seen from
+straight above: no tilt, and north stays up, so nothing a thumb does on a phone
+leaves it askew. Page scrolling over the map never zooms it, and touch panning
+takes two fingers, as before.
+
+**A link lands on the map.** The map starts when it is near the viewport, so a
+shared `?event=` link, which used to open at the top of the page with the map
+below the fold, now scrolls the map into view and opens on its pin.
+
+Kept in view for later rather than built: a "you are here" from the browser's
+geolocation (a permission prompt on first visit, for a map that already shows
+where to look); a slow turn of the globe while idle (motion for its own sake);
+a dark style (the page is light).
+
 ### Google Maps
 
 Nothing to set up. The new map does not use Google Maps, and a search of the
@@ -280,6 +345,9 @@ client through the route manifest. Minified sizes:
 
 ### The experience
 
+- The map opens on the whole world. A pin flies the camera down to its event
+  and opens the card; closing the card flies back out; a world button under
+  the zoom buttons brings the world back whenever the viewer has wandered.
 - The list is the map's other half: hovering a row lifts its pin, selecting
   one opens its details and brings its pin into the part of the map the card
   leaves open, beside it on a wide screen and above it on a phone, where the
@@ -295,7 +363,8 @@ client through the route manifest. Minified sizes:
   under their own label.
 - Scrolling the page over the map never zooms it; touch panning takes two
   fingers. Animations honour reduced-motion.
-- `?event=<slug>` on the home page opens an event, so a pin can be shared.
+- `?event=<slug>` on the home page scrolls the map into view and opens the
+  event on its pin, so a pin can be shared.
 - The add form is for a wallet whose pins count. Everyone else has a
   connect button, and a wallet the map does not know is told so without
   ever seeing the form.
@@ -380,6 +449,16 @@ layout with and without a card. What that found, and what changed:
 - On a phone, a row chosen from the list opened a card out of sight above;
   the map now scrolls back into view.
 
+**Rendered again for the overview.** OpenFreeMap being unreachable from the
+sandbox, the flat world and the globe were rendered over Natural Earth's
+outlines with the site's own markers, at the map's desktop size (1060 by 560)
+and a phone's (390 by 430), and the flight down to an event with the card in
+place on each. That is where the globe lost two of seven pins behind its
+horizon, where `fitBounds` proved a tenth of a level out, and where the card
+and pin were seen to clear each other on both sizes. The suite's screenshots
+then showed the same on the built site: the world, the pin flown to with its
+card beside it, and the phone deep link with the pin above the card.
+
 **Reviewed for security.** The site now holds no secret and no session, so
 the surface is small: the server only reads, with the indexer's answer
 filtered to the wallets that count and every slug checked against the shape
@@ -393,7 +472,9 @@ headers, which was fixed then and is moot now that nothing is signed for the
 site. One trade-off stands: `addedBy` in the public list names the wallets
 that pinned events, which are public on the chain anyway.
 
-**Tested.** Fifty-five tests under `bun test`: the resolver against Luma's
+**Tested.** Sixty-six tests under `bun test`: the overview camera (the zoom
+that lays the world across a width, the latitude it is centred on, the
+Mercator arithmetic both ways), the story reel, the resolver against Luma's
 three page shapes and its endpoints, and the API over a stub indexer and a
 stub Luma (the list with who pinned what and what the page needs to attest,
 the indexer asked for the schema and the wallets that count in both
@@ -414,10 +495,13 @@ and sends the transactions the page asks for, and passes every other request
 on to the chain. The run walks through a visitor seeing only the way in, the
 admin connecting and getting the form, a look-up, the first pin as two
 transactions, the schema and then the attestation, found on the chain and
-on the map, the wallet picked back up after a reload, a revocation taking
-the pin off the chain and the map, a later pin as one transaction,
-disconnecting, a stranger turned away without the form, and a deep link on
-a phone-sized screen: twelve checks, a screenshot of each step. Only Luma,
+on the map, the map opening on the whole world after a reload, the pin flying the
+camera in with the card clear of it, the card closing and the world coming
+back, the wallet picked back up after a reload, a revocation taking the pin
+off the chain and the map, a later pin as one transaction, disconnecting, a
+stranger turned away without the form, and a deep link on a phone-sized
+screen landing straight on its pin: sixteen checks, a screenshot of each
+step. Only Luma,
 the tiles, the indexer and the chain's distance are stubbed. A failed run
 leaves a screenshot, the page's text and the server's log.
 
@@ -461,6 +545,12 @@ local stand-ins rather than live services:
    returning the name, cover and times; none shows coordinates. If they are
    there, the server could read links through it with a Luma account instead
    of the page.
+7. **The world on the live tiles.** The overview was rendered over Natural
+   Earth's outlines, not OpenFreeMap's Positron. On the live site, look at
+   the overview on a desktop and a phone for what Positron labels at that
+   zoom and how its ocean sits against the page, and watch one flight down to
+   an event and back on a phone for smoothness; the parent tiles MapLibre
+   shows while finer ones arrive should carry it.
 
 ## Later
 
@@ -474,3 +564,7 @@ local stand-ins rather than live services:
   referencing a pin's UID would be the same idea with nothing deployed.
 - Seed history: the first map's fifty-two Base Batch Workshop cities and
   their links are in the research notes and could be pinned as past events.
+- A globe at the top level, on phones at least, where a sphere fills the
+  width better than the strip of the flat world: the style's `projection`,
+  a `GlobeControl` and `opacityWhenCovered: 0` on the markers, with the
+  flight down crossing over to the flat map on its own past zoom 11.

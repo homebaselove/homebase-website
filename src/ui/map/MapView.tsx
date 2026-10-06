@@ -10,6 +10,8 @@ import Supercluster, { type ClusterProperties } from "supercluster"
 import { hasPin } from "../../map/event.ts"
 import type { MapEvent } from "../../map/MapEvent.ts"
 import { vendorPath } from "../../map/vendor.ts"
+import { worldCamera } from "./camera.ts"
+import { WorldControl } from "./controls.ts"
 import { clusterElement, markerElement } from "./markers.ts"
 
 type MapLibre = typeof import("maplibre-gl")
@@ -48,6 +50,18 @@ function loadMapLibre(): Promise<MapLibre> {
 /** Past this zoom a cluster is the same place, so it opens instead of splitting. */
 const SamePlaceZoom = 15
 
+/** An event is shown no further out than this, a town and its surroundings. */
+const EventZoom = 11
+
+/** A move of more zoom levels than this flies, arcing out and back in, rather than easing. */
+const FlightZooms = 3
+
+/** How long the flight from the world down to an event takes. */
+const FlightDuration = 1800
+
+/** How long the flight back out to the world takes. */
+const ReturnDuration = 1200
+
 interface PinProperties {
   readonly slug: string
 }
@@ -78,6 +92,12 @@ type State =
   | "loading"
   | "ready"
   | "unavailable"
+
+/** Where the camera is: on the whole world, on an event, or wherever the viewer took it. */
+type View =
+  | "world"
+  | "event"
+  | "free"
 
 export function MapView(props: Props) {
   const container = useRef<HTMLDivElement>(null)
@@ -117,13 +137,16 @@ export function MapView(props: Props) {
         map = new lib.Map({
           container: element,
           style: StyleUrl,
-          center: [
-            10,
-            25,
-          ],
-          zoom: 1.3,
-          minZoom: 1,
+          ...worldCamera(element.clientWidth),
+          minZoom: -1,
           maxZoom: 17,
+          // One world, edge to edge, rather than copies rolling in at the sides.
+          renderWorldCopies: false,
+          // A map seen from straight above: no tilt, and north stays up.
+          maxPitch: 0,
+          dragRotate: false,
+          pitchWithRotate: false,
+          touchPitch: false,
           cooperativeGestures: true,
           attributionControl: {
             compact: true,
@@ -141,6 +164,10 @@ export function MapView(props: Props) {
       }
 
       const live = map
+      const world = new WorldControl(() => overview(false))
+
+      live.touchZoomRotate.disableRotation()
+      live.keyboard.disableRotation()
 
       live.addControl(
         new lib.NavigationControl({
@@ -148,6 +175,7 @@ export function MapView(props: Props) {
         }),
         "top-right",
       )
+      live.addControl(world, "top-right")
 
       const index = new Supercluster<PinProperties, Record<never, never>>({
         radius: 48,
@@ -163,6 +191,13 @@ export function MapView(props: Props) {
       // The loaded() method of MapLibre is false whenever a tile is still on its way,
       // so readiness is the load event, which fires once.
       let ready = false
+      let view: View = "free"
+
+      /** Where the camera is, written on the container for styles and tests, and told to the world button. */
+      const describe = () => {
+        element.dataset.zoom = live.getZoom().toFixed(2)
+        world.setAway(view !== "world")
+      }
 
       const reflect = () => {
         for (const [key, marker] of markers) {
@@ -221,13 +256,18 @@ export function MapView(props: Props) {
                 }
               }
 
-              live.easeTo({
-                center: [
+              move(
+                [
                   lng,
                   lat,
                 ],
-                zoom: Math.min(zoom, SamePlaceZoom + 1),
-              })
+                Math.min(zoom, SamePlaceZoom + 1),
+                [
+                  0,
+                  0,
+                ],
+                false,
+              )
             })
           } else {
             const event = known.get(properties.slug)
@@ -244,6 +284,8 @@ export function MapView(props: Props) {
             new lib.Marker({
               element,
               anchor: key.startsWith("cluster:") ? "center" : "bottom",
+              // Whole pixels make a marker stutter along a flight.
+              subpixelPositioning: true,
             })
               .setLngLat([
                 lng,
@@ -263,57 +305,74 @@ export function MapView(props: Props) {
         reflect()
       }
 
-      const fit = () => {
-        const pins = [
-          ...known.values(),
-        ]
-          .filter(hasPin)
+      /** The world across the map, which is also as far out as the camera goes. */
+      const floor = () => {
+        const camera = worldCamera(element.clientWidth)
 
-        if (pins.length === 0) {
+        live.setMinZoom(camera.zoom)
+
+        return camera
+      }
+
+      /** Back out to the whole world, unless the camera is there or on its way. */
+      const overview = (instant: boolean) => {
+        const camera = floor()
+
+        if (view === "world" && !instant) {
           return
         }
 
-        if (pins.length === 1) {
-          live.easeTo({
-            center: [
-              pins[0].lng,
-              pins[0].lat,
-            ],
-            zoom: 10,
+        view = "world"
+        focused = null
+
+        if (instant) {
+          live.jumpTo(camera)
+        } else {
+          live.flyTo({
+            ...camera,
+            duration: ReturnDuration,
+            minZoom: camera.zoom,
           })
-
-          return
         }
 
-        const bounds = new lib.LngLatBounds(
-          [
-            pins[0].lng,
-            pins[0].lat,
-          ],
-          [
-            pins[0].lng,
-            pins[0].lat,
-          ],
-        )
+        describe()
+      }
 
-        for (const pin of pins) {
-          bounds.extend([
-            pin.lng,
-            pin.lat,
-          ])
+      /**
+       * Sends the camera somewhere: at once, by easing when it is near, or by
+       * flying when it is far, so coming in from the world arcs the way a real
+       * flight would rather than zooming down a well.
+       */
+      const move = (
+        center: [number, number],
+        zoom: number,
+        offset: [number, number],
+        instant: boolean,
+      ) => {
+        if (instant) {
+          live.easeTo({
+            center,
+            zoom,
+            offset,
+            duration: 0,
+          })
+        } else if (Math.abs(zoom - live.getZoom()) > FlightZooms) {
+          live.flyTo({
+            center,
+            zoom,
+            offset,
+            duration: FlightDuration,
+            minZoom: live.getMinZoom(),
+          })
+        } else {
+          live.easeTo({
+            center,
+            zoom,
+            offset,
+          })
         }
 
-        live.fitBounds(bounds, {
-          // a pin stands on its anchor, so the top needs its height on top of the margin
-          padding: {
-            top: 96,
-            bottom: 64,
-            left: 64,
-            right: 64,
-          },
-          maxZoom: 12,
-          duration: 700,
-        })
+        describe()
       }
 
       /**
@@ -371,8 +430,9 @@ export function MapView(props: Props) {
           lat: number
           lng: number
         },
+        instant: boolean,
       ) => {
-        let zoom = Math.max(live.getZoom(), 11)
+        let zoom = Math.max(live.getZoom(), EventZoom)
 
         // Close enough that the pin is its own marker; the events of one venue stack past SamePlaceZoom.
         while (zoom <= SamePlaceZoom && !alone(event, zoom)) {
@@ -380,6 +440,7 @@ export function MapView(props: Props) {
         }
 
         focused = event.slug
+        view = "event"
 
         // The card renders after this signal settles, and the camera needs its size.
         requestAnimationFrame(() => {
@@ -387,35 +448,53 @@ export function MapView(props: Props) {
             return
           }
 
-          live.easeTo({
-            center: [
+          move(
+            [
               event.lng,
               event.lat,
             ],
             zoom,
-            offset: clearance(),
-          })
+            clearance(),
+            instant,
+          )
         })
       }
 
-      const settle = () => {
+      const settle = (instant: boolean) => {
         const slug = props.selected.peek()
         const event = slug ? known.get(slug) : undefined
 
         if (event && hasPin(event)) {
-          focus(event)
+          focus(event, instant)
         } else {
-          fit()
+          overview(instant)
         }
       }
 
       live.on("load", () => {
         ready = true
         state.value = "ready"
-        settle()
+        settle(true)
         render()
       })
-      live.on("moveend", render)
+      live.on("movestart", (event) => {
+        // A drag, a wheel, a pinch, a key or a zoom button: the viewer has taken the camera.
+        if (event.originalEvent) {
+          view = "free"
+          describe()
+        }
+      })
+      live.on("moveend", () => {
+        render()
+        describe()
+      })
+      live.on("resize", () => {
+        const camera = floor()
+
+        if (view === "world") {
+          live.jumpTo(camera)
+        }
+      })
 
       stops.push(
         effect(() => {
@@ -458,7 +537,7 @@ export function MapView(props: Props) {
             }
 
             markers.clear()
-            settle()
+            settle(false)
             render()
           }
         }),
@@ -472,8 +551,12 @@ export function MapView(props: Props) {
 
           if (!slug) {
             focused = null
+
+            if (ready) {
+              overview(false)
+            }
           } else if (event && hasPin(event) && ready && slug !== focused) {
-            focus(event)
+            focus(event, false)
           }
         }),
       )

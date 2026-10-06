@@ -60,8 +60,9 @@ everyone else sees a connect button. Nothing is deployed and nothing is
 configured: the site reads the attestations through EAS's free indexer and
 writes them through the connected wallet. [docs/map.md](docs/map.md) has the
 design, the research it rests on, the endpoints, and what is left to verify
-against live services. The map draws on OpenFreeMap's tiles and needs no key
-of its own.
+against live services. The map opens on the whole world, flies down to an
+event on its pin and back out when the card closes; it draws on OpenFreeMap's
+tiles and needs no key of its own.
 
 `bun run e2e` drives the whole flow in a real browser: a local chain with EAS
 on it, the server with Luma answered from fixtures, a wallet the run holds
