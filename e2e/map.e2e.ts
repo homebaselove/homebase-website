@@ -62,14 +62,16 @@ function sign(messageHex: string, address: string): string {
 const walletScript = (address: string) =>
   `(() => {
   const address = ${JSON.stringify(address)}
+  window.__walletCalls = []
   const provider = {
     request: async ({ method, params }) => {
+      window.__walletCalls.push(method)
       switch (method) {
         case "eth_requestAccounts":
         case "eth_accounts":
           return [address]
         case "wallet_requestPermissions":
-          return [{ parentCapability: "eth_accounts" }]
+          return [{ parentCapability: "eth_accounts", caveats: [{ type: "restrictReturnedAccounts", value: [address] }] }]
         case "eth_chainId":
           return "0x2105"
         case "wallet_switchEthereumChain":
@@ -244,6 +246,15 @@ const shot = (page: Page, name: string) =>
 
 const dialog = (page: Page) => page.getByRole("dialog")
 
+/** Every request the fake wallet has answered on the page, in order. */
+const walletCalls = (page: Page) =>
+  page.evaluate(() =>
+    (window as unknown as {
+      __walletCalls: string[]
+    })
+      .__walletCalls
+  )
+
 async function connectAndSignIn(page: Page) {
   await page
     .getByRole("button", {
@@ -319,6 +330,22 @@ try {
       && (await page.getByLabel("Luma link").count()) === 0,
   )
 
+  // The first sign-in meets a deployment with no store, the way an unconfigured Vercel answers.
+  let nonces = 0
+
+  await page.route("**/auth/nonce.json", (route) => {
+    nonces += 1
+
+    return nonces === 1
+      ? route.fulfill({
+        status: 503,
+        json: {
+          error: "The map's store isn't set up on this deployment.",
+        },
+      })
+      : route.continue()
+  })
+
   const offered = await connectAndSignIn(page)
 
   check(
@@ -327,9 +354,50 @@ try {
       && offered.some((text) => text.includes("Coinbase Wallet")),
     offered.join(" | "),
   )
+  await dialog(page).getByRole("alert").waitFor({
+    timeout: 30_000,
+  })
+  check(
+    "a deployment without a store says so, and keeps the wallets on offer",
+    (await dialog(page).getByRole("alert").innerText()).includes("isn't set up")
+      && (await dialog(page)
+          .getByRole("button", {
+            name: "Test Wallet",
+          })
+          .count()) === 1,
+    await dialog(page).getByRole("alert").innerText(),
+  )
+
+  const before = await walletCalls(page)
+
+  await dialog(page)
+    .getByRole("button", {
+      name: "Test Wallet",
+    })
+    .click()
   await dialog(page).getByText(`Adding as ${short(wallets.admin)}`).waitFor({
     timeout: 30_000,
   })
+
+  const retry = (await walletCalls(page)).slice(before.length)
+  const connects = (calls: string[]) =>
+    calls
+      .filter((method) =>
+        method === "eth_requestAccounts"
+        || method === "wallet_requestPermissions"
+      )
+      .length
+  const signs = (calls: string[]) =>
+    calls.filter((method) => method === "personal_sign").length
+
+  check(
+    "the second try reuses the connected wallet and signs once",
+    connects(before) > 0
+      && signs(before) === 0
+      && connects(retry) === 0
+      && signs(retry) === 1,
+    `first: ${before.join(" ")} | retry: ${retry.join(" ")}`,
+  )
   await shot(page, "03-signed-in")
   check(
     "the admin wallet is signed in and gets the form",

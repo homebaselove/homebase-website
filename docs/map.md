@@ -383,12 +383,22 @@ schema, open-source clients, and stub servers rather than live services:
    answer says which reader answered.
 2. **Wallet sign-in** with a plain wallet, with Coinbase Smart Wallet (which
    exercises the ERC-6492 path), and inside the Farcaster mini app. The
-   end-to-end suite covers the flow with a wallet it holds the key to; what
-   it cannot stand in for is a real wallet's own side: the extension's
-   prompts, Coinbase's passkey popup, and the host's wallet in the mini app.
+   end-to-end suite covers the flow with a wallet it holds the key to, a
+   first try the server turns away included; what it cannot stand in for is
+   a real wallet's own side: the extension's prompts, Coinbase's passkey
+   popup, and the host's wallet in the mini app. A connect or signature the
+   wallet refuses is reported with the wallet's own reason, in the dialog
+   and in the browser console.
 3. **Tiles** in Safari, Chrome and the Base app's web view.
-4. **Turso** on the Vercel deploy: install it from the Marketplace, list your
-   wallet in `HOMEBASE_ADMIN_ADDRESSES`, pin an event.
+4. **Turso on the Vercel deploy.** Until it is there, `/map.json` and every
+   `/auth/*` call answer 503 with "The map's store isn't set up on this
+   deployment", which is what the dialog shows once a wallet has connected.
+   Install Turso from the Vercel Marketplace (Storage, Create Database,
+   Turso), which puts `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` on the
+   project; set `HOMEBASE_SITE_HOSTS` to `homebase.love,www.homebase.love`;
+   redeploy; then check that `curl -s https://homebase.love/map.json` answers
+   with an event list. The tables are created on the first request. Then
+   sign in and pin an event.
 5. **The MCP server.** The sandbox's network policy refused every Luma host,
    `mcp.luma.com` included, so its lookup is untested here. From Claude Code:
    `claude mcp add --transport http luma https://mcp.luma.com`, sign in, then
