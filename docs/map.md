@@ -1,28 +1,33 @@
 # The Homebase map
 
 The map shows where the community gathers: events pinned from their Luma
-links. An admin pastes a link, the server reads the event from Luma, and the
-pin appears for everyone within a minute. This document records the design,
-the research behind each decision, and what is left to do.
+links. A wallet the registry on Base lets in pastes a link and pins it with a
+transaction, and the pin appears for everyone within a minute. This document
+records the design, the research behind each decision, and what is left to do.
 
 ## How it works
 
-1. **Paste.** "Add an event" opens a dialog. A signed-in admin pastes a Luma
-   link and looks it up. The server canonicalizes the link (host, slug, no
-   tracking or ticket keys) and reads the event: title, start and end in UTC,
-   the venue's IANA timezone, venue and address, coordinates, cover, hosts,
-   and whether the address is public.
-2. **Preview, then pin.** The dialog shows what Luma said, including anything
+1. **Connect.** "Connect wallet" opens a dialog listing the wallets on the
+   page and Coinbase's. The connected wallet is put to the registry's
+   `canPin`: the admin wallet passes, and later any wallet the gate vouches
+   for. Everyone else is told so and never sees the form.
+2. **Paste, preview, pin.** The wallet pastes a Luma link and looks it up.
+   The server canonicalizes the link (host, slug, no tracking or ticket keys)
+   and reads the event: title, start and end in UTC, the venue's IANA
+   timezone, venue and address, coordinates, cover, hosts, and whether the
+   address is public. The dialog shows what Luma said, including anything
    that changes how the event is shown: a guests-only address pins the city,
-   an online event is listed but not pinned. "Pin it" stores the event.
-3. **Read.** `/map.json` lists live events and is cached at the CDN for a
-   minute, so the store is read about once a minute however many people look.
-   The client splits events into upcoming and past, draws pins with
-   clustering, and keeps the list and the map in step.
-4. **Stay fresh.** Pins are read from Luma again once their reading is six
-   hours old: hourly on the Bun server, daily from Vercel's cron, or on demand
-   by an admin. A rescheduled or relocated event moves; a cancelled one, which
-   Luma deletes, is retired from the map.
+   an online event is listed but not pinned. "Pin it" sends `pin(slug)` to
+   the registry from the wallet: one transaction, a few cents on Base.
+3. **Read.** `/map.json` reads the registry's list with one `eth_call`, looks
+   each slug up on Luma, and is cached at the CDN for a minute, so the chain
+   and Luma are read about once a minute however many people look. The
+   client splits events into upcoming and past, draws pins with clustering,
+   and keeps the list and the map in step.
+4. **Stay fresh.** What Luma said about a pin stands for thirty minutes, then
+   it is read again on the next list. A rescheduled or relocated event moves;
+   a cancelled one, which Luma deletes, drops off the map; Luma being down
+   leaves the last reading in place. Nothing runs on a schedule.
 
 ## Decisions, and what they were weighed against
 
@@ -135,43 +140,51 @@ the phone's maps app. Luma's page JSON also carries the venue's
 `geo_address_info.place_id`, which those URLs accept as `destination_place_id`
 for door-exact directions; storing it is a one-column follow-up.
 
-### Storage
+### Where the pins live
 
-Vercel's functions have no disk, so the Vercel deploy keeps pins in
-**Turso** (libSQL, SQLite's dialect, reached over HTTP) and the Bun server
-keeps them in its SQLite file, or in the same Turso database when told to.
-One set of SQL statements serves both, behind a `Store` that only runs a
-statement and returns rows. The functions use `@libsql/client/web`, which is
-plain `fetch`; the package's native binding is never loaded.
+The pins are Luma slugs in a contract on Base, `contracts/HomebaseMap.sol`:
+`pin(slug)` and `unpin(slug)`, an `admin`, a `gate` the admin can point at
+another contract, and `list()` for anyone. The site holds nothing else: no
+database, no sessions, no secrets, and nothing to set on Vercel. The server
+reads the registry through Base's public RPC (`HOMEBASE_BASE_RPC` names a
+provider instead), and the browser reads and writes it through the connected
+wallet's own provider, so it needs no RPC of its own.
 
-Rejected: committing a JSON file to the repository and redeploying (about
-thirty seconds per write, a token that can also write code, and a second data
-path for the Bun server); Vercel Blob (no atomic writes, sixty seconds of
-cache staleness); Edge Config (a flags store with a small monthly write
-allowance); Postgres (a second dialect to maintain next to SQLite).
+Each pin costs its sender gas: `pin` writes a few storage slots, roughly
+100k to 200k gas, one to ten cents at Base's usual 0.05 to 0.3 gwei; `unpin`
+refunds some of it. The contract keeps the list in order and takes a pin off
+by moving the last one into its place, so removal costs no more than a pin.
+The admin may take any pin off, a pinner only their own.
+
+Weighed against it, and why not: Turso or any hosted database (a credential
+that has to live in Vercel's settings, which is where the first deploy of
+this map stalled); committing a JSON file to the repository (a GitHub token
+with write access, half a minute per change, and no wallet gate); Vercel
+Blob, KV and Edge Config (tokens made in the dashboard, no atomic writes);
+the Ethereum Attestation Service (no contract to deploy, but reads through
+its indexer or log queries, and a gate that can only be applied when
+reading); a Luma calendar's own iCal feed as the whole store (official and
+free, with coordinates, but no wallet gate and no timezone); Fly behind
+`vercel.json` rewrites (keeps a server store, adds a second platform to run
+and pay for). The registry is the one route where "my wallet now, $home
+lockers later" is enforced by the thing that holds the data.
 
 ### Who may add events
 
-One way in today, built so that the next is a rule added rather than a
-rewrite:
+The registry decides, with `canPin(address)`:
 
-- **Admin wallets.** The Homebase wallet,
-  `0x3D140B892437dD7857701098415deB2daaE03A40`, or the list in
-  `HOMEBASE_ADMIN_ADDRESSES` in its place, signs in with
-  Ethereum (ERC-4361): the server writes the message, binds it to one of the
-  site's own hosts (`HOMEBASE_SITE_HOSTS`, with Vercel's hostnames known on
-  their own; a request from any other host gets no message), a single-use
-  nonce and Base's chain id, and checks the signature by recovery for plain
-  wallets or through ERC-6492's universal validator for smart wallets (Base
-  Account, Safe), in one deployless call on Base. A
-  session is a random token stored hashed, sent as a bearer header, which
-  also works inside the Farcaster mini app's frame where cookies do not.
-- **$home lockers, next.** The same sign-in gains a second rule: a wallet
-  with enough $home locked gets the `locker` role for an hour. The read is
-  configured, not coded: `HOMEBASE_LOCK_CONTRACT`, `HOMEBASE_LOCK_READ` (the
-  view function's signature), `HOMEBASE_LOCK_MIN`, and the output indexes of
-  the amount and the unlock time. It is tested against a stub chain and
-  switches on the moment the contract is known.
+- **The admin wallet.** The Homebase wallet,
+  `0x3D140B892437dD7857701098415deB2daaE03A40`, given to the contract when
+  it is deployed; `setAdmin` hands the role on. The admin may also take any
+  pin off and point the registry at a gate.
+- **$home lockers, next.** `contracts/LockGate.sol` answers `allowed(who)`
+  with whether `lockedBalanceOf(who)` on a lock contract is at least a
+  minimum. Once SeedMe's lock contract is known, deploy the gate with its
+  address and the minimum, and have the admin call `setGate` on the
+  registry: one transaction, no site deploy. A gate that reverts lets nobody
+  through, and `setGate(0)` puts it aside. The suite proves the whole path
+  with a stub lock on a local chain; LockGate's read is adjusted if SeedMe's
+  interface turns out to differ.
 
 What is not yet known is SeedMe's lock contract. It was not found in any
 public repository, Doppler deployment list, or search. The quickest way to it:
@@ -180,12 +193,13 @@ ask the SeedMe team, or perform a small lock on seedme.xyz/lock and read the
 view function's signature from the verified source. `$home` itself is
 `0xB9A1E52f3ED678B01Ff5e256fDe43f26f9C01bA3` on Base.
 
-Removed: the shared admin key the first cut also took, `HOMEBASE_MAP_ADMIN_KEY`
-(no per-person identity, nothing to build the lock gate on, one more secret
-to keep and to paste). Rejected: Sign In with Farcaster as the primary identity (it proves a
+Removed, in turn: the shared admin key the first cut took (no per-person
+identity, one more secret to keep), then Sign-In with Ethereum sessions with
+an admin list in the environment (a database for nonces and sessions, and a
+deployment setting to carry, both of which the registry makes unnecessary).
+Rejected: Sign In with Farcaster as the primary identity (it proves a
 Farcaster account, not the wallet that holds $home, and the Base app no
-longer invokes it); cookies as the session transport (third-party inside the
-mini app).
+longer invokes it).
 
 ### Connecting a wallet
 
@@ -194,8 +208,13 @@ hooks), RainbowKit, ConnectKit and OnchainKit all require React 18 and
 TanStack Query. `@wagmi/core` 3.6.5 is the framework-free layer beneath them:
 it peers on `viem` 2.x alone (its other peers, `@tanstack/query-core`, the
 Tempo `accounts` SDK and `typescript`, are optional) and depends on `mipd`,
-`zustand` and `eventemitter3`. It gives `connect`, `signMessage` and
-`disconnect` over any EIP-1193 provider, which is all sign-in needs.
+`zustand` and `eventemitter3`. It gives `connect`, `reconnect` and
+`disconnect` over any EIP-1193 provider; viem's actions on the connected
+wallet's client do the rest, `readContract` for `canPin` and `admin`,
+`simulateContract` so a pin the registry would refuse fails before the wallet
+opens, then `writeContract` and `waitForTransactionReceipt`. After a reload
+the page picks the last wallet back up with `reconnect`, without a prompt,
+when the wallet still allows it; the wallet's id is all that is remembered.
 
 Every wallet reaches it through its `injected` connector with a provider
 handed in:
@@ -228,9 +247,9 @@ client through the route manifest. Minified sizes:
 
 | Fetched                                | Raw    | Gzipped |
 | -------------------------------------- | ------ | ------- |
-| the page, as before                    | 507 KB | 151 KB  |
-| the wallet entry and its shared chunks | 115 KB | 35 KB   |
-| the Coinbase chunk, on choosing it     | 111 KB | 35 KB   |
+| the page, as before                    | 496 KB | 147 KB  |
+| the wallet entry and its shared chunks | 180 KB | 56 KB   |
+| the Coinbase chunk, on choosing it     | 109 KB | 35 KB   |
 
 ### The experience
 
@@ -250,8 +269,9 @@ client through the route manifest. Minified sizes:
 - Scrolling the page over the map never zooms it; touch panning takes two
   fingers. Animations honour reduced-motion.
 - `?event=<slug>` on the home page opens an event, so a pin can be shared.
-- The add form is for a signed-in admin. Everyone else has a sign-in button,
-  and a wallet that is not an admin is told so without ever seeing the form.
+- The add form is for a wallet the registry lets in. Everyone else has a
+  connect button, and a wallet the registry does not know is told so without
+  ever seeing the form.
 - Mobile gets the map above the list and the details over the map's lower
   edge; desktop gets them side by side.
 
@@ -262,46 +282,40 @@ the fake loading screen, and the Google dependency.
 
 ## Data
 
-One table, `MapEvent`, keyed by the Luma slug (the path on luma.com, which is
-also the public id in `?event=`), with Luma's event id kept unique when known
-so a renamed link replaces its older self. `lat` and `lng` are null for
-online events and for events Luma could not place; `placement` says which.
-`addedBy` is the wallet that pinned the event. Two small tables, `AuthNonce`
-and `AuthSession`, carry sign-ins.
+The chain holds `(slug, by, pinnedAt)` per pin and nothing more: the slug is
+the path on luma.com, which is also the public id in `?event=`. Everything
+shown comes from Luma at read time, kept per server process for thirty
+minutes: `lat` and `lng` are null for online events and for events Luma
+could not place, and `placement` says which; `addedBy` and `addedAt` come
+from the chain. A renamed link keeps its pin under the slug it was pinned
+with, which Luma redirects; the newer link pins alongside until one is taken
+off.
 
 ## Endpoints
 
-| Path                 | Method                        | Who                                 | What                                                   |
-| -------------------- | ----------------------------- | ----------------------------------- | ------------------------------------------------------ |
-| `/map.json`          | GET                           | anyone                              | live events, CDN-cached for a minute                   |
-| `/map.json`          | POST `{ url }`                | admin or locker                     | reads the link and pins it; 201 new, 200 already there |
-| `/map.json?slug=`    | DELETE                        | admin, or the wallet that pinned it | removes the pin                                        |
-| `/map/preview.json`  | POST `{ url }`                | admin or locker                     | reads the link without pinning                         |
-| `/map/refresh.json`  | POST or GET                   | admin, locker, or Vercel's cron     | reads Luma again for aged pins                         |
-| `/auth/nonce.json`   | POST `{ address }`            | anyone                              | the message to sign                                    |
-| `/auth/verify.json`  | POST `{ message, signature }` | anyone                              | a session token and role                               |
-| `/auth/session.json` | GET, DELETE                   | bearer                              | who the token is; sign out                             |
+| Path                | Method         | Who                    | What                                                            |
+| ------------------- | -------------- | ---------------------- | --------------------------------------------------------------- |
+| `/map.json`         | GET            | anyone                 | the pins, read from the chain and Luma, CDN-cached for a minute |
+| `/map/preview.json` | POST `{ url }` | anyone, within a limit | reads the link without pinning                                  |
 
-`src/map/api.ts` answers all of them against the web's `Request` and
+Pinning and removing are transactions to the registry, not requests to the
+site. `src/map/api.ts` answers both routes against the web's `Request` and
 `Response`; `api/*.ts` hands Vercel's requests to it and `src/map/bun.ts`
-hands the Bun server's. Sign-in and write endpoints are rate limited per
-address.
+hands the Bun server's. The preview is rate limited per address.
 
 ## Configuration
 
-| Variable                                                                                                                     | Where                                                      | Meaning                                                                                                                                                                                    |
-| ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`                                                                                     | Vercel (required), Fly (optional)                          | the hosted database; `https://<db>-<org>.turso.io`. Install Turso from the Vercel Marketplace or create one at turso.tech. The Bun server uses it too when set, otherwise its SQLite file. |
-| `HOMEBASE_ADMIN_ADDRESSES`                                                                                                   | both                                                       | comma-separated wallets that may sign in as admins; unset, the Homebase wallet alone                                                                                                       |
-| `HOMEBASE_SITE_HOSTS`                                                                                                        | Fly (required for wallet sign-in), Vercel (custom domains) | comma-separated hostnames the site is served on, which sign-in messages are bound to; Vercel's own hostnames are known without it. Unset, only `localhost` may sign in with a wallet.      |
-| `HOMEBASE_LOCK_CONTRACT`, `HOMEBASE_LOCK_READ`, `HOMEBASE_LOCK_MIN`, `HOMEBASE_LOCK_AMOUNT_INDEX`, `HOMEBASE_LOCK_END_INDEX` | both                                                       | the $home lock gate; unset until the contract is known                                                                                                                                     |
-| `HOMEBASE_BASE_RPC`                                                                                                          | both                                                       | already used by the funding card; also checks smart-wallet signatures and locks                                                                                                            |
-| `CRON_SECRET`                                                                                                                | Vercel                                                     | lets the daily cron call `/api/map-refresh`                                                                                                                                                |
-| `DATA_PATH`                                                                                                                  | Fly                                                        | where the SQLite file lives                                                                                                                                                                |
+| Variable                | Where          | Meaning                                                                                                           |
+| ----------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `HOMEBASE_BASE_RPC`     | both, optional | the Base RPC the server reads the registry with, and the funding card its fees; Base's public endpoint unless set |
+| `HOMEBASE_MAP_REGISTRY` | tests only     | the registry's address on another chain; the site carries the real one in `src/map/registry.ts`                   |
+| `DATA_PATH`             | Fly            | where the calendar sync's SQLite file lives                                                                       |
 
-There is always an admin, so a deployment is never without a way to add
-events. The form itself is shown to a signed-in wallet alone; everyone else
-sees a sign-in button, and a wallet that is not an admin is told so.
+Nothing about the map needs a setting on Vercel: the registry's address is in
+the code, the admin is in the contract, and the form is shown to a wallet the
+registry lets in. Until the address is in the code, `/map.json` answers an
+empty list with `registry: null`, and the dialog says the registry is not
+deployed yet.
 
 ## Validation
 
@@ -333,47 +347,67 @@ layout with and without a card. What that found, and what changed:
 - On a phone, a row chosen from the list opened a card out of sight above;
   the map now scrolls back into view.
 
-**Reviewed for security.** A review of the branch, with each finding checked
-again for exploitability, raised one issue below the bar it sets for
-blocking: the host a sign-in message was bound to came from request headers,
-so a page elsewhere could have had the server write a message in its own
-name, which a wallet would then sign without its usual domain warning. Sign-in
-now serves the hosts in `HOMEBASE_SITE_HOSTS` (and Vercel's own) alone, and
-`localhost` when nothing is set. The rest was checked and clean: every SQL
-value is a bound parameter; the vendor route serves an exact allow-list of
-files; no Luma text reaches `innerHTML`; the resolver only ever fetches
-Luma's own hosts and drops a redirect elsewhere; nonces are single-use and
-sessions stored hashed; bearer headers leave no room for CSRF; a pin is
-removed by an admin or the wallet that added it. One trade-off stands:
-`addedBy` in the public list names the wallets that pinned events, which are
-pseudonymous and already public on chain.
+**Reviewed for security.** The site now holds no secret and no session, so
+the surface is small: the registry decides who writes, and enforces that a
+pin is removed by the admin or the wallet that added it; the server only
+reads the chain, with the response decoded against a fixed ABI and every
+slug checked against the shape Luma uses before it is looked up; the resolver
+only ever fetches Luma's own hosts and drops a redirect elsewhere; no Luma
+text reaches `innerHTML`; the vendor route serves an exact allow-list of
+files; the preview is rate limited per address. An earlier review of the
+sign-in design found the host a message was bound to coming from request
+headers, which was fixed then and is moot now that nothing is signed. One
+trade-off stands: `addedBy` in the public list names the wallets that pinned
+events, which are public on the chain anyway.
 
-**Tested.** Seventy tests cover the resolver against Luma's three page
-shapes and its endpoints, the API's rules, the sign-in flow with a plain
-wallet, a smart wallet and a forged signature, the lock gate against a stub
-chain, and the refresh job, under `bun test`.
+**Tested.** Sixty tests under `bun test`: the resolver against Luma's three
+page shapes and its endpoints; the API over a stub chain and a stub Luma
+(the list with who pinned what, a pin Luma has lost, a slug the contract
+should not have let in, readings that stand in while Luma is down, no
+registry, a chain that does not answer, the preview and its limit); and,
+when anvil is on the PATH or in `ANVIL_BIN`, the contract itself on a local
+chain: who may pin, double pins and bad slugs, removal keeping the list
+whole, the lock gate letting a locker through and no further, a gate that
+breaks, and handing the admin on.
 
-**Driven end to end.** `bun run e2e` starts the Bun server, or with
-`E2E_TARGET=vercel` the Vercel layout under Node (`e2e/vercel.ts`: the built
-`dist/`, the rewrites in `vercel.json`, the functions in `api/`, the store on
-a libsql server the run starts from `SQLD_BIN`), with Luma answered
-from fixtures, opens the site in Chromium, announces a wallet whose key the
-run holds (EIP-6963, the way extensions do), and walks through a visitor
-seeing only the way in, connecting, signing in and getting the form, looking
-up a link, pinning, keeping the session across a reload, removing, signing
-out and losing the form, a wallet that is not an admin being turned away
-without it, and a deep link on a phone-sized screen: eleven checks, a
-screenshot of each step. The reader, the API, sign-in and the store under it are the ones
-the site runs on; only Luma and the tiles are stubbed. A failed run leaves a
+**Driven end to end.** `bun run e2e` starts a local chain (anvil), deploys
+the registry on it with the suite's own admin wallet, starts the Bun server,
+or with `E2E_TARGET=vercel` the Vercel layout under Node (`e2e/vercel.ts`:
+the built `dist/`, the rewrites in `vercel.json`, the functions in `api/`),
+pointed at that chain with Luma answered from fixtures, and opens the site in
+Chromium. A wallet whose keys the run holds is announced to the page the way
+extensions are (EIP-6963); it answers accounts and the chain itself, signs
+and sends the transactions the page asks for, and passes every other request
+on to the chain. The run walks through a visitor seeing only the way in, the
+admin connecting and getting the form, a look-up, a pin as one transaction
+found on the chain and on the map, the wallet picked back up after a reload,
+removal, disconnecting, a stranger turned away without the form, a lock gate
+set on the registry over a stub lock, a locker pinning under its own wallet,
+allowed to remove its own pin and not the admin's, and a deep link on a
+phone-sized screen: fifteen checks, a screenshot of each step. Only Luma,
+the tiles and the chain's distance are stubbed. A failed run leaves a
 screenshot, the page's text and the server's log.
 
 ## What still needs a hand
 
-The sandbox this was built in could not reach Luma, Base, OpenFreeMap or
-Turso, so these were verified against documentation, Luma's published API
-schema, open-source clients, and stub servers rather than live services:
+The sandbox this was built in could not reach Luma, Base or OpenFreeMap, so
+these were verified against documentation, Luma's published API schema,
+open-source clients, and local stand-ins rather than live services:
 
-1. **Luma's page shape.** Run, from any machine, for a public event slug:
+1. **Deploy the registry.** From a machine with a wallet that holds a few
+   cents of ETH on Base:
+
+   ```sh
+   DEPLOYER_KEY=0x… bun scripts/deploy-registry.ts
+   ```
+
+   It deploys `contracts/HomebaseMap.sol` with the Homebase wallet as admin
+   (`--admin` for another) and prints the address. Put it into
+   `RegistryAddress` in `src/map/registry.ts`, commit, and deploy the site.
+   `forge create` does the same for those who have Foundry; the deploy
+   script's header has the command. Verifying the source on BaseScan or
+   Sourcify is optional and needs no key.
+2. **Luma's page shape.** Run, from any machine, for a public event slug:
 
    ```sh
    SLUG=some-public-event
@@ -381,31 +415,20 @@ schema, open-source clients, and stub servers rather than live services:
    curl -s "https://api.lu.ma/url?url=$SLUG" | head -c 600
    ```
 
-   Then paste the link into the dialog on a deploy whose
-   `HOMEBASE_ADMIN_ADDRESSES` lists your wallet. `source` in the preview
-   answer says which reader answered.
-2. **Wallet sign-in** with a plain wallet, with Coinbase Smart Wallet (which
-   exercises the ERC-6492 path), and inside the Farcaster mini app. The
-   end-to-end suite covers the flow with a wallet it holds the key to, a
-   first try the server turns away included; what it cannot stand in for is
-   a real wallet's own side: the extension's prompts, Coinbase's passkey
-   popup, and the host's wallet in the mini app. A connect or signature the
-   wallet refuses is reported with the wallet's own reason, in the dialog
-   and in the browser console.
-3. **Tiles** in Safari, Chrome and the Base app's web view.
-4. **Turso on the Vercel deploy.** Until it is there, `/map.json` and every
-   `/auth/*` call answer 503 with "The map's store isn't set up on this
-   deployment", which is what the dialog shows once a wallet has connected.
-   The path itself is proven: the suite passes against the Vercel layout
-   under Node with the store on a libsql server, every call going through
-   `@libsql/client/web` the way it does on Vercel.
-   Install Turso from the Vercel Marketplace (Storage, Create Database,
-   Turso), which puts `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` on the
-   project; set `HOMEBASE_SITE_HOSTS` to `homebase.love,www.homebase.love`;
-   redeploy; then check that `curl -s https://homebase.love/map.json` answers
-   with an event list. The tables are created on the first request. Then
-   sign in and pin an event.
-5. **The MCP server.** The sandbox's network policy refused every Luma host,
+   Then connect the Homebase wallet on the deployed site, paste the link,
+   and pin it. `source` in the preview answer says which reader answered.
+3. **A real wallet.** Coinbase Smart Wallet (its passkey popup, and that its
+   `eth_sendTransaction` answers with the transaction hash the page waits
+   on), an extension, and the host's wallet inside the Farcaster mini app.
+   The suite covers the flow with a wallet it holds the keys to; a connect or
+   transaction a real wallet refuses is reported with the wallet's own
+   reason, in the dialog and in the browser console.
+4. **Base's public RPC** under real traffic: the server reads the registry
+   once a minute per CDN region, the same endpoint the funding card already
+   uses. If it ever rate limits, `HOMEBASE_BASE_RPC` takes a provider's URL;
+   nothing else changes.
+5. **Tiles** in Safari, Chrome and the Base app's web view.
+6. **The MCP server.** The sandbox's network policy refused every Luma host,
    `mcp.luma.com` included, so its lookup is untested here. From Claude Code:
    `claude mcp add --transport http luma https://mcp.luma.com`, sign in, then
    ask it to look up a third-party event link and see whether the answer
@@ -416,12 +439,13 @@ schema, open-source clients, and stub servers rather than live services:
 
 ## Later
 
-- Wire the $home lock once SeedMe's contract is known: five environment
-  variables, no code.
+- Wire the $home lock once SeedMe's contract is known: deploy
+  `contracts/LockGate.sol` with its address and a minimum, and have the admin
+  call `setGate` on the registry. No site deploy.
 - Read a Homebase calendar's official iCal feed as a second sync path, so
-  events added to the calendar on Luma appear without pasting.
-- Check-ins: the first map minted a soulbound token per city. A single
-  contract keyed by event, with the pinned coordinates, would revive the idea
-  without the per-city deployments.
+  events added to the calendar on Luma appear without pinning.
+- Check-ins: the first map minted a soulbound token per city. The registry
+  already keys events by slug; a check-in contract keyed the same way would
+  revive the idea without the per-city deployments.
 - Seed history: the first map's fifty-two Base Batch Workshop cities and
   their links are in the research notes and could be pinned as past events.

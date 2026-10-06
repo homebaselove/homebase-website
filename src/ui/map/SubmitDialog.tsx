@@ -2,13 +2,12 @@
 import { useEffect, useRef } from "preact"
 import { useSignal } from "preact/signals"
 import {
-  checkSession,
+  account,
+  connectWith,
   isFailure,
   pin,
   type Preview,
   preview,
-  session,
-  signInWith,
   signOut,
   type Wallet,
   walletChoices,
@@ -32,8 +31,8 @@ const shortAddress = (address: string) =>
   `${address.slice(0, 6)}…${address.slice(-4)}`
 
 /**
- * Sign in with a wallet, then paste a link, see what Luma says about it and
- * pin it. The form is only there once the server has said who the wallet is.
+ * Connect a wallet, then paste a link, see what Luma says about it and pin
+ * it. The form is only there once the registry has said the wallet may.
  */
 export function SubmitDialog(props: Props) {
   // String() is an empty string without an empty literal, which the class
@@ -62,10 +61,8 @@ export function SubmitDialog(props: Props) {
   }
 
   useEffect(() => {
-    checkSession()
-
-    // Signed out, the dialog is the way in, so the wallets come up at once.
-    if (!session.peek()) {
+    // Without a wallet the dialog is the way in, so the wallets come up at once.
+    if (!account.peek()) {
       offerWallets()
     }
 
@@ -80,7 +77,7 @@ export function SubmitDialog(props: Props) {
     return () => removeEventListener("keydown", onKey)
   }, [])
 
-  const actor = session.value
+  const actor = account.value
 
   useEffect(() => {
     if (actor) {
@@ -108,7 +105,15 @@ export function SubmitDialog(props: Props) {
     busy.value = "pinning"
     problem.value = null
 
-    const answer = await pin(url.value)
+    const chosen = found.value
+
+    if (!chosen) {
+      busy.value = "idle"
+
+      return
+    }
+
+    const answer = await pin(chosen.event)
 
     busy.value = "idle"
 
@@ -124,7 +129,7 @@ export function SubmitDialog(props: Props) {
     chosen.value = id
     problem.value = null
 
-    const failure = await signInWith(id)
+    const failure = await connectWith(id)
 
     busy.value = "idle"
     chosen.value = null
@@ -165,12 +170,12 @@ export function SubmitDialog(props: Props) {
               id="submit-heading"
               class="text-2xl font-bold leading-tight"
             >
-              {actor ? "Add a Luma event" : "Sign in"}
+              {actor ? "Add a Luma event" : "Connect a wallet"}
             </h2>
             <p class="text-sm text-gray-500 mt-1">
               {actor
                 ? "Paste the event’s Luma link. Its time, place and cover come from Luma, and stay in step with it."
-                : "Homebase admins sign in with their wallet to add events. Once $home locking is wired in, anyone who has locked $home will be able to as well."}
+                : "The Homebase wallet adds events to the map. Once $home locking is wired in, anyone who has locked $home will be able to as well."}
             </p>
           </div>
 
@@ -193,7 +198,7 @@ export function SubmitDialog(props: Props) {
                   <strong title={actor.address}>
                     {shortAddress(actor.address)}
                   </strong>
-                  {actor.role === "locker" && " ($home locker)"}
+                  {actor.isAdmin ? " (admin)" : " ($home locker)"}
                 </span>
 
                 <button
@@ -201,7 +206,7 @@ export function SubmitDialog(props: Props) {
                   class="text-brand hover:underline"
                   onClick={leave}
                 >
-                  Sign out
+                  Disconnect
                 </button>
               </div>
 
@@ -389,7 +394,7 @@ function PreviewCard(props: {
           disabled={props.busy}
           onClick={props.onPin}
         >
-          {props.busy ? "Pinning…" : "Pin it to the map"}
+          {props.busy ? "Confirm in your wallet…" : "Pin it to the map"}
         </button>
       </div>
     </div>

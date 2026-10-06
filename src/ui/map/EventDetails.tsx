@@ -2,7 +2,7 @@
 import { useEffect } from "preact"
 import { useSignal } from "preact/signals"
 import { createCalendarLinks } from "../../calendar.ts"
-import { session, unpin } from "../../map/client.ts"
+import { account, unpin } from "../../map/client.ts"
 import { endOf, hasPin } from "../../map/event.ts"
 import type { MapEvent } from "../../map/MapEvent.ts"
 import { describeWhen } from "../../map/time.ts"
@@ -24,9 +24,10 @@ export function EventDetails(props: Props) {
   const when = describeWhen(event)
   const removing = useSignal(false)
   const problem = useSignal<string | null>(null)
-  const actor = session.value
+  const actor = account.value
   const mayRemove = actor !== null
-    && (actor.role === "admin" || actor.address === event.addedBy)
+    && (actor.isAdmin
+      || actor.address.toLowerCase() === event.addedBy.toLowerCase())
 
   useEffect(() => {
     const onKey = (key: KeyboardEvent) => {

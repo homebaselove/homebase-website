@@ -50,29 +50,34 @@ bun run dev
 
 ## 🗺️ Map
 
-Events on the map come from Luma: an admin pastes an event's link, the server
-reads the event from its public page, and the pin is up for everyone within a
-minute. [docs/map.md](docs/map.md) has the design, the research it rests on, the
-endpoints, and what is left to verify against live services.
+Events on the map come from Luma, and the list of them lives on Base: a
+wallet the registry lets in pastes an event's link, pins it with a
+transaction, and the pin is up for everyone within a minute. Only such a
+wallet sees the add form; everyone else sees a connect button. The registry
+is `contracts/HomebaseMap.sol`, its admin is the Homebase wallet, and a gate
+for $home lockers plugs in later with one transaction. [docs/map.md](docs/map.md)
+has the design, the research it rests on, the endpoints, and what is left to
+verify against live services. The map draws on OpenFreeMap's tiles and needs
+no key of its own.
 
-Only a signed-in admin sees the add form; everyone else sees a sign-in
-button. The Homebase wallet is the admin unless `HOMEBASE_ADMIN_ADDRESSES`
-names others. Locally, set it to your own address before `bun run dev`, press
-"Sign in" and connect; on `localhost` sign-in needs nothing else. The map draws
-on OpenFreeMap's tiles and needs no key of its own.
+The contracts compile with `bun scripts/compile-contracts.ts` (solc on the
+PATH or in `SOLC_BIN`), which writes their ABI and bytecode next to them, and
+deploy with `DEPLOYER_KEY=0x… bun scripts/deploy-registry.ts`, which prints
+the address to put into `src/map/registry.ts`. `bun test` runs the contract
+tests too when anvil is on the PATH or in `ANVIL_BIN`.
 
-`bun run e2e` drives the whole flow in a real browser: the server with Luma
-answered from fixtures, a wallet the run holds the key to, connecting, signing
-in, pinning, removing, signing out and a wallet that is turned away. It needs
-port 3000 free and, once, `bunx playwright install chromium`. With
-`E2E_TARGET=vercel` it runs the same flow against the Vercel layout instead:
-the built `dist/`, the rewrites and the functions in `api/` under Node, with
-the store on a libsql server, started for the run when `SQLD_BIN` names the
-[libsql server](https://github.com/tursodatabase/libsql/releases) binary:
+`bun run e2e` drives the whole flow in a real browser: a local chain with the
+registry on it, the server with Luma answered from fixtures, a wallet the run
+holds the keys to, connecting, pinning, removing, disconnecting, a wallet
+that is turned away, and a $home locker let in through the gate. It needs
+anvil (Foundry), port 3000 free and, once, `bunx playwright install
+chromium`. With `E2E_TARGET=vercel` it runs the same flow against the Vercel
+layout instead: the built `dist/`, the rewrites and the functions in `api/`
+under Node.
 
 ```bash
 bun run build
-E2E_TARGET=vercel SQLD_BIN=/path/to/sqld bun run e2e
+E2E_TARGET=vercel bun run e2e
 ```
 
 ## 📦 Deployment
@@ -84,8 +89,7 @@ persistent disk for SQLite and nowhere to run the sync loops, so it serves the
 client as static files and answers the JSON endpoints with functions in `api/`.
 The events function parses the iCal feed per request and lets the CDN cache it
 for five minutes; the funding answer is cached for two; the map's list for one
-minute. The map's pins live in Turso, and a daily cron re-reads aged pins from
-Luma.
+minute. The map's pins live on Base, read per request and looked up on Luma.
 
 `vercel.json` carries the build command and the routing, so the only project
 settings are the environment variables:
@@ -96,38 +100,19 @@ settings are the environment variables:
   creator's share of the $home fees. It defaults to the address in
   `api/funding.ts`, so this only needs setting to point the card somewhere
   else.
-- `HOMEBASE_BASE_RPC` — optional. The Base JSON-RPC endpoint the fees are read
-  from, defaulting to Base's public, rate-limited `https://mainnet.base.org`,
-  which each instance reads at most once a minute. A provider's URL works the
-  same way, and a key in it never appears in an answer.
-
-- `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` — the map's database, from the
-  Turso integration on the Vercel Marketplace. Without them `/map.json`
-  answers with a 503 and the site shows an empty map.
-- `HOMEBASE_ADMIN_ADDRESSES` — optional. The wallets that may sign in to add
-  events on the map, comma-separated. Unset, the Homebase wallet
-  `0x3D140B892437dD7857701098415deB2daaE03A40` is the one admin; a list
-  replaces it.
-- `HOMEBASE_SITE_HOSTS` — the hostnames the site is served on, comma-separated,
-  which wallet sign-in messages are bound to: `homebase.love,www.homebase.love`
-  on Vercel, where its own hostnames are known only when the project exposes
-  its system variables, and on Fly. Unset, only `localhost` can sign in with a
-  wallet.
-- `CRON_SECRET` — optional. Lets Vercel's daily cron call `/api/map-refresh`.
-- `HOMEBASE_LOCK_CONTRACT` and the other `HOMEBASE_LOCK_*` variables —
-  optional, for the $home lock gate once SeedMe's contract is known; see
-  [docs/map.md](docs/map.md).
+- `HOMEBASE_BASE_RPC` — optional. The Base JSON-RPC endpoint the fees and the
+  map's registry are read from, defaulting to Base's public, rate-limited
+  `https://mainnet.base.org`, which each instance reads at most once a minute.
+  A provider's URL works the same way, and a key in it never appears in an
+  answer.
 
 An empty value counts as unset for every optional variable.
 
-The deploy reads its own gaps back: `/map.json` and the `/auth/*` calls
-answering 503 means the Turso variables are missing (the answer says so) or
-the store could not be reached (the function's log says why), `/events.json`
-answering 500 means `HOMEBASE_LIVE_ICAL` is missing, and the sign-in dialog
-saying sign-in isn't set up for this address of the site means
-`HOMEBASE_SITE_HOSTS` needs the hostname. Each takes effect on the next
-deployment, and a variable added for Production alone is not there on a
-preview deployment of a branch.
+The deploy reads its own gaps back: `/events.json` answering 500 means
+`HOMEBASE_LIVE_ICAL` is missing, and a variable added for Production alone is
+not there on a preview deployment of a branch. The map needs no setting:
+`/map.json` answering `registry: null` means the registry's address is not in
+`src/map/registry.ts` yet, and a 503 means the chain could not be read.
 
 $home's creator fees accrue in its pool's fee ledger, a Doppler hook on Base,
 and only reach the address when someone claims them. The card reads that
@@ -150,10 +135,9 @@ bun run build   # writes dist/
 
 ### Fly.io
 
-`bun start` runs the full Bun server — file router, SQLite, the calendar sync
-job and the map's hourly refresh — which is what the Dockerfile and `fly.toml`
-deploy. The map's pins live in the SQLite file under `DATA_PATH`, or in the
-same Turso database as the Vercel deploy when `TURSO_DATABASE_URL` is set:
+`bun start` runs the full Bun server — file router, the calendar sync job and
+its SQLite file under `DATA_PATH` — which is what the Dockerfile and `fly.toml`
+deploy. The map reads the same registry on Base as the Vercel deploy:
 
 ```bash
 fly deploy

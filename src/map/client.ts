@@ -1,25 +1,25 @@
 /**
- * The browser's view of the map: the pins, who is signed in, and the calls
- * that change either. Sessions ride in a bearer token rather than a cookie,
- * which also works inside the Farcaster mini app's frame. The wallet code
- * is fetched on its own the first time someone presses Connect.
+ * The browser's view of the map: the pins, the connected wallet, and the
+ * calls that change either. The server reads the pins from the registry on
+ * Base and looks them up on Luma; adding or removing one is a transaction
+ * the connected wallet sends to the registry itself. The wallet code is
+ * fetched on its own the first time it is needed.
  */
 import { signal } from "preact/signals"
-import type { EIP1193Provider } from "viem"
-import type { Wallet } from "../wallet/wagmi.ts"
+import type { Address, EIP1193Provider } from "viem"
+import type { Registry, Wallet } from "../wallet/wagmi.ts"
 import type { Source } from "./luma.ts"
 import type { LumaEvent, MapEvent } from "./MapEvent.ts"
 
 export type {
+  Registry,
   Wallet,
 }
 
-export interface Session {
-  readonly role:
-    | "admin"
-    | "locker"
+/** The connected wallet, once the registry has said it may add events. */
+export interface Account {
   readonly address: string
-  readonly expiresAt: string
+  readonly isAdmin: boolean
 }
 
 export interface Failure {
@@ -30,25 +30,31 @@ export interface Failure {
 export const isFailure = (value: unknown): value is Failure =>
   typeof value === "object" && value !== null && "error" in value
 
-const TokenKey = "homebase.map.token"
+/** The wallet connected last, so a reload picks it back up. */
+const WalletKey = "homebase.map.wallet"
 
-function storedToken(): string | null {
+/** When this browser last changed the map, so it reads past the cache for a while after. */
+const ChangedKey = "homebase.map.changed"
+
+const FreshForMs = 2 * 60_000
+
+function stored(key: string): string | null {
   try {
-    return localStorage.getItem(TokenKey)
+    return localStorage.getItem(key)
   } catch {
     return null
   }
 }
 
-function storeToken(token: string | null) {
+function store(key: string, value: string | null) {
   try {
-    if (token) {
-      localStorage.setItem(TokenKey, token)
+    if (value) {
+      localStorage.setItem(key, value)
     } else {
-      localStorage.removeItem(TokenKey)
+      localStorage.removeItem(key)
     }
   } catch {
-    // Private windows may refuse; the session then lasts the page.
+    // Private windows may refuse; the page then forgets on reload.
   }
 }
 
@@ -56,31 +62,23 @@ export const events = signal<MapEvent[] | null>(null)
 
 export const loadFailed = signal(false)
 
-export const token = signal<string | null>(storedToken())
+/** Where the pins live, as the server told the page; null until deployed. */
+export const registry = signal<Registry | null>(null)
 
-export const session = signal<Session | null>(null)
+export const account = signal<Account | null>(null)
 
 async function call<A>(
   path: string,
   init: RequestInit = {},
 ): Promise<A | Failure> {
-  const headers: Record<string, string> = {
-    ...(init.body
-      ? {
-        "content-type": "application/json",
-      }
-      : {}),
-    ...(token.value
-      ? {
-        authorization: `Bearer ${token.value}`,
-      }
-      : {}),
-  }
-
   try {
     const response = await fetch(path, {
       ...init,
-      headers,
+      headers: init.body
+        ? {
+          "content-type": "application/json",
+        }
+        : {},
       // Past the server's own worst case: a slow page and slow endpoints.
       signal: AbortSignal.timeout?.(30_000),
     })
@@ -105,9 +103,15 @@ async function call<A>(
 }
 
 export async function loadEvents(): Promise<void> {
+  const changed = Number(stored(ChangedKey) ?? 0)
   const answer = await call<{
     events: MapEvent[]
-  }>("/map.json")
+    registry: Registry | null
+  }>(
+    Date.now() - changed < FreshForMs
+      ? `/map.json?fresh=${changed}`
+      : "/map.json",
+  )
 
   if (isFailure(answer)) {
     loadFailed.value = true
@@ -115,27 +119,8 @@ export async function loadEvents(): Promise<void> {
   } else {
     loadFailed.value = false
     events.value = answer.events
+    registry.value = answer.registry
   }
-}
-
-/** Learns who the stored token is. */
-export async function checkSession(): Promise<Failure | null> {
-  const answer = await call<{
-    actor: Session | null
-  }>("/auth/session.json")
-
-  if (isFailure(answer)) {
-    return answer
-  }
-
-  session.value = answer.actor
-
-  if (!answer.actor && token.value) {
-    token.value = null
-    storeToken(null)
-  }
-
-  return null
 }
 
 type WalletModule = typeof import("../wallet/wagmi.ts")
@@ -207,8 +192,25 @@ export async function walletChoices(): Promise<Wallet[] | Failure> {
   }
 }
 
-/** What the wallet said went wrong, for the message, when it said anything. */
+/**
+ * What the wallet or the chain said went wrong, for the message: a contract
+ * error by name, else the first line of the message.
+ */
 function reason(error: unknown): string {
+  for (
+    let seen = error as Record<string, unknown> | null;
+    seen;
+    seen = seen.cause as Record<string, unknown> | null
+  ) {
+    const data = seen.data as {
+      errorName?: string
+    } | undefined
+
+    if (data?.errorName) {
+      return `: ${data.errorName}`
+    }
+  }
+
   const seen = error as {
     shortMessage?: string
     message?: string
@@ -236,11 +238,47 @@ function rejected(error: unknown): boolean {
   )
 }
 
-/**
- * Connects the chosen wallet, has it sign the message the server wrote for
- * its address, and opens a session with the signature.
- */
-export async function signInWith(walletId: string): Promise<Failure | null> {
+const NotAllowed: Failure = {
+  error:
+    "This wallet can't add events yet. The Homebase wallet can now, and $home lockers will be able to soon.",
+  status: 403,
+}
+
+/** What the registry makes of a connected wallet. */
+async function standing(
+  lib: WalletModule,
+  address: Address,
+): Promise<Account | Failure> {
+  const where = registry.value
+
+  if (!where) {
+    return {
+      error: "The map's registry isn't deployed yet, so nothing can be added.",
+      status: 0,
+    }
+  }
+
+  try {
+    const { canPin, isAdmin } = await lib.access(where, address)
+
+    return canPin
+      ? {
+        address,
+        isAdmin,
+      }
+      : NotAllowed
+  } catch (error) {
+    console.error("The registry could not be read:", error)
+
+    return {
+      error: `The registry couldn't be read${reason(error)}. Try again.`,
+      status: 0,
+    }
+  }
+}
+
+/** Connects the chosen wallet and asks the registry whether it may add events. */
+export async function connectWith(walletId: string): Promise<Failure | null> {
   let lib: WalletModule
 
   try {
@@ -249,7 +287,7 @@ export async function signInWith(walletId: string): Promise<Failure | null> {
     return NotLoaded
   }
 
-  let address: string
+  let address: Address
 
   try {
     address = await lib.connectWallet(walletId)
@@ -266,71 +304,49 @@ export async function signInWith(walletId: string): Promise<Failure | null> {
     }
   }
 
-  const issued = await call<{
-    message: string
-  }>("/auth/nonce.json", {
-    method: "POST",
-    body: JSON.stringify({
-      address,
-    }),
-  })
+  const found = await standing(lib, address)
 
-  if (isFailure(issued)) {
-    return issued
+  if (isFailure(found)) {
+    return found
   }
 
-  let signature: string
-
-  try {
-    signature = await lib.signInMessage(issued.message)
-  } catch (error) {
-    console.error("The wallet did not sign:", error)
-
-    return {
-      error: rejected(error)
-        ? "You didn't sign the message."
-        : `The wallet didn't sign the message${reason(error)}.`,
-      status: 0,
-    }
-  }
-
-  const verified = await call<
-    Session & {
-      token: string
-    }
-  >("/auth/verify.json", {
-    method: "POST",
-    body: JSON.stringify({
-      message: issued.message,
-      signature,
-    }),
-  })
-
-  if (isFailure(verified)) {
-    return verified
-  }
-
-  token.value = verified.token
-  storeToken(verified.token)
-  session.value = {
-    role: verified.role,
-    address: verified.address,
-    expiresAt: verified.expiresAt,
-  }
+  account.value = found
+  store(WalletKey, walletId)
 
   return null
 }
 
-export async function signOut(): Promise<void> {
-  if (session.value) {
-    await call("/auth/session.json", {
-      method: "DELETE",
-    })
+/** Picks the last wallet back up after a reload, without a prompt, when there was one. */
+export async function restore(): Promise<void> {
+  const walletId = stored(WalletKey)
+
+  if (!walletId) {
+    return
   }
 
-  token.value = null
-  session.value = null
-  storeToken(null)
+  try {
+    const lib = await walletModule()
+    const address = await lib.reconnectWallet(walletId)
+
+    if (!address) {
+      store(WalletKey, null)
+
+      return
+    }
+
+    const found = await standing(lib, address)
+
+    if (!isFailure(found)) {
+      account.value = found
+    }
+  } catch (error) {
+    console.error("The wallet could not be picked back up:", error)
+  }
+}
+
+export async function signOut(): Promise<void> {
+  account.value = null
+  store(WalletKey, null)
 
   if (wallet) {
     await (await wallet).disconnectWallet()
@@ -351,38 +367,75 @@ export function preview(url: string): Promise<Preview | Failure> {
   })
 }
 
-export async function pin(url: string): Promise<MapEvent | Failure> {
-  const answer = await call<{
-    event: MapEvent
-  }>("/map.json", {
-    method: "POST",
-    body: JSON.stringify({
-      url,
-    }),
-  })
+function sendFailure(error: unknown, what: string): Failure {
+  console.error(`The ${what} did not go through:`, error)
 
-  if (isFailure(answer)) {
-    return answer
+  return {
+    error: rejected(error)
+      ? "You didn't approve the transaction."
+      : `The ${what} didn't go through${reason(error)}.`,
+    status: 0,
+  }
+}
+
+/** Pins an event the preview showed: a transaction from the connected wallet. */
+export async function pin(event: LumaEvent): Promise<MapEvent | Failure> {
+  const me = account.value
+  const where = registry.value
+
+  if (!me || !where) {
+    return {
+      error: "Connect a wallet that may add events first.",
+      status: 401,
+    }
+  }
+
+  if ((events.value ?? []).some((pinned) => pinned.slug === event.slug)) {
+    return {
+      error: "That event is already on the map.",
+      status: 409,
+    }
+  }
+
+  try {
+    await (await walletModule()).pinSlug(where, event.slug)
+  } catch (error) {
+    return sendFailure(error, "pin")
+  }
+
+  const pinned: MapEvent = {
+    ...event,
+    addedBy: me.address,
+    addedAt: new Date().toISOString(),
   }
 
   events.value = [
-    ...(events.value ?? []).filter((event) => event.slug !== answer.event.slug),
-    answer.event,
+    ...(events.value ?? []).filter((other) => other.slug !== event.slug),
+    pinned,
   ]
+  store(ChangedKey, String(Date.now()))
 
-  return answer.event
+  return pinned
 }
 
 export async function unpin(slug: string): Promise<Failure | null> {
-  const answer = await call(`/map.json?slug=${encodeURIComponent(slug)}`, {
-    method: "DELETE",
-  })
+  const where = registry.value
 
-  if (isFailure(answer)) {
-    return answer
+  if (!account.value || !where) {
+    return {
+      error: "Connect a wallet that may remove events first.",
+      status: 401,
+    }
+  }
+
+  try {
+    await (await walletModule()).unpinSlug(where, slug)
+  } catch (error) {
+    return sendFailure(error, "removal")
   }
 
   events.value = (events.value ?? []).filter((event) => event.slug !== slug)
+  store(ChangedKey, String(Date.now()))
 
   return null
 }

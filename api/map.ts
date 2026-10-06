@@ -9,7 +9,3 @@ const map = handler("map")
 export const GET = map
 
 export const HEAD = map
-
-export const POST = map
-
-export const DELETE = map

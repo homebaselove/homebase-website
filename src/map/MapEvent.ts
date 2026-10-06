@@ -38,18 +38,12 @@ export const LumaEvent = S.Struct({
 
 export type LumaEvent = typeof LumaEvent.Type
 
-/** Live, or gone from Luma since it was pinned. */
-export const EventStatus = S.Literal("live", "gone")
-
-export type EventStatus = typeof EventStatus.Type
-
-/** A pinned event: what Luma said, who pinned it, and when it was last read. */
+/** A pinned event: what Luma says about it, and who pinned it when. */
 export const MapEvent = S.Struct({
   ...LumaEvent.fields,
-  status: EventStatus,
+  /** The wallet that pinned it. */
   addedBy: S.String,
   addedAt: S.String,
-  checkedAt: S.String,
 })
 
 export type MapEvent = typeof MapEvent.Type

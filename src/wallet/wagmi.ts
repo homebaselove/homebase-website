@@ -7,18 +7,28 @@
  * the host's wallet inside a Farcaster mini app, which the page hands in
  * since its SDK is already there, and Coinbase's smart wallet through its
  * SDK, which opens a passkey flow for people with no extension at all.
+ *
+ * The registry on Base is read and written through the connected wallet's
+ * own provider, so the browser needs no RPC of its own.
  */
 import {
   connect,
   createConfig,
   disconnect,
   getAccount,
+  getConnectorClient,
   http,
   injected,
-  signMessage,
+  reconnect,
 } from "@wagmi/core"
 import { base } from "@wagmi/core/chains"
-import type { EIP1193Provider } from "viem"
+import { type Address, type EIP1193Provider, type Hash, parseAbi } from "viem"
+import {
+  readContract,
+  simulateContract,
+  waitForTransactionReceipt,
+  writeContract,
+} from "viem/actions"
 
 export interface Wallet {
   readonly id: string
@@ -26,6 +36,24 @@ export interface Wallet {
   /** A data: URI the wallet announced, or nothing for the ones added here. */
   readonly icon: string | null
 }
+
+/** Where the map's pins live on Base. */
+export interface Registry {
+  readonly address: Address
+}
+
+const RegistryAbi = parseAbi([
+  "function pin(string slug)",
+  "function unpin(string slug)",
+  "function canPin(address who) view returns (bool)",
+  "function admin() view returns (address)",
+  "error NotAdmin()",
+  "error NotAllowed()",
+  "error BadSlug()",
+  "error AlreadyPinned()",
+  "error NotPinned()",
+  "error BadGate()",
+])
 
 const CoinbaseId = "coinbase-smart-wallet"
 
@@ -35,6 +63,9 @@ const BrowserId = "browser"
 
 /** How long wallets get to answer the page's request to announce themselves. */
 const AnnounceWaitMs = 150
+
+/** How long a sent transaction gets to land before the page stops waiting. */
+const ReceiptWaitMs = 120_000
 
 const config = createConfig({
   chains: [
@@ -179,11 +210,11 @@ async function connectorFor(id: string) {
 }
 
 /**
- * Connects the chosen wallet on Base and hands back the account to sign in
- * with. A wallet that is still connected from an earlier try, which the
- * server may have turned away, is reused rather than asked again.
+ * Connects the chosen wallet on Base and hands back its account. A wallet
+ * that is still connected from an earlier try is reused rather than asked
+ * again.
  */
-export async function connectWallet(id: string): Promise<string> {
+export async function connectWallet(id: string): Promise<Address> {
   const current = getAccount(config)
 
   if (current.status === "connected" && current.connector.id === id) {
@@ -202,12 +233,100 @@ export async function connectWallet(id: string): Promise<string> {
   return connected.accounts[0]
 }
 
-/** A personal_sign of the message by the connected wallet. */
-export function signInMessage(message: string): Promise<string> {
-  return signMessage(config, {
-    message,
-  })
+/**
+ * Picks a connection back up after a reload, without a prompt, if the wallet
+ * still allows it; null when it does not.
+ */
+export async function reconnectWallet(id: string): Promise<Address | null> {
+  await wait(AnnounceWaitMs)
+
+  try {
+    await reconnect(config, {
+      connectors: [
+        await connectorFor(id),
+      ],
+    })
+  } catch {
+    return null
+  }
+
+  const account = getAccount(config)
+
+  return account.status === "connected" ? account.address : null
 }
+
+/** What the registry says about a wallet: whether it may pin, and whether it is the admin. */
+export async function access(
+  registry: Registry,
+  address: Address,
+): Promise<{
+  canPin: boolean
+  isAdmin: boolean
+}> {
+  const client = await getConnectorClient(config)
+  const [canPin, admin] = await Promise.all([
+    readContract(client, {
+      address: registry.address,
+      abi: RegistryAbi,
+      functionName: "canPin",
+      args: [
+        address,
+      ],
+    }),
+    readContract(client, {
+      address: registry.address,
+      abi: RegistryAbi,
+      functionName: "admin",
+    }),
+  ])
+
+  return {
+    canPin,
+    isAdmin: admin.toLowerCase() === address.toLowerCase(),
+  }
+}
+
+/**
+ * Sends a pin or unpin through the wallet and waits for it to land. The call
+ * is tried first, so a registry that would refuse it says so before the
+ * wallet opens.
+ */
+async function send(
+  registry: Registry,
+  functionName:
+    | "pin"
+    | "unpin",
+  slug: string,
+): Promise<Hash> {
+  const client = await getConnectorClient(config)
+  const { request } = await simulateContract(client, {
+    address: registry.address,
+    abi: RegistryAbi,
+    functionName,
+    args: [
+      slug,
+    ],
+    account: client.account,
+    chain: base,
+  })
+  const hash = await writeContract(client, request)
+  const receipt = await waitForTransactionReceipt(client, {
+    hash,
+    timeout: ReceiptWaitMs,
+  })
+
+  if (receipt.status !== "success") {
+    throw new Error("The transaction was reverted.")
+  }
+
+  return hash
+}
+
+export const pinSlug = (registry: Registry, slug: string) =>
+  send(registry, "pin", slug)
+
+export const unpinSlug = (registry: Registry, slug: string) =>
+  send(registry, "unpin", slug)
 
 export async function disconnectWallet(): Promise<void> {
   try {
