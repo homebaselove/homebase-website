@@ -64,7 +64,16 @@ on OpenFreeMap's tiles and needs no key of its own.
 `bun run e2e` drives the whole flow in a real browser: the server with Luma
 answered from fixtures, a wallet the run holds the key to, connecting, signing
 in, pinning, removing, signing out and a wallet that is turned away. It needs
-port 3000 free and, once, `bunx playwright install chromium`.
+port 3000 free and, once, `bunx playwright install chromium`. With
+`E2E_TARGET=vercel` it runs the same flow against the Vercel layout instead:
+the built `dist/`, the rewrites and the functions in `api/` under Node, with
+the store on a libsql server, started for the run when `SQLD_BIN` names the
+[libsql server](https://github.com/tursodatabase/libsql/releases) binary:
+
+```bash
+bun run build
+E2E_TARGET=vercel SQLD_BIN=/path/to/sqld bun run e2e
+```
 
 ## 📦 Deployment
 
@@ -112,10 +121,13 @@ settings are the environment variables:
 An empty value counts as unset for every optional variable.
 
 The deploy reads its own gaps back: `/map.json` and the `/auth/*` calls
-answering 503 means the Turso variables are missing, `/events.json` answering
-500 means `HOMEBASE_LIVE_ICAL` is, and the sign-in dialog saying sign-in isn't
-set up for this address of the site means `HOMEBASE_SITE_HOSTS` needs the
-hostname. Each takes effect on the next deployment.
+answering 503 means the Turso variables are missing (the answer says so) or
+the store could not be reached (the function's log says why), `/events.json`
+answering 500 means `HOMEBASE_LIVE_ICAL` is missing, and the sign-in dialog
+saying sign-in isn't set up for this address of the site means
+`HOMEBASE_SITE_HOSTS` needs the hostname. Each takes effect on the next
+deployment, and a variable added for Production alone is not there on a
+preview deployment of a branch.
 
 $home's creator fees accrue in its pool's fee ledger, a Doppler hook on Base,
 and only reach the address when someone claims them. The card reads that

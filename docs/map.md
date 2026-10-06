@@ -353,7 +353,10 @@ shapes and its endpoints, the API's rules, the sign-in flow with a plain
 wallet, a smart wallet and a forged signature, the lock gate against a stub
 chain, and the refresh job, under `bun test`.
 
-**Driven end to end.** `bun run e2e` starts the Bun server with Luma answered
+**Driven end to end.** `bun run e2e` starts the Bun server, or with
+`E2E_TARGET=vercel` the Vercel layout under Node (`e2e/vercel.ts`: the built
+`dist/`, the rewrites in `vercel.json`, the functions in `api/`, the store on
+a libsql server the run starts from `SQLD_BIN`), with Luma answered
 from fixtures, opens the site in Chromium, announces a wallet whose key the
 run holds (EIP-6963, the way extensions do), and walks through a visitor
 seeing only the way in, connecting, signing in and getting the form, looking
@@ -393,6 +396,9 @@ schema, open-source clients, and stub servers rather than live services:
 4. **Turso on the Vercel deploy.** Until it is there, `/map.json` and every
    `/auth/*` call answer 503 with "The map's store isn't set up on this
    deployment", which is what the dialog shows once a wallet has connected.
+   The path itself is proven: the suite passes against the Vercel layout
+   under Node with the store on a libsql server, every call going through
+   `@libsql/client/web` the way it does on Vercel.
    Install Turso from the Vercel Marketplace (Storage, Create Database,
    Turso), which puts `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` on the
    project; set `HOMEBASE_SITE_HOSTS` to `homebase.love,www.homebase.love`;

@@ -119,26 +119,80 @@ function check(name: string, ok: boolean, detail?: string) {
 /** Everything the server printed, shown when the run fails. */
 let serverLog = String()
 
+/** What to stop at the end besides the server itself. */
+const stops: (() => void)[] = []
+
+/**
+ * The server under test: the Bun server by default, or with E2E_TARGET=vercel
+ * the Vercel layout under Node, with a libsql server of its own when SQLD_BIN
+ * names the binary, else the one TURSO_DATABASE_URL names.
+ */
 async function startServer() {
   const dataPath = await NFs.mkdtemp(
     NPath.join(NOs.tmpdir(), "homebase-e2e-data-"),
   )
-  const server = Bun.spawn([
-    "bun",
-    "--preload",
-    "./e2e/luma-stub.ts",
-    "src/server.ts",
-  ], {
-    env: {
-      ...process.env,
-      DATA_PATH: dataPath,
-      HOMEBASE_ADMIN_ADDRESSES: wallets.admin,
-      HOMEBASE_SITE_HOSTS: undefined,
-      HOMEBASE_LIVE_ICAL: undefined,
+  const vercel = process.env.E2E_TARGET === "vercel"
+  let database = process.env.TURSO_DATABASE_URL
+
+  if (vercel && process.env.SQLD_BIN) {
+    const libsql = Bun.spawn([
+      process.env.SQLD_BIN,
+      "--db-path",
+      NPath.join(dataPath, "libsql.db"),
+      "--http-listen-addr",
+      "127.0.0.1:8880",
+      "--no-welcome",
+    ], {
+      stdout: "ignore",
+      stderr: "ignore",
+    })
+
+    stops.push(() => libsql.kill())
+    database = "http://127.0.0.1:8880"
+
+    for (let tries = 0; tries < 50; tries += 1) {
+      if (await fetch(`${database}/health`).then(() => true, () => false)) {
+        break
+      }
+
+      await Bun.sleep(100)
+    }
+  }
+
+  if (vercel && !database) {
+    throw new Error(
+      "E2E_TARGET=vercel needs SQLD_BIN (a libsql server binary) or TURSO_DATABASE_URL.",
+    )
+  }
+
+  const server = Bun.spawn(
+    vercel
+      ? [
+        "node",
+        "--import",
+        "./e2e/luma-stub.ts",
+        "e2e/vercel.ts",
+      ]
+      : [
+        "bun",
+        "--preload",
+        "./e2e/luma-stub.ts",
+        "src/server.ts",
+      ],
+    {
+      env: {
+        ...process.env,
+        DATA_PATH: dataPath,
+        TURSO_DATABASE_URL: vercel ? database : undefined,
+        TURSO_AUTH_TOKEN: undefined,
+        HOMEBASE_ADMIN_ADDRESSES: wallets.admin,
+        HOMEBASE_SITE_HOSTS: undefined,
+        HOMEBASE_LIVE_ICAL: undefined,
+      },
+      stdout: "pipe",
+      stderr: "pipe",
     },
-    stdout: "pipe",
-    stderr: "pipe",
-  })
+  )
   const listening = new Promise<void>((resolve, reject) => {
     const read = async (stream: ReadableStream<Uint8Array>) => {
       const reader = stream.getReader()
@@ -340,7 +394,8 @@ try {
       ? route.fulfill({
         status: 503,
         json: {
-          error: "The map's store isn't set up on this deployment.",
+          error:
+            "The map's store isn't set up on this deployment: TURSO_DATABASE_URL is missing.",
         },
       })
       : route.continue()
@@ -586,6 +641,7 @@ try {
 } finally {
   await browser.close()
   server.kill()
+  stops.forEach((stop) => stop())
 }
 
 const failed = checks.filter((item) => !item.ok)
@@ -593,6 +649,10 @@ const failed = checks.filter((item) => !item.ok)
 console.log(
   `\n${
     checks.length - failed.length
-  } of ${checks.length} checks passed; screenshots in ${Shots}`,
+  } of ${checks.length} checks passed against the ${
+    process.env.E2E_TARGET === "vercel"
+      ? "Vercel layout under Node"
+      : "Bun server"
+  }; screenshots in ${Shots}`,
 )
 process.exit(failed.length ? 1 : 0)

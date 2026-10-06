@@ -51,7 +51,9 @@ export function handler(route: Route) {
 
       return json(
         {
-          error: "The map's store isn't set up on this deployment.",
+          error: process.env.TURSO_DATABASE_URL
+            ? "The map's store couldn't be reached. The deployment's logs say why."
+            : "The map's store isn't set up on this deployment: TURSO_DATABASE_URL is missing.",
         },
         503,
       )
