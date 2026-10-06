@@ -2,12 +2,11 @@
 import { useEffect, useRef } from "preact"
 import { useComputed, useSignal, useSignalEffect } from "preact/signals"
 import {
-  checkSession,
+  account,
   events,
   loadEvents,
   loadFailed,
-  session,
-  token,
+  restore,
 } from "../../map/client.ts"
 import { hasPin, isUpcoming } from "../../map/event.ts"
 import type { MapEvent } from "../../map/MapEvent.ts"
@@ -61,11 +60,8 @@ export function MapCard() {
   const now = useSignal(Date.now())
 
   useEffect(() => {
-    loadEvents()
-
-    if (token.value) {
-      checkSession()
-    }
+    // Who may pin comes with the list, and the wallet is checked against it.
+    loadEvents().then(restore)
 
     const tick = setInterval(() => {
       now.value = Date.now()
@@ -211,17 +207,17 @@ export function MapCard() {
             {chip("past", "Past", counts.value.past)}
           </div>
 
-          {/* The form is for a signed-in wallet; everyone else gets the way in. */}
+          {/* The form is for a wallet whose pins count; everyone else gets the way in. */}
           <button
             type="button"
-            class={session.value
+            class={account.value
               ? "btn-brand"
               : "rounded-full border-[1px] border-brand/30 px-3 py-1.5 text-sm text-brand hover:bg-brand/10"}
             onClick={() => {
               adding.value = true
             }}
           >
-            {session.value ? "Add an event" : "Sign in"}
+            {account.value ? "Add an event" : "Connect wallet"}
           </button>
         </div>
       </div>
@@ -293,7 +289,7 @@ export function MapCard() {
             failed={loadFailed.value}
             empty={filter.value !== "upcoming"
               ? "No past events here yet."
-              : session.value
+              : account.value
               ? "No upcoming events pinned yet. Paste a Luma link to add one."
               : "No upcoming events pinned yet."}
           />
