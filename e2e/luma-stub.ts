@@ -59,7 +59,6 @@ const venue = (slug: string, name: string) => ({
 export const Fixtures: Record<string, Record<string, unknown>> = {
   "e2e-demo-day": venue("e2e-demo-day", "Based House Lisbon · Demo Day"),
   "e2e-build-night": venue("e2e-build-night", "Lisbon build night"),
-  "e2e-locker-night": venue("e2e-locker-night", "Locker night"),
 }
 
 const page = (data: Record<string, unknown>) =>

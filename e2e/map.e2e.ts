@@ -1,155 +1,68 @@
 /**
- * The map, end to end: a real browser against a real server, the registry
- * on a local chain, a wallet that signs and sends with keys this script
- * holds, and Luma answered from fixtures.
+ * The map, end to end: a real browser against a real server, with a wallet
+ * that signs with a key this script holds, and Luma answered from fixtures.
  *
- *   bun run e2e                        the Bun server
- *   E2E_TARGET=vercel bun run e2e      the Vercel layout under Node
+ *   bun run e2e
  *
- * Needs anvil (Foundry) on the PATH or in ANVIL_BIN, port 3000 free, and a
- * one-time `bunx playwright install chromium`. Screenshots of every step
- * land in the directory the run prints.
+ * Port 3000 must be free, and the browser comes from a one-time
+ * `bunx playwright install chromium`. Screenshots of every step land in the
+ * directory the run prints.
  */
 import * as NFs from "node:fs/promises"
 import * as NOs from "node:os"
 import * as NPath from "node:path"
+import * as Address from "ox/Address"
+import * as Hex from "ox/Hex"
+import * as PersonalMessage from "ox/PersonalMessage"
+import * as Secp256k1 from "ox/Secp256k1"
+import * as Signature from "ox/Signature"
 import { type BrowserContext, chromium, type Page } from "playwright"
-import {
-  type Address,
-  createPublicClient,
-  createWalletClient,
-  type Hex,
-  http,
-} from "viem"
-import { privateKeyToAccount } from "viem/accounts"
-import { foundry } from "viem/chains"
-import artifacts from "../contracts/artifacts.json" with { type: "json" }
-import stubs from "./contracts/artifacts.json" with { type: "json" }
 
 const Origin = "http://127.0.0.1:3000"
 
 const Shots = NPath.join(NOs.tmpdir(), "homebase-e2e")
 
-const ChainPort = 8545
-
-const ChainRpc = `http://127.0.0.1:${ChainPort}`
-
-/** Anvil's well-known funded accounts: the admin, a $home locker, and nobody. */
 const keys = {
-  admin: privateKeyToAccount(
-    "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-  ),
-  locker: privateKeyToAccount(
-    "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
-  ),
-  stranger: privateKeyToAccount(
-    "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",
-  ),
+  admin: Secp256k1.randomPrivateKey(),
+  stranger: Secp256k1.randomPrivateKey(),
 }
+
+const addressOf = (privateKey: Hex.Hex) =>
+  Address.checksum(
+    Address.fromPublicKey(Secp256k1.getPublicKey({
+      privateKey,
+    })),
+  )
 
 const wallets = {
-  admin: keys.admin.address,
-  locker: keys.locker.address,
-  stranger: keys.stranger.address,
+  admin: addressOf(keys.admin),
+  stranger: addressOf(keys.stranger),
 }
-
-const chain = {
-  ...foundry,
-  rpcUrls: {
-    default: {
-      http: [
-        ChainRpc,
-      ],
-    },
-  },
-}
-
-const reader = createPublicClient({
-  chain,
-  transport: http(ChainRpc),
-})
-
-const as = (account: typeof keys.admin) =>
-  createWalletClient({
-    account,
-    chain,
-    transport: http(ChainRpc),
-  })
 
 const short = (address: string) => `${address.slice(0, 6)}…${address.slice(-4)}`
 
-const keyFor = (address: string) =>
-  Object.values(keys).find((key) =>
-    key.address.toLowerCase() === address.toLowerCase()
-  ) ?? keys.stranger
+/** What a wallet does with personal_sign, done here with the key behind the address. */
+function sign(messageHex: string, address: string): string {
+  const privateKey = Address.isEqual(address as Address.Address, wallets.admin)
+    ? keys.admin
+    : keys.stranger
 
-/** What a wallet does with eth_sendTransaction: sign with the key behind the sender and send it on. */
-async function send(tx: {
-  from: string
-  to?: string
-  data?: string
-  value?: string
-}): Promise<unknown> {
-  try {
-    return await as(keyFor(tx.from)).sendTransaction({
-      to: tx.to as Address,
-      data: tx.data as Hex,
-      value: tx.value ? BigInt(tx.value) : undefined,
-    })
-  } catch (error) {
-    return {
-      __error: {
-        message: String((error as Error).message).split("\n")[0],
-      },
-    }
-  }
-}
-
-/** Anything else the page asks the wallet is asked of the chain itself. */
-async function rpc(method: string, params: unknown[]): Promise<unknown> {
-  const response = await fetch(ChainRpc, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method,
-      params,
+  return Signature.toHex(
+    Secp256k1.sign({
+      payload: PersonalMessage.getSignPayload(messageHex as Hex.Hex),
+      privateKey,
     }),
-  })
-  const answer = await response.json() as {
-    result?: unknown
-    error?: {
-      code: number
-      message: string
-      data?: unknown
-    }
-  }
-
-  return answer.error
-    ? {
-      __error: answer.error,
-    }
-    : answer.result
+  )
 }
 
 /**
  * A wallet announced to the page the way browser wallets are (EIP-6963),
- * answering the requests wagmi and viem make: accounts and the chain from
- * here, transactions signed by this script, everything else from the chain.
+ * answering the requests wagmi makes; the signature comes from this script.
  */
 const walletScript = (address: string) =>
   `(() => {
   const address = ${JSON.stringify(address)}
   window.__walletCalls = []
-  const answerOf = (reply) => {
-    if (reply && typeof reply === "object" && reply.__error) {
-      throw Object.assign(new Error(reply.__error.message), { code: reply.__error.code, data: reply.__error.data })
-    }
-    return reply
-  }
   const provider = {
     request: async ({ method, params }) => {
       window.__walletCalls.push(method)
@@ -161,14 +74,12 @@ const walletScript = (address: string) =>
           return [{ parentCapability: "eth_accounts", caveats: [{ type: "restrictReturnedAccounts", value: [address] }] }]
         case "eth_chainId":
           return "0x2105"
-        case "net_version":
-          return "8453"
         case "wallet_switchEthereumChain":
           return null
-        case "eth_sendTransaction":
-          return answerOf(await window.__homebaseSend(params[0]))
+        case "personal_sign":
+          return await window.__homebaseSign(params[0], params[1])
         default:
-          return answerOf(await window.__homebaseRpc(method, params ?? []))
+          throw Object.assign(new Error("unsupported " + method), { code: -32601 })
       }
     },
     on: () => {},
@@ -211,84 +122,49 @@ let serverLog = String()
 /** What to stop at the end besides the server itself. */
 const stops: (() => void)[] = []
 
-/** A local chain with the registry on it, the admin wallet as its admin. */
-async function startChain(): Promise<Address> {
-  const anvil = process.env.ANVIL_BIN ?? Bun.which("anvil")
-
-  if (!anvil) {
-    throw new Error(
-      "The suite needs anvil (Foundry) on the PATH or in ANVIL_BIN.",
-    )
-  }
-
-  const node = Bun.spawn([
-    anvil,
-    "--port",
-    String(ChainPort),
-    "--silent",
-  ], {
-    stdout: "ignore",
-    stderr: "ignore",
-  })
-
-  stops.push(() => node.kill())
-
-  for (let tries = 0; tries < 100; tries += 1) {
-    if (await reader.getChainId().then(() => true, () => false)) {
-      break
-    }
-
-    await Bun.sleep(100)
-  }
-
-  return deploy(artifacts.HomebaseMap, [
-    wallets.admin,
-  ])
-}
-
-async function deploy(
-  artifact: {
-    abi: unknown
-    bytecode: string
-  },
-  args: unknown[],
-): Promise<Address> {
-  const hash = await as(keys.admin).deployContract({
-    abi: artifact.abi as [],
-    bytecode: artifact.bytecode as Hex,
-    args: args as never,
-  })
-  const receipt = await reader.waitForTransactionReceipt({
-    hash,
-  })
-
-  return receipt.contractAddress!
-}
-
-/** The slugs on the chain right now, with who pinned them. */
-const onChain = async (registry: Address) =>
-  (await reader.readContract({
-    address: registry,
-    abi: artifacts.HomebaseMap.abi as [],
-    functionName: "list" as never,
-  }) as {
-    slug: string
-    by: Address
-  }[])
-    .map((pin) => [
-      pin.slug,
-      pin.by,
-    ])
-
 /**
  * The server under test: the Bun server by default, or with E2E_TARGET=vercel
- * the Vercel layout under Node, both pointed at the local chain.
+ * the Vercel layout under Node, with a libsql server of its own when SQLD_BIN
+ * names the binary, else the one TURSO_DATABASE_URL names.
  */
-async function startServer(registry: Address) {
+async function startServer() {
   const dataPath = await NFs.mkdtemp(
     NPath.join(NOs.tmpdir(), "homebase-e2e-data-"),
   )
   const vercel = process.env.E2E_TARGET === "vercel"
+  let database = process.env.TURSO_DATABASE_URL
+
+  if (vercel && process.env.SQLD_BIN) {
+    const libsql = Bun.spawn([
+      process.env.SQLD_BIN,
+      "--db-path",
+      NPath.join(dataPath, "libsql.db"),
+      "--http-listen-addr",
+      "127.0.0.1:8880",
+      "--no-welcome",
+    ], {
+      stdout: "ignore",
+      stderr: "ignore",
+    })
+
+    stops.push(() => libsql.kill())
+    database = "http://127.0.0.1:8880"
+
+    for (let tries = 0; tries < 50; tries += 1) {
+      if (await fetch(`${database}/health`).then(() => true, () => false)) {
+        break
+      }
+
+      await Bun.sleep(100)
+    }
+  }
+
+  if (vercel && !database) {
+    throw new Error(
+      "E2E_TARGET=vercel needs SQLD_BIN (a libsql server binary) or TURSO_DATABASE_URL.",
+    )
+  }
+
   const server = Bun.spawn(
     vercel
       ? [
@@ -307,8 +183,10 @@ async function startServer(registry: Address) {
       env: {
         ...process.env,
         DATA_PATH: dataPath,
-        HOMEBASE_MAP_REGISTRY: registry,
-        HOMEBASE_BASE_RPC: ChainRpc,
+        TURSO_DATABASE_URL: vercel ? database : undefined,
+        TURSO_AUTH_TOKEN: undefined,
+        HOMEBASE_ADMIN_ADDRESSES: wallets.admin,
+        HOMEBASE_SITE_HOSTS: undefined,
         HOMEBASE_LIVE_ICAL: undefined,
       },
       stdout: "pipe",
@@ -409,8 +287,7 @@ async function walletContext(address: string) {
     deviceScaleFactor: 2,
   })
 
-  await context.exposeFunction("__homebaseSend", send)
-  await context.exposeFunction("__homebaseRpc", rpc)
+  await context.exposeFunction("__homebaseSign", sign)
   await context.addInitScript(walletScript(address))
 
   return context
@@ -432,19 +309,20 @@ const walletCalls = (page: Page) =>
       .__walletCalls
   )
 
-async function connectWith(page: Page, name: "Test Wallet") {
+async function connectAndSignIn(page: Page) {
   await page
     .getByRole("button", {
-      name: "Connect wallet",
+      name: "Sign in",
     })
     .click()
   await dialog(page)
     .getByRole("button", {
-      name,
+      name: "Test Wallet",
     })
     .waitFor({
       timeout: 30_000,
     })
+  await shot(page, "02-wallets")
 
   const offered = await dialog(page)
     .getByRole("list", {
@@ -455,40 +333,15 @@ async function connectWith(page: Page, name: "Test Wallet") {
 
   await dialog(page)
     .getByRole("button", {
-      name,
+      name: "Test Wallet",
     })
     .click()
 
   return offered
 }
 
-async function lookUpAndPin(page: Page, link: string) {
-  await dialog(page).getByLabel("Luma link").fill(link)
-  await dialog(page)
-    .getByRole("button", {
-      name: "Look up",
-    })
-    .click()
-  await dialog(page)
-    .getByRole("button", {
-      name: "Pin it to the map",
-    })
-    .waitFor({
-      timeout: 30_000,
-    })
-  await dialog(page)
-    .getByRole("button", {
-      name: "Pin it to the map",
-    })
-    .click()
-  await page.locator("article[aria-label]").waitFor({
-    timeout: 30_000,
-  })
-  await page.waitForTimeout(1500)
-}
-
 const mapJson = async () =>
-  (await (await fetch(`${Origin}/map.json?fresh=${Date.now()}`)).json()) as {
+  (await (await fetch(`${Origin}/map.json`)).json()) as {
     events: {
       slug: string
       addedBy: string
@@ -503,12 +356,11 @@ await NFs.mkdir(Shots, {
   recursive: true,
 })
 
-const registry = await startChain()
-const server = await startServer(registry)
+const server = await startServer()
 const browser = await chromium.launch()
 
 try {
-  // The admin: connect, pin, keep the wallet over a reload, remove, disconnect.
+  // An admin: connect, sign in, look up, pin, keep the session, remove, sign out.
   const admin = await walletContext(wallets.admin)
   const page = await open(admin)
 
@@ -526,13 +378,30 @@ try {
           .count()) === 0
       && (await page
           .getByRole("button", {
-            name: "Connect wallet",
+            name: "Sign in",
           })
           .count()) === 1
       && (await page.getByLabel("Luma link").count()) === 0,
   )
 
-  const offered = await connectWith(page, "Test Wallet")
+  // The first sign-in meets a deployment with no store, the way an unconfigured Vercel answers.
+  let nonces = 0
+
+  await page.route("**/auth/nonce.json", (route) => {
+    nonces += 1
+
+    return nonces === 1
+      ? route.fulfill({
+        status: 503,
+        json: {
+          error:
+            "The map's store isn't set up on this deployment: TURSO_DATABASE_URL is missing.",
+        },
+      })
+      : route.continue()
+  })
+
+  const offered = await connectAndSignIn(page)
 
   check(
     "the page offers the announced wallet and Coinbase Wallet",
@@ -540,14 +409,54 @@ try {
       && offered.some((text) => text.includes("Coinbase Wallet")),
     offered.join(" | "),
   )
+  await dialog(page).getByRole("alert").waitFor({
+    timeout: 30_000,
+  })
+  check(
+    "a deployment without a store says so, and keeps the wallets on offer",
+    (await dialog(page).getByRole("alert").innerText()).includes("isn't set up")
+      && (await dialog(page)
+          .getByRole("button", {
+            name: "Test Wallet",
+          })
+          .count()) === 1,
+    await dialog(page).getByRole("alert").innerText(),
+  )
+
+  const before = await walletCalls(page)
+
+  await dialog(page)
+    .getByRole("button", {
+      name: "Test Wallet",
+    })
+    .click()
   await dialog(page).getByText(`Adding as ${short(wallets.admin)}`).waitFor({
     timeout: 30_000,
   })
-  await shot(page, "02-connected")
+
+  const retry = (await walletCalls(page)).slice(before.length)
+  const connects = (calls: string[]) =>
+    calls
+      .filter((method) =>
+        method === "eth_requestAccounts"
+        || method === "wallet_requestPermissions"
+      )
+      .length
+  const signs = (calls: string[]) =>
+    calls.filter((method) => method === "personal_sign").length
+
   check(
-    "the admin wallet is let in by the registry and gets the form",
-    (await dialog(page).getByText("(admin)").count()) === 1
-      && (await dialog(page).getByLabel("Luma link").count()) === 1,
+    "the second try reuses the connected wallet and signs once",
+    connects(before) > 0
+      && signs(before) === 0
+      && connects(retry) === 0
+      && signs(retry) === 1,
+    `first: ${before.join(" ")} | retry: ${retry.join(" ")}`,
+  )
+  await shot(page, "03-signed-in")
+  check(
+    "the admin wallet is signed in and gets the form",
+    (await dialog(page).getByLabel("Luma link").count()) === 1,
   )
 
   await dialog(page).getByLabel("Luma link").fill(
@@ -565,14 +474,12 @@ try {
     .waitFor({
       timeout: 30_000,
     })
-  await shot(page, "03-preview")
+  await shot(page, "04-preview")
   check(
     "the preview names the event",
     (await dialog(page).getByText("Based House Lisbon · Demo Day").count())
       === 1,
   )
-
-  const before = await walletCalls(page)
 
   await dialog(page)
     .getByRole("button", {
@@ -583,24 +490,16 @@ try {
     timeout: 30_000,
   })
   await page.waitForTimeout(1500)
-  await shot(page, "04-pinned")
+  await shot(page, "05-pinned")
 
-  const sent = (await walletCalls(page)).slice(before.length)
   const pinned = await mapJson()
 
   check(
-    "pinning is one transaction from the wallet, and the pin is on the chain and on the map",
-    sent.filter((method) => method === "eth_sendTransaction").length === 1
-      && JSON.stringify(await onChain(registry)) === JSON.stringify([
-          [
-            "e2e-demo-day",
-            wallets.admin,
-          ],
-        ])
-      && pinned.events.length === 1
+    "the pin is on the map, added by the admin wallet",
+    pinned.events.length === 1
       && pinned.events[0].slug === "e2e-demo-day"
       && pinned.events[0].addedBy === wallets.admin,
-    `${sent.join(" ")} | ${JSON.stringify(pinned)}`,
+    JSON.stringify(pinned),
   )
 
   const again = await open(admin)
@@ -611,10 +510,9 @@ try {
     })
     .click()
   check(
-    "the wallet is picked back up after a reload",
-    (await dialog(again)
-      .getByText(`Adding as ${short(wallets.admin)}`)
-      .count()) === 1,
+    "the session survives a reload",
+    (await dialog(again).getByText(`Adding as ${short(wallets.admin)}`).count())
+      === 1,
   )
   await again.keyboard.press("Escape")
   await again.locator("li[id^=event-] [role=button]").first().click()
@@ -625,25 +523,36 @@ try {
     .waitFor({
       timeout: 10_000,
     })
-  await shot(again, "05-remove-offered")
+  await shot(again, "06-remove-offered")
   await again
     .getByRole("button", {
       name: "Remove from map",
     })
     .click()
-  await again.waitForTimeout(1500)
-  check(
-    "the admin can take the pin off the chain",
-    (await onChain(registry)).length === 0
-      && (await mapJson()).events.length === 0,
-  )
+  await again.waitForTimeout(1000)
+  check("the admin can remove the pin", (await mapJson()).events.length === 0)
 
   await again
     .getByRole("button", {
       name: "Add an event",
     })
     .click()
-  await lookUpAndPin(again, "https://luma.com/e2e-build-night")
+  await dialog(again).getByLabel("Luma link").fill(
+    "https://luma.com/e2e-build-night",
+  )
+  await dialog(again)
+    .getByRole("button", {
+      name: "Look up",
+    })
+    .click()
+  await dialog(again)
+    .getByRole("button", {
+      name: "Pin it to the map",
+    })
+    .click()
+  await again.locator("article[aria-label]").waitFor({
+    timeout: 30_000,
+  })
   await again
     .getByRole("button", {
       name: "Add an event",
@@ -651,7 +560,7 @@ try {
     .click()
   await dialog(again)
     .getByRole("button", {
-      name: "Disconnect",
+      name: "Sign out",
     })
     .click()
   await dialog(again)
@@ -662,27 +571,27 @@ try {
       timeout: 30_000,
     })
   check(
-    "disconnecting takes the form away and offers the way back in",
+    "signing out takes the form away and offers the way back in",
     (await dialog(again).getByLabel("Luma link").count()) === 0
       && (await again
           .getByRole("button", {
-            name: "Connect wallet",
+            name: "Sign in",
           })
           .count()) === 1,
   )
   await admin.close()
 
-  // A wallet that is nobody: it connects fine, and the registry turns it away.
+  // A wallet that is nobody: it signs fine, and the server turns it away.
   const stranger = await walletContext(wallets.stranger)
   const outsider = await open(stranger)
 
-  await connectWith(outsider, "Test Wallet")
+  await connectAndSignIn(outsider)
   await outsider.getByRole("alert").waitFor({
     timeout: 30_000,
   })
-  await shot(outsider, "06-stranger")
+  await shot(outsider, "07-stranger")
   check(
-    "a wallet the registry does not know is turned away, and never sees the form",
+    "a wallet that is not an admin is turned away, and never sees the form",
     (await outsider.getByRole("alert").innerText()).includes(
       "can't add events yet",
     )
@@ -695,129 +604,6 @@ try {
     await outsider.getByRole("alert").innerText(),
   )
   await stranger.close()
-
-  // The lockers' turn: a gate on a stub lock, set on the registry by the admin.
-  const lock = await deploy(stubs.StubLock, [])
-  const gate = await deploy(artifacts.LockGate, [
-    lock,
-    100n,
-  ])
-
-  for (
-    const call of [
-      {
-        address: registry,
-        abi: artifacts.HomebaseMap.abi,
-        functionName: "setGate",
-        args: [
-          gate,
-        ],
-      },
-      {
-        address: lock,
-        abi: stubs.StubLock.abi,
-        functionName: "setLocked",
-        args: [
-          wallets.locker,
-          100n,
-        ],
-      },
-    ]
-  ) {
-    const hash = await as(keys.admin).writeContract({
-      address: call.address,
-      abi: call.abi as [],
-      functionName: call.functionName as never,
-      args: call.args as never,
-    })
-
-    await reader.waitForTransactionReceipt({
-      hash,
-    })
-  }
-
-  const lockers = await walletContext(wallets.locker)
-  const locker = await open(lockers)
-
-  await connectWith(locker, "Test Wallet")
-  await dialog(locker).getByText(`Adding as ${short(wallets.locker)}`).waitFor({
-    timeout: 30_000,
-  })
-  await shot(locker, "07-locker")
-  check(
-    "a wallet with enough $home locked is let in through the gate",
-    (await dialog(locker).getByText("($home locker)").count()) === 1,
-  )
-  await lookUpAndPin(locker, "https://luma.com/e2e-locker-night")
-  await locker.keyboard.press("Escape")
-  check(
-    "the locker's pin is on the chain under its own wallet",
-    JSON.stringify(await onChain(registry)) === JSON.stringify([
-      [
-        "e2e-build-night",
-        wallets.admin,
-      ],
-      [
-        "e2e-locker-night",
-        wallets.locker,
-      ],
-    ]),
-    JSON.stringify(await onChain(registry)),
-  )
-
-  const rows = locker.locator("li[id^=event-] [role=button]")
-
-  await rows.first().click()
-  await locker.locator("article[aria-label] h3").waitFor({
-    timeout: 10_000,
-  })
-
-  const firstTitle = await locker.locator("article[aria-label] h3").innerText()
-  const removeOnFirst = await locker
-    .getByRole("button", {
-      name: "Remove from map",
-    })
-    .count()
-
-  await rows.nth(1).click()
-  await locker.waitForTimeout(500)
-
-  const secondTitle = await locker.locator("article[aria-label] h3").innerText()
-  const removeOnSecond = await locker
-    .getByRole("button", {
-      name: "Remove from map",
-    })
-    .count()
-  const own = firstTitle === "Locker night" ? removeOnFirst : removeOnSecond
-  const other = firstTitle === "Locker night" ? removeOnSecond : removeOnFirst
-
-  check(
-    "a locker may remove its own pin and not the admin's",
-    own === 1 && other === 0,
-    `${firstTitle}: ${removeOnFirst}, ${secondTitle}: ${removeOnSecond}`,
-  )
-
-  if (secondTitle !== "Locker night") {
-    await rows.first().click()
-    await locker.waitForTimeout(500)
-  }
-
-  await locker
-    .getByRole("button", {
-      name: "Remove from map",
-    })
-    .click()
-  await locker.waitForTimeout(1500)
-  check(
-    "the locker's pin comes off the chain",
-    JSON.stringify(await onChain(registry)) === JSON.stringify([
-      [
-        "e2e-build-night",
-        wallets.admin,
-      ],
-    ]),
-  )
-  await lockers.close()
 
   // The deep link, with no wallet at all.
   const visitor = await browser.newContext({

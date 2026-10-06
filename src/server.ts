@@ -6,6 +6,7 @@ import * as Sql from "./db/Sql"
 import * as HomeRoute from "./HomeRoute.ts"
 import IndexHtml from "./index.html" with { type: "file" }
 import * as CalendarSync from "./jobs/CalendarSync"
+import * as MapRefresh from "./jobs/MapRefresh.ts"
 import * as VendorRoute from "./map/vendorRoute.ts"
 import * as Telemetry from "./Telemetry"
 import * as WalletRoute from "./wallet/walletRoute.ts"
@@ -23,6 +24,7 @@ export default Layer
       ],
     }),
     CalendarSync.layer(),
+    MapRefresh.layer(),
     VendorRoute.layer,
     WalletRoute.layer,
     HomeRoute.layer,
