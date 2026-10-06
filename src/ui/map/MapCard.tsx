@@ -58,10 +58,18 @@ export function MapCard() {
   const adding = useSignal(false)
   const mapUnavailable = useSignal(false)
   const now = useSignal(Date.now())
+  const frame = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // Who may pin comes with the list, and the wallet is checked against it.
     loadEvents().then(restore)
+
+    // A shared link lands on the map, not at the top of the page above it.
+    if (selected.peek()) {
+      frame.current?.closest("section")?.scrollIntoView({
+        block: "start",
+      })
+    }
 
     const tick = setInterval(() => {
       now.value = Date.now()
@@ -136,8 +144,6 @@ export function MapCard() {
   const select = (slug: string | null) => {
     selected.value = slug
   }
-
-  const frame = useRef<HTMLDivElement>(null)
 
   // On a phone the list sits under the map, so a chosen row brings the map back.
   const selectFromList = (slug: string | null) => {

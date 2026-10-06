@@ -211,6 +211,27 @@
     transform: scale(1.08);
   }
 
+  /* The way back to the whole world, in MapLibre's control group under the
+     zoom buttons; it only shows once the camera has left the world. */
+  .hb-world {
+    display: none;
+  }
+
+  .hb-world[data-away] {
+    display: block;
+  }
+
+  .hb-world-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #374151;
+  }
+
+  .hb-world-button:hover {
+    color: var(--color-brand);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .hb-pin,
     .hb-cluster {

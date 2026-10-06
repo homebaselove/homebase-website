@@ -463,6 +463,52 @@ const shot = (page: Page, name: string) =>
 
 const dialog = (page: Page) => page.getByRole("dialog")
 
+/** The zoom the camera settled on, which the view writes on its container. */
+const zoomOf = (page: Page) =>
+  page.evaluate(() =>
+    Number(
+      document.querySelector<HTMLElement>("[data-zoom]")?.dataset.zoom ?? NaN,
+    )
+  )
+
+/** Waits for the camera to come to rest between two zooms. */
+const settledBetween = (page: Page, min: number, max: number) =>
+  page.waitForFunction(
+    ([low, high]) => {
+      const zoom = Number(
+        document.querySelector<HTMLElement>("[data-zoom]")?.dataset.zoom
+          ?? NaN,
+      )
+
+      return zoom >= low && zoom <= high
+    },
+    [
+      min,
+      max,
+    ] as const,
+    {
+      timeout: 15_000,
+    },
+  )
+
+/** Whether the pin head of the first pin on the map is what the pointer would reach at its centre. */
+const pinUncovered = (page: Page) =>
+  page.evaluate(() => {
+    const head = document.querySelector(".hb-pin-head")
+
+    if (!head) {
+      return false
+    }
+
+    const box = head.getBoundingClientRect()
+    const hit = document.elementFromPoint(
+      box.left + box.width / 2,
+      box.top + box.height / 2,
+    )
+
+    return hit !== null && head.contains(hit)
+  })
+
 /** Every request the fake wallet has answered on the page, in order. */
 const walletCalls = (page: Page) =>
   page.evaluate(() =>
@@ -645,6 +691,49 @@ try {
 
   const again = await open(admin)
 
+  // The map starts once it is near the viewport, so a visitor scrolls down to it
+  // and finds the whole world, with nothing selected.
+  await again.evaluate(() =>
+    document.getElementById("map-heading")?.closest("section")?.scrollIntoView({
+      block: "start",
+    })
+  )
+  await settledBetween(again, -1, 2)
+  await shot(again, "05-world")
+  check(
+    "the map opens on the whole world",
+    (await zoomOf(again)) < 2
+      && (await again.locator("article[aria-label]").count()) === 0
+      && (await again.locator(".hb-world[data-away]").count()) === 0,
+    `zoom ${await zoomOf(again)}`,
+  )
+
+  // The house pin flies the camera in, and the card leaves the pin uncovered.
+  await again.locator(".hb-pin").first().click()
+  await again.locator("article[aria-label]").waitFor({
+    timeout: 10_000,
+  })
+  await settledBetween(again, 11, 17)
+  await again.waitForTimeout(400)
+  await shot(again, "05-event")
+  check(
+    "the pin flies the camera in to the event, clear of its card",
+    (await zoomOf(again)) >= 11
+      && (await pinUncovered(again))
+      && (await again.locator(".hb-world[data-away]").count()) === 1,
+    `zoom ${await zoomOf(again)}`,
+  )
+
+  // Closing the card flies back out to the world.
+  await again.keyboard.press("Escape")
+  await settledBetween(again, -1, 2)
+  check(
+    "closing the card brings the whole world back",
+    (await again.locator("article[aria-label]").count()) === 0
+      && (await zoomOf(again)) < 2,
+    `zoom ${await zoomOf(again)}`,
+  )
+
   await again
     .getByRole("button", {
       name: "Add an event",
@@ -784,10 +873,14 @@ try {
     timeout: 30_000,
   })
   await shot(linked, "08-deep-link-mobile")
+  await settledBetween(linked, 11, 17)
   check(
-    "a deep link opens the event on a phone",
+    "a deep link opens the event on a phone, straight on its pin",
     (await linked.locator("article[aria-label] h3").innerText())
-      === "Lisbon build night",
+        === "Lisbon build night"
+      && (await zoomOf(linked)) >= 11
+      && (await pinUncovered(linked)),
+    `zoom ${await zoomOf(linked)}`,
   )
   await visitor.close()
 } catch (error) {
