@@ -330,7 +330,7 @@ export const Chapters: Chapter[] = [
       },
       {
         label: "Fund Based House Mumbai",
-        href: "#top",
+        href: "#fund",
       },
     ],
   },
