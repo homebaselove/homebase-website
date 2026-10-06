@@ -65,6 +65,52 @@
     background: var(--color-brand-dark);
   }
 
+  /* The story reel: cards share one width that leaves the neighbors peeking
+     in on either side, and the scrollbar stays hidden because the dots and
+     arrows are the controls. */
+  .story-reel {
+    --story-card: min(calc(100% - 5rem), 640px);
+    --story-gap: 0.5rem;
+    gap: var(--story-gap);
+    scrollbar-width: none;
+  }
+
+  @media (min-width: 40rem) {
+    .story-reel {
+      --story-gap: 1rem;
+    }
+  }
+
+  /* Two cover photos: each grows in proportion to its aspect ratio, which
+     lands them at the same height across the full width of the card. */
+  .story-pair {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  @media (min-width: 40rem) {
+    .story-pair {
+      flex-direction: row;
+    }
+
+    .story-pair > a {
+      flex: var(--aspect) 1 0%;
+    }
+
+    .story-pair-stack {
+      flex-direction: column;
+    }
+
+    .story-pair-stack > a {
+      flex: none;
+    }
+  }
+
+  .story-reel::-webkit-scrollbar {
+    display: none;
+  }
+
   .btn-brand:disabled {
     opacity: 0.5;
     cursor: not-allowed;
