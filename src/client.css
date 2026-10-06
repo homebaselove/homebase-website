@@ -297,6 +297,29 @@
     color: #6b7280;
   }
 
+  .hb-preview-next {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-brand);
+  }
+
+  /* The soonest upcoming event wears a ring, so the map carries the order
+     the list has. The ring breathes once every few seconds, and holds still
+     for anyone who asked for less motion. */
+  .hb-marker[data-next] .hb-badge::after,
+  .hb-marker[data-next] .hb-pin-head::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    border-radius: 9999px;
+    border: 2px solid var(--color-brand);
+    opacity: 0.55;
+    pointer-events: none;
+    animation: hb-ring 2.8s ease-out infinite;
+  }
+
   /* The way back to the whole world, in MapLibre's control group under the
      zoom buttons; it only shows once the camera has left the world. */
   .hb-world {
@@ -323,6 +346,28 @@
     .hb-badge {
       transition: none;
     }
+
+    .hb-marker[data-next] .hb-badge::after,
+    .hb-marker[data-next] .hb-pin-head::after {
+      animation: none;
+    }
+  }
+}
+
+@keyframes hb-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.7;
+  }
+
+  60% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
   }
 }
 

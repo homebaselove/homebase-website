@@ -198,7 +198,11 @@ count. Hovering any marker, on a device whose pointer can hover, opens a
 preview with the title, the date in the event's timezone and a link to Luma;
 a cluster's preview lists up to three of its events, each a link, and says how
 many more a zoom would show. The card keeps Open on Luma, Add to calendar and
-Directions under the place line, in view without scrolling.
+Directions under the place line, in view without scrolling. The soonest
+upcoming event wears a ring on its marker, breathing once every few seconds
+and still for anyone who asked for less motion, with a Next up tag in the
+list and the preview: the list is ordered by date and the map was not, and
+one mark carries the order over.
 
 What this rests on:
 
@@ -249,7 +253,7 @@ the world button appearing only when away; a card that shows at once with the
 flight behind it; the pin kept clear of its card by measuring the card; links
 that land on the map; reduced motion honoured by MapLibre itself.
 
-Weighed and left for later, with what would decide each:
+Weighed and left out, with what would bring each back:
 
 - A single click on a marker opening Luma: refused, since one badge can
   hold several events, a map click leaving the site surprises and a thumb
@@ -257,12 +261,11 @@ Weighed and left for later, with what would decide each:
   viewer's zone, the calendar, directions and the admin's remove.
 - City names under the badges at the world: fewer hovers, but clutter in a
   crowded region; try with the real pins.
-- A ring on the soonest event's badge: the list is ordered by date, the map
-  is not, and one mark would carry the order over.
 - Ordering the list by the viewer's part of the world, read from the
   browser's timezone with no permission prompt: research on map views notes
-  that people expect proximity ordering, and a timezone is a coarse,
-  prompt-free proxy.
+  that people expect proximity ordering, but an events list promises date
+  order, Luma's own included, and a timezone misplaces anyone travelling. The
+  list stays in date order, with the ring marking what is next.
 
 ### Google Maps
 
@@ -431,6 +434,8 @@ client through the route manifest. Minified sizes:
 - Hovering a marker, on a pointer that hovers, previews the event, or up to
   three of a cluster's events, each a link to Luma. The card keeps Open on
   Luma, Add to calendar and Directions right under the place line.
+- The soonest upcoming event wears a ring on its marker and a Next up tag in
+  the list and in the preview, so the map carries the order the list has.
 - The list is the map's other half: hovering a row lifts its pin, selecting
   one opens its details and brings its pin into the part of the map the card
   leaves open, beside it on a wide screen and above it on a phone, where the
@@ -570,6 +575,25 @@ attestation left out, readings that stand in while Luma is down, the
 Homebase wallet as the default and a list replacing it, an indexer that does
 not answer, the preview and its limit).
 
+**Validated claim by claim.** Each finding above has a check in the suite,
+with a second city pinned a week later and up the coast so the two share a
+badge at the world: the card shows within a second of the click and the
+flight settles after more than 1.5 seconds; the shared badge carries the
+count and the ring for the soonest; its preview lists both events as links,
+tags the soonest, keeps a title written as markup as text, and stays while
+the pointer is on it; pressing it flies in until the cities stand apart with
+the ring on the right one; hovering a row lifts its badge and hovering a
+badge lights its row; Enter on a focused badge opens the card with the
+title, the date and the Luma link; two presses of the zoom button bring the
+world button, which takes the camera back; the wheel scrolls the page over
+the map and zooms it only with the key held; every control in the map and
+the list measures at least 24 pixels each way and a badge over 44; with
+reduced motion asked for, the same flight settles within a second; and on a
+touchscreen a tap splits the shared badge, a tap opens the card, and no
+preview appears. Writing the camera's zoom on the container only once it is
+at rest came out of this: the first version wrote it as a flight began, and
+a check read a camera in mid-air as settled.
+
 **Driven end to end.** `bun run e2e` starts a local chain (anvil), deploys
 EAS and its schema registry on it from the artifacts EAS publishes, starts
 the Bun server, or with `E2E_TARGET=vercel` the Vercel layout under Node
@@ -584,12 +608,12 @@ admin connecting and getting the form, a look-up, the first pin as two
 transactions, the schema and then the attestation, found on the chain and
 on the map, the map opening on the whole world after a reload with the event a round
 badge, the badge's hover preview with its link to Luma and the preview going
-once the pointer leaves, the badge flying the camera in to a pin with the
-card clear of it, the card closing and the world coming
+once the pointer leaves, the card showing at once and the badge flying the
+camera in to a pin over 1.5 seconds with the card clear of it, the card closing and the world coming
 back, the wallet picked back up after a reload, a revocation taking the pin
 off the chain and the map, a later pin as one transaction, disconnecting, a
 stranger turned away without the form, and a deep link on a phone-sized
-screen landing straight on its pin: eighteen checks, a screenshot of each
+screen landing straight on its pin: thirty-one checks, a screenshot of each
 step. Only Luma,
 the tiles, the indexer and the chain's distance are stubbed. A failed run
 leaves a screenshot, the page's text and the server's log.

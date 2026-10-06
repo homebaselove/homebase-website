@@ -6,29 +6,62 @@
  */
 const original = globalThis.fetch
 
-const venue = (slug: string, name: string) => ({
+interface Where {
+  readonly latitude: number
+  readonly longitude: number
+  readonly address: string
+  readonly city: string
+  readonly full_address: string
+  readonly description: string
+}
+
+const Lisbon: Where = {
+  latitude: 38.7223,
+  longitude: -9.1393,
+  address: "Rua do Grilo 1",
+  city: "Lisbon",
+  full_address: "Rua do Grilo 1, 1950-144 Lisbon, Portugal",
+  description: "grow.inc SPACES",
+}
+
+/** Close enough to Lisbon to share a badge at the world, far enough to split a few zooms in. */
+const Porto: Where = {
+  latitude: 41.1496,
+  longitude: -8.611,
+  address: "Rua de Cedofeita 112",
+  city: "Porto",
+  full_address: "Rua de Cedofeita 112, 4050-174 Porto, Portugal",
+  description: "Porto i/o",
+}
+
+const venue = (
+  slug: string,
+  name: string,
+  where: Where = Lisbon,
+  day = "2026-11-20",
+) => ({
   api_id: `evt-${slug}`,
   event: {
     api_id: `evt-${slug}`,
     name,
     url: slug,
-    start_at: "2026-11-20T18:00:00.000Z",
-    end_at: "2026-11-20T21:00:00.000Z",
+    start_at: `${day}T18:00:00.000Z`,
+    end_at: `${day}T21:00:00.000Z`,
     timezone: "Europe/Lisbon",
     cover_url: "https://images.lumacdn.com/cdn-cgi/image/e2e-cover.png",
     location_type: "offline",
     geo_address_visibility: "public",
     coordinate: {
-      latitude: 38.7223,
-      longitude: -9.1393,
+      latitude: where.latitude,
+      longitude: where.longitude,
     },
     geo_address_info: {
-      address: "Rua do Grilo 1",
-      city: "Lisbon",
+      address: where.address,
+      city: where.city,
       country: "Portugal",
-      city_state: "Lisbon, Portugal",
-      full_address: "Rua do Grilo 1, 1950-144 Lisbon, Portugal",
-      description: "grow.inc SPACES",
+      city_state: `${where.city}, Portugal`,
+      full_address: where.full_address,
+      description: where.description,
       mode: "exact",
     },
   },
@@ -59,7 +92,13 @@ const venue = (slug: string, name: string) => ({
 export const Fixtures: Record<string, Record<string, unknown>> = {
   "e2e-demo-day": venue("e2e-demo-day", "Based House Lisbon · Demo Day"),
   "e2e-build-night": venue("e2e-build-night", "Lisbon build night"),
-  "e2e-locker-night": venue("e2e-locker-night", "Locker night"),
+  // A week later, up the coast, with a title that must stay text wherever it shows.
+  "e2e-locker-night": venue(
+    "e2e-locker-night",
+    "Locker night <b>& more</b>",
+    Porto,
+    "2026-11-27",
+  ),
 }
 
 const page = (data: Record<string, unknown>) =>

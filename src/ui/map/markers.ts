@@ -97,6 +97,7 @@ export function clusterElement(
 export function previewElement(
   events: readonly MapEvent[],
   more: number,
+  next: string | null,
 ): HTMLElement {
   const root = document.createElement("div")
 
@@ -127,6 +128,15 @@ export function previewElement(
     date.textContent = `${when.date} · ${when.time}`
     open.className = "hb-preview-open"
     open.textContent = "Open on Luma ↗"
+
+    if (event.slug === next) {
+      const soon = document.createElement("span")
+
+      soon.className = "hb-preview-next"
+      soon.textContent = "Next up"
+      row.append(soon)
+    }
+
     row.append(title, date, open)
     root.append(row)
   }

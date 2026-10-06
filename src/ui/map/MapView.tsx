@@ -95,6 +95,8 @@ interface Props {
   readonly events: ReadonlySignal<MapEvent[]>
   readonly selected: Signal<string | null>
   readonly hovered: Signal<string | null>
+  /** The soonest upcoming event, whose marker wears a ring. */
+  readonly next: ReadonlySignal<string | null>
   readonly onSelect: (slug: string) => void
   readonly onUnavailable: () => void
   /** Where the details card lies over the map, so the selected pin is kept out from under it. */
@@ -254,7 +256,7 @@ export function MapView(props: Props) {
           preview
             .setLngLat(lngLat)
             .setOffset(shape === "pin" ? PinHeight + 6 : BadgeRadius + 8)
-            .setDOMContent(previewElement(events, more))
+            .setDOMContent(previewElement(events, more, props.next.peek()))
 
           if (!preview.isOpen()) {
             preview.addTo(live)
@@ -282,6 +284,8 @@ export function MapView(props: Props) {
         maxZoom: SamePlaceZoom,
       })
       const markers = new Map<string, import("maplibre-gl").Marker>()
+      // The events each marker stands for: one for a pin, all of them for a cluster.
+      const members = new Map<string, string[]>()
       let known = new Map<string, MapEvent>()
       // The pins the index holds, so a list that only re-sorted does not reset
       // the view; null until the first list, which must load even when empty.
@@ -292,16 +296,32 @@ export function MapView(props: Props) {
       // so readiness is the load event, which fires once.
       let ready = false
       let view: View = "free"
+      // Set before each camera move of our own; a move that starts without it is the viewer taking over.
+      let ours = false
+      let lastWidth = element.clientWidth
+      let lastHeight = element.clientHeight
       // The shape the markers on the map have; they are redrawn when the zoom crosses PinZoom.
       let shaped: Shape = "badge"
 
-      /** Where the camera is, written on the container for styles and tests, and told to the world button. */
+      /**
+       * Where the camera is: told to the world button, and written on the
+       * container for styles and tests once the camera has come to rest, so a
+       * zoom read there is never one from the middle of a flight.
+       */
       const describe = () => {
-        element.dataset.zoom = live.getZoom().toFixed(2)
+        if (live.isMoving()) {
+          delete element.dataset.zoom
+        } else {
+          element.dataset.zoom = live.getZoom().toFixed(2)
+        }
+
+        element.dataset.view = view
         world.setAway(view !== "world")
       }
 
       const reflect = () => {
+        const next = props.next.value
+
         for (const [key, marker] of markers) {
           const slug = key.startsWith("event:") ? key.slice(6) : null
           const element = marker.getElement()
@@ -311,6 +331,10 @@ export function MapView(props: Props) {
             slug === props.selected.value,
           )
           element.toggleAttribute("data-hovered", slug === props.hovered.value)
+          element.toggleAttribute(
+            "data-next",
+            next !== null && (members.get(key)?.includes(next) ?? false),
+          )
         }
       }
 
@@ -323,6 +347,7 @@ export function MapView(props: Props) {
           }
 
           markers.clear()
+          members.clear()
           shaped = shape
         }
 
@@ -356,6 +381,12 @@ export function MapView(props: Props) {
           if (isCluster(properties)) {
             const id = properties.cluster_id
 
+            members.set(
+              key,
+              index
+                .getLeaves(id, Infinity)
+                .map((leaf) => leaf.properties.slug),
+            )
             element = clusterElement(properties.point_count, () => {
               const zoom = index.getClusterExpansionZoom(id)
 
@@ -410,6 +441,9 @@ export function MapView(props: Props) {
               continue
             }
 
+            members.set(key, [
+              event.slug,
+            ])
             element = markerElement(
               event,
               shape,
@@ -453,6 +487,7 @@ export function MapView(props: Props) {
           if (!keep.has(key)) {
             marker.remove()
             markers.delete(key)
+            members.delete(key)
           }
         }
 
@@ -467,7 +502,10 @@ export function MapView(props: Props) {
       const floor = () => {
         const camera = worldCamera(element.clientWidth)
 
+        // Raising the floor can move the camera up to it.
+        ours = true
         live.setMinZoom(camera.zoom)
+        ours = false
 
         return camera
       }
@@ -482,6 +520,7 @@ export function MapView(props: Props) {
 
         view = "world"
         focused = null
+        ours = true
 
         if (instant) {
           live.jumpTo(camera)
@@ -507,6 +546,8 @@ export function MapView(props: Props) {
         offset: [number, number],
         instant: boolean,
       ) => {
+        ours = true
+
         if (instant) {
           live.easeTo({
             center,
@@ -635,12 +676,22 @@ export function MapView(props: Props) {
         settle(true)
         render()
       })
-      live.on("movestart", (event) => {
-        // A drag, a wheel, a pinch, a key or a zoom button: the viewer has taken the camera.
-        if (event.originalEvent) {
+      live.on("movestart", () => {
+        // A move we did not start, and that is not the map fitting a new size,
+        // is the viewer taking the camera: a drag, a wheel, a pinch, a key or a
+        // zoom button.
+        const resized = element.clientWidth !== lastWidth
+          || element.clientHeight !== lastHeight
+
+        lastWidth = element.clientWidth
+        lastHeight = element.clientHeight
+
+        if (!ours && !resized) {
           view = "free"
-          describe()
         }
+
+        ours = false
+        describe()
       })
       live.on("moveend", () => {
         render()
@@ -650,6 +701,7 @@ export function MapView(props: Props) {
         const camera = floor()
 
         if (view === "world") {
+          ours = true
           live.jumpTo(camera)
         }
       })
@@ -695,6 +747,7 @@ export function MapView(props: Props) {
             }
 
             markers.clear()
+            members.clear()
             settle(false)
             render()
           }
@@ -721,6 +774,7 @@ export function MapView(props: Props) {
       stops.push(
         effect(() => {
           props.hovered.value
+          props.next.value
           reflect()
         }),
       )
