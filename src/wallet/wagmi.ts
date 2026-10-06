@@ -179,9 +179,12 @@ async function connectorFor(id: string) {
 }
 
 /**
- * Connects the chosen wallet on Base and hands back the account to sign in
- * with. A wallet that is still connected from an earlier try, which the
- * server may have turned away, is reused rather than asked again.
+ * Connects the chosen wallet and hands back the account to sign in with. A
+ * wallet that is still connected from an earlier try, which the server may
+ * have turned away, is reused rather than asked again. The wallet is not
+ * asked to switch chains: a sign-in is a signature, good from any chain, and
+ * a switch some wallets only answer on the phone would leave the page
+ * waiting.
  */
 export async function connectWallet(id: string): Promise<string> {
   const current = getAccount(config)
@@ -196,7 +199,6 @@ export async function connectWallet(id: string): Promise<string> {
 
   const connected = await connect(config, {
     connector: await connectorFor(id),
-    chainId: base.id,
   })
 
   return connected.accounts[0]
