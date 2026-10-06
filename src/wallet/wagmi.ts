@@ -12,6 +12,7 @@ import {
   connect,
   createConfig,
   disconnect,
+  getAccount,
   http,
   injected,
   signMessage,
@@ -47,6 +48,35 @@ const config = createConfig({
 
 /** The wallet of the app hosting the page, when the page found one. */
 let hosted: EIP1193Provider | null = null
+
+let coinbase: Promise<EIP1193Provider> | null = null
+
+/**
+ * Coinbase's SDK and its provider, made once. Making it opens nothing; the
+ * popup comes with the first request, so it is started while the list is
+ * on screen and the click that follows reaches the popup with no wait.
+ */
+function coinbaseProvider(): Promise<EIP1193Provider> {
+  coinbase ??= (async () => {
+    const { createCoinbaseWalletSDK } = await import("@coinbase/wallet-sdk")
+
+    return createCoinbaseWalletSDK({
+      appName: "Homebase",
+      appChainIds: [
+        base.id,
+      ],
+      preference: {
+        options: "all",
+      },
+    })
+      .getProvider() as unknown as EIP1193Provider
+  })()
+  coinbase.catch(() => {
+    coinbase = null
+  })
+
+  return coinbase
+}
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -92,6 +122,7 @@ export async function wallets(
   }
 
   if (!announced.some((wallet) => /coinbase/i.test(wallet.name))) {
+    coinbaseProvider().catch(() => {})
     found.push({
       id: CoinbaseId,
       name: "Coinbase Wallet",
@@ -102,20 +133,20 @@ export async function wallets(
   return found
 }
 
-async function coinbaseProvider(): Promise<EIP1193Provider> {
-  const { createCoinbaseWalletSDK } = await import("@coinbase/wallet-sdk")
-
-  return createCoinbaseWalletSDK({
-    appName: "Homebase",
-    appChainIds: [
-      base.id,
-    ],
-    preference: {
-      options: "all",
+/**
+ * The connector for a wallet added here. Permissions are not asked for
+ * first: the SDK providers do not answer that request, and sending it would
+ * only put a round trip between the click and the popup it has to open.
+ */
+const added = (id: string, name: string, provider: EIP1193Provider) =>
+  injected({
+    target: {
+      id,
+      name,
+      provider,
     },
+    shimDisconnect: false,
   })
-    .getProvider() as unknown as EIP1193Provider
-}
 
 async function connectorFor(id: string) {
   if (id === HostId) {
@@ -123,27 +154,19 @@ async function connectorFor(id: string) {
       throw new Error("The host's wallet is only there inside its app.")
     }
 
-    return injected({
-      target: {
-        id,
-        name: "Wallet in this app",
-        provider: hosted,
-      },
-    })
+    return added(id, "Wallet in this app", hosted)
   }
 
   if (id === CoinbaseId) {
-    return injected({
-      target: {
-        id,
-        name: "Coinbase Wallet",
-        provider: await coinbaseProvider(),
-      },
-    })
+    return added(id, "Coinbase Wallet", await coinbaseProvider())
   }
 
   if (id === BrowserId) {
-    return injected()
+    if (!("ethereum" in window) || !window.ethereum) {
+      throw new Error("The browser wallet is no longer on the page.")
+    }
+
+    return added(id, "Browser wallet", window.ethereum as EIP1193Provider)
   }
 
   const announced = config.connectors.find((connector) => connector.id === id)
@@ -155,11 +178,24 @@ async function connectorFor(id: string) {
   return announced
 }
 
-/** Connects the chosen wallet on Base and hands back the account to sign in with. */
+/**
+ * Connects the chosen wallet on Base and hands back the account to sign in
+ * with. A wallet that is still connected from an earlier try, which the
+ * server may have turned away, is reused rather than asked again.
+ */
 export async function connectWallet(id: string): Promise<string> {
-  const connector = await connectorFor(id)
+  const current = getAccount(config)
+
+  if (current.status === "connected" && current.connector.id === id) {
+    return current.address
+  }
+
+  if (current.status !== "disconnected") {
+    await disconnect(config).catch(() => {})
+  }
+
   const connected = await connect(config, {
-    connector,
+    connector: await connectorFor(id),
     chainId: base.id,
   })
 

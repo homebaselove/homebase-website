@@ -207,6 +207,20 @@ export async function walletChoices(): Promise<Wallet[] | Failure> {
   }
 }
 
+/** What the wallet said went wrong, for the message, when it said anything. */
+function reason(error: unknown): string {
+  const seen = error as {
+    shortMessage?: string
+    message?: string
+  } | null
+  const text = (seen?.shortMessage ?? seen?.message ?? String())
+    .split("\n")[0]
+    .trim()
+    .replace(/\.$/, String())
+
+  return text ? `: ${text.slice(0, 160)}` : String()
+}
+
 /** A wallet's "no" is error code 4001, which viem wraps for the caller. */
 function rejected(error: unknown): boolean {
   const seen = error as {
@@ -240,10 +254,14 @@ export async function signInWith(walletId: string): Promise<Failure | null> {
   try {
     address = await lib.connectWallet(walletId)
   } catch (error) {
+    console.error("The wallet did not connect:", error)
+
     return {
       error: rejected(error)
         ? "You closed the wallet before connecting."
-        : "The wallet didn't connect. Try again, or try another wallet.",
+        : `The wallet didn't connect${
+          reason(error)
+        }. Try again, or try another wallet.`,
       status: 0,
     }
   }
@@ -266,10 +284,12 @@ export async function signInWith(walletId: string): Promise<Failure | null> {
   try {
     signature = await lib.signInMessage(issued.message)
   } catch (error) {
+    console.error("The wallet did not sign:", error)
+
     return {
       error: rejected(error)
         ? "You didn't sign the message."
-        : "The wallet didn't sign the message.",
+        : `The wallet didn't sign the message${reason(error)}.`,
       status: 0,
     }
   }
