@@ -15,6 +15,11 @@ This instructs AI agents how to navigate and edit this codebase.
 - ALWAYS use extension in file imports.
 - Do not unwrap effects in `Effect.gen`. You can `yield*` effects directly.
 - Do not write obvious comments that restate what the code is doing without adding meaningful context.
+- In `.tsx` files, keep apostrophes and unpaired quotes out of comments and JSX text
+  (write ’ in visible text, and `String()` for an empty string). The Tailwind
+  plugin pairs every quote character in the file to find class names and
+  silently drops the classes after a stray one. `bun run check:classes` reports
+  files at risk.
 - Always run test after making all the changes.
 
 # Tests

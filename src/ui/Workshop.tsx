@@ -14,8 +14,9 @@ import { SpinnerIcon } from "./Icons.tsx"
 // Types
 interface LiveEvent {
   title: string
-  description?: string
-  location?: string
+  description?: string | null
+  /** The stream or registration link, from the LOCATION field of the feed. */
+  link?: string | null
   start: string
   end: string
 }
@@ -169,11 +170,11 @@ function DayElement({ day }: DayElementProps) {
                   >
                     Google
                   </a>
-                  {event.location && (
+                  {event.link && (
                     <>
                       {" • "}
                       <a
-                        href={event.location}
+                        href={event.link}
                         target="_blank"
                         class="hover:underline"
                       >
@@ -206,6 +207,7 @@ export function WorkshopListCard() {
   const selectedTimezone = useSignal<string | null>(null)
   const calendarEvents = useSignal<LiveEvent[]>([])
   const loading = useSignal(true)
+  const failed = useSignal(false)
 
   // Initialize timezones on client side
   useEffect(() => {
@@ -213,19 +215,34 @@ export function WorkshopListCard() {
     timezones.value = supportedTimezones
     const currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
     selectedTimezone.value = currentTimezone
-  })
+  }, [])
 
   // Fetch calendar events
   useEffect(() => {
     const fetchCalendarEvents = async () => {
       try {
         loading.value = true
+
         const response = await fetch("/events.json")
-        const events: LiveEvent[] = await response.json()
-        calendarEvents.value = events
+        // An error answer is an object, which the list must never hold.
+        const body: unknown = response.ok ? await response.json() : null
+
+        if (!Array.isArray(body)) {
+          throw new Error(`/events.json answered ${response.status}`)
+        }
+
+        const now = Date.now()
+
+        calendarEvents.value = (body as LiveEvent[]).filter((event) => {
+          const ends = Date.parse(event.end)
+
+          return (Number.isNaN(ends) ? Date.parse(event.start) : ends) >= now
+        })
+        failed.value = false
       } catch (error) {
         console.error("Error fetching calendar events:", error)
         calendarEvents.value = []
+        failed.value = true
       } finally {
         loading.value = false
       }
@@ -323,7 +340,9 @@ export function WorkshopListCard() {
         {days.value.length === 0
           ? (
             <div class="text-center py-12 text-gray-500">
-              No upcoming events found.
+              {failed.value
+                ? "The livestream schedule couldn’t be loaded. Refresh to try again."
+                : "No upcoming events found."}
             </div>
           )
           : (

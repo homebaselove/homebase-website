@@ -2,6 +2,37 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "bun run build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/map-refresh.ts": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/map-refresh",
+      "schedule": "0 3 * * *"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/vendor/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/wallet/chunk-(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/events.json",
@@ -10,6 +41,30 @@
     {
       "source": "/funding.json",
       "destination": "/api/funding"
+    },
+    {
+      "source": "/map.json",
+      "destination": "/api/map"
+    },
+    {
+      "source": "/map/preview.json",
+      "destination": "/api/map-preview"
+    },
+    {
+      "source": "/map/refresh.json",
+      "destination": "/api/map-refresh"
+    },
+    {
+      "source": "/auth/nonce.json",
+      "destination": "/api/auth-nonce"
+    },
+    {
+      "source": "/auth/verify.json",
+      "destination": "/api/auth-verify"
+    },
+    {
+      "source": "/auth/session.json",
+      "destination": "/api/auth-session"
     },
     {
       "source": "/(.*)",
