@@ -153,8 +153,11 @@ attester can. The site holds nothing: no database, no sessions, no secrets,
 nothing deployed and nothing set on Vercel. The server reads the
 attestations through EAS's own indexer for Base, `base.easscan.org`, which
 is free and takes no key, the way Coinbase's OnchainKit reads the identity
-badges it shows; the browser writes them through the connected wallet's own
-provider, so it needs no RPC of its own.
+badges it shows. The browser reads the chain, tries each call first and
+waits for receipts through Base's public RPC, and hands the wallet only the
+transaction to sign and send: a wallet's own relay may answer a refused
+call without the reason, where the public RPC answers with EAS's own name
+for it, which the dialog then shows.
 
 The schema's UID is the hash the registry computes for it, so the site
 knows it before anyone has registered it; the first pin ever registers it,
@@ -219,10 +222,11 @@ TanStack Query. `@wagmi/core` 3.6.5 is the framework-free layer beneath them:
 it peers on `viem` 2.x alone (its other peers, `@tanstack/query-core`, the
 Tempo `accounts` SDK and `typescript`, are optional) and depends on `mipd`,
 `zustand` and `eventemitter3`. It gives `connect`, `reconnect`, `switchChain`
-and `disconnect` over any EIP-1193 provider; viem's actions on the connected
-wallet's client do the rest, `readContract` to see whether the schema is
+and `disconnect` over any EIP-1193 provider; viem does the rest on a public
+client over Base's RPC, `readContract` to see whether the schema is
 registered, `simulateContract` so a call the chain would refuse fails before
-the wallet opens, then `writeContract` and `waitForTransactionReceipt`.
+the wallet opens, and `waitForTransactionReceipt`, with `writeContract` on
+the wallet's client in between.
 After a reload the page picks the last wallet back up with `reconnect`,
 without a prompt, when the wallet still allows it; the wallet's id is all
 that is remembered. Connecting never asks the wallet to switch chains; a pin
@@ -292,9 +296,11 @@ client through the route manifest. Minified sizes:
 - Scrolling the page over the map never zooms it; touch panning takes two
   fingers. Animations honour reduced-motion.
 - `?event=<slug>` on the home page opens an event, so a pin can be shared.
-- The add form is for a wallet the registry lets in. Everyone else has a
-  connect button, and a wallet the registry does not know is told so without
+- The add form is for a wallet whose pins count. Everyone else has a
+  connect button, and a wallet the map does not know is told so without
   ever seeing the form.
+- The dialog is rendered at the document's root, since each section of the
+  page paints in its own layer and a later one would otherwise cover it.
 - Mobile gets the map above the list and the details over the map's lower
   edge; desktop gets them side by side.
 

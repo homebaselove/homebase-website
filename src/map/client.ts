@@ -199,7 +199,8 @@ export async function walletChoices(): Promise<Wallet[] | Failure> {
 
 /**
  * What the wallet or the chain said went wrong, for the message: a contract
- * error by name, else the first line of the message.
+ * error by name, else the revert's signature or reason, else the first line
+ * of the message.
  */
 function reason(error: unknown): string {
   for (
@@ -210,9 +211,13 @@ function reason(error: unknown): string {
     const data = seen.data as {
       errorName?: string
     } | undefined
+    const named = data?.errorName
+      ?? seen.errorName
+      ?? seen.signature
+      ?? seen.reason
 
-    if (data?.errorName) {
-      return `: ${data.errorName}`
+    if (typeof named === "string" && named) {
+      return `: ${named}`
     }
   }
 

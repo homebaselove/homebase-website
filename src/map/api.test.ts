@@ -300,6 +300,7 @@ test("the map lists the attested slugs, read from Luma, with who pinned each and
         schemaRegistry: SchemaRegistryAddress,
         schema: SchemaUid,
         schemaText: SchemaText,
+        rpc: "https://mainnet.base.org",
       },
       [
         Admin,

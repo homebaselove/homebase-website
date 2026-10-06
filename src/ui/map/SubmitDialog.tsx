@@ -1,5 +1,6 @@
 /** @jsxImportSource preact */
 import { useEffect, useRef } from "preact"
+import { createPortal } from "preact/compat"
 import { useSignal } from "preact/signals"
 import {
   account,
@@ -149,7 +150,9 @@ export function SubmitDialog(props: Props) {
     offerWallets()
   }
 
-  return (
+  // The page's sections each paint in their own layer, so the dialog is
+  // rendered at the document's root to lie over all of them.
+  return createPortal(
     <div
       class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 sm:p-4"
       onClick={(click) => {
@@ -329,7 +332,8 @@ export function SubmitDialog(props: Props) {
           />
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
