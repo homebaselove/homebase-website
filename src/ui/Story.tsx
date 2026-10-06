@@ -160,7 +160,7 @@ export function BasedHouseStory() {
             key={chapter.id}
             chapter={chapter}
             index={index}
-            focused={index === active.value}
+            active={active.value}
             goTo={goTo}
           />
         ))}
@@ -216,7 +216,7 @@ function Rail(props: { active: number; goTo: (index: number) => void }) {
                 type="button"
                 aria-label={`${chapter.when}: ${chapter.title}`}
                 aria-current={focused ? "step" : undefined}
-                class="group flex flex-col items-center gap-2 px-1 w-full min-h-11 focus:outline-none"
+                class="group flex flex-col items-center gap-2 px-1 max-sm:px-0 w-full min-h-11 focus:outline-none"
                 onClick={() => props.goTo(index)}
               >
                 <span
@@ -265,11 +265,15 @@ function ArrowButton(props: {
 function ChapterCard(props: {
   chapter: Chapter
   index: number
-  focused: boolean
+  active: number
   goTo: (index: number) => void
 }) {
-  const { chapter, focused } = props
+  const { chapter } = props
+  const focused = props.index === props.active
   const today = chapter.id === "today"
+  // A neighbor shrinks from the edge nearest the focused card, so the sliver
+  // the reader sees of it keeps its width whatever the scale.
+  const side = props.index < props.active ? "origin-right" : "origin-left"
 
   return (
     <li
@@ -278,8 +282,8 @@ function ChapterCard(props: {
       aria-roledescription="slide"
       aria-label={`${props.index + 1} of ${Chapters.length}: ${chapter.title}`}
       class={focused
-        ? "shrink-0 snap-center snap-always flex transition-[transform,opacity] duration-300 motion-reduce:transition-none scale-100 opacity-100"
-        : "shrink-0 snap-center snap-always flex transition-[transform,opacity] duration-300 motion-reduce:transition-none scale-[0.92] sm:scale-[0.88] opacity-50 hover:opacity-75 cursor-pointer"}
+        ? "shrink-0 snap-center snap-always flex"
+        : "shrink-0 snap-center snap-always flex cursor-pointer"}
       style="width: var(--story-card)"
       onClick={() => {
         if (!focused) {
@@ -287,6 +291,13 @@ function ChapterCard(props: {
         }
       }}
     >
+      {/* The snap target above stays untransformed, so the reel centers on
+          the layout box; the scale lives on this wrapper. */}
+      <div
+        class={focused
+          ? "w-full flex transition-[transform,opacity] duration-300 motion-reduce:transition-none scale-100 opacity-100"
+          : `w-full flex transition-[transform,opacity] duration-300 motion-reduce:transition-none scale-[0.92] sm:scale-[0.88] opacity-50 hover:opacity-75 ${side}`}
+      >
       <article
         // Only the chapter in focus can be read or tabbed into.
         inert={!focused}
@@ -311,8 +322,8 @@ function ChapterCard(props: {
             {chapter.title}
           </h3>
 
-          <details class="group -mt-1">
-            <summary class="list-none [&::-webkit-details-marker]:hidden inline-flex items-center gap-1.5 text-sm font-bold text-gray-600 cursor-pointer select-none rounded-full -mx-2 px-2 py-1 transition-colors hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+          <details class="group -my-2">
+            <summary class="list-none [&::-webkit-details-marker]:hidden inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-gray-600 cursor-pointer select-none rounded-full -mx-2 px-2 transition-colors hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
               What happened
               <ChevronIcon />
             </summary>
@@ -327,12 +338,12 @@ function ChapterCard(props: {
               {chapter.stats.map((stat) => (
                 <div
                   key={stat.label}
-                  class="sm:flex-1 sm:basis-0 max-sm:odd:last:col-span-2 rounded-lg bg-gray-50 px-3 py-2.5"
+                  class="sm:flex-1 sm:basis-0 max-sm:odd:last:col-span-2 max-[359px]:col-span-2 min-w-0 rounded-lg bg-gray-50 px-3 py-2.5"
                 >
-                  <dd class="text-2xl font-bold leading-none text-brand">
+                  <dd class="text-2xl max-sm:text-xl font-bold leading-none text-brand">
                     {stat.value}
                   </dd>
-                  <dt class="text-sm text-gray-500 mt-1">
+                  <dt class="text-sm text-gray-500 mt-1 break-words">
                     {stat.label}
                   </dt>
                 </div>
@@ -348,8 +359,8 @@ function ChapterCard(props: {
                 target={link.href.startsWith("#") ? undefined : "_blank"}
                 rel={link.href.startsWith("#") ? undefined : "noopener"}
                 class={today
-                  ? "btn-brand text-sm"
-                  : "inline-flex items-center gap-1.5 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand"}
+                  ? "btn-brand text-sm min-h-11"
+                  : "inline-flex items-center gap-1.5 min-h-11 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand"}
               >
                 {link.label}
                 {!link.href.startsWith("#") && (
@@ -360,6 +371,7 @@ function ChapterCard(props: {
           </div>
         </div>
       </article>
+      </div>
     </li>
   )
 }

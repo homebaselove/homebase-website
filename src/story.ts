@@ -58,18 +58,18 @@ export interface Chapter {
 
 export const LetterToJesseV1Url = "https://farcaster.xyz/rafi/0x14fd4e8e"
 
-export const LetterToJesseV2Url = "https://farcaster.xyz/luciano/0xf5061233"
+const LetterToJesseV2Url = "https://farcaster.xyz/luciano/0xf5061233"
 
-export const EthDenverRecapVideoUrl =
+const EthDenverRecapVideoUrl =
   "https://x.com/lucianodeangeIo/status/1899183264759439586?s=20"
 
-export const DevconnectRecapUrl = "https://farcaster.xyz/luciano/0x78eb1ae0"
+const DevconnectRecapUrl = "https://farcaster.xyz/luciano/0x78eb1ae0"
 
-export const EthDenverReturnRecapUrl =
+const EthDenverReturnRecapUrl =
   "https://x.com/homebasedotlove/status/2029929738454847972"
 
 /** Where applications for the next house go. */
-export const BasedHouseMumbaiApplyUrl = "https://forms.gle/vXRkM4qnAVeQpX"
+const BasedHouseMumbaiApplyUrl = "https://forms.gle/vXRkM4qnAVeQpX"
 
 export const Chapters: Chapter[] = [
   {
@@ -89,8 +89,8 @@ export const Chapters: Chapter[] = [
       },
       {
         src: LetterToJesseCast,
-        width: 1094,
-        height: 1022,
+        width: 900,
+        height: 841,
         alt:
           "rafi casts: Dear jessepollak, we want to build a Based House at ETHDenver with luciano and samuellhuber.eth. Will you help us? Below, a letter in an envelope reads Dear Jesse, we got the crew. Based Crew",
         href: LetterToJesseV1Url,
@@ -114,8 +114,8 @@ export const Chapters: Chapter[] = [
     cover: [
       {
         src: EthDenverCrew,
-        width: 2000,
-        height: 963,
+        width: 1280,
+        height: 616,
         alt:
           "The Based House ETHDenver crew standing together in the living room, captioned ETH Denver - Based House",
         href: EthDenverRecapVideoUrl,
@@ -232,8 +232,8 @@ export const Chapters: Chapter[] = [
     cover: [
       {
         src: DevconnectCrew,
-        width: 2000,
-        height: 1200,
+        width: 1280,
+        height: 768,
         alt:
           "The Based House Devconnect crew packed onto and around a sofa in Buenos Aires, with the Based House Devconnect logo on the screen behind them",
         href: DevconnectRecapUrl,
@@ -252,7 +252,7 @@ export const Chapters: Chapter[] = [
       },
       {
         value: "11",
-        label: "artworks, 2 collaborative",
+        label: "artworks, 2 shared",
       },
       {
         value: "200k+",

@@ -1,12 +1,12 @@
 /** @jsxImportSource preact */
 import { useEffect } from "preact"
-import { BasedHouseCard } from "../ui/BasedHouse"
-import { Footer } from "../ui/Footer"
-import { Header } from "../ui/Header"
+import { BasedHouseCard } from "../ui/BasedHouse.tsx"
+import { Footer } from "../ui/Footer.tsx"
+import { Header } from "../ui/Header.tsx"
 import { MapCard } from "../ui/map/MapCard.tsx"
 import { BasedHouseStory } from "../ui/Story.tsx"
-import { VideoGallery } from "../ui/VideoGallery"
-import { WorkshopListCard } from "../ui/Workshop"
+import { VideoGallery } from "../ui/VideoGallery.tsx"
+import { WorkshopListCard } from "../ui/Workshop.tsx"
 
 export default function() {
   useEffect(() => {
