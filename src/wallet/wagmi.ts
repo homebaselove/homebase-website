@@ -5,20 +5,44 @@
  * Every wallet reaches wagmi as an EIP-1193 provider behind its injected
  * connector: the wallets that announce themselves on the page (EIP-6963),
  * the host's wallet inside a Farcaster mini app, which the page hands in
- * since its SDK is already there, and Coinbase's smart wallet through its
- * SDK, which opens a passkey flow for people with no extension at all.
+ * since its SDK is already there, and Coinbase's through its SDK, which
+ * offers the Coinbase Wallet app and extension as well as a passkey smart
+ * wallet for people with nothing installed. This is what wagmi's own
+ * coinbaseWallet connector does, with one difference: no permissions
+ * request before the accounts, which that SDK does not answer.
+ *
+ * A pin is an attestation on Base, sent and signed through the connected
+ * wallet's own provider, so the browser needs no RPC of its own.
  */
 import {
   connect,
   createConfig,
   disconnect,
   getAccount,
+  getConnectorClient,
   http,
   injected,
-  signMessage,
+  reconnect,
+  switchChain,
 } from "@wagmi/core"
 import { base } from "@wagmi/core/chains"
-import type { EIP1193Provider } from "viem"
+import {
+  type Address,
+  type EIP1193Provider,
+  encodeAbiParameters,
+  type Hash,
+  type Hex,
+  parseAbi,
+  parseEventLogs,
+  zeroAddress,
+  zeroHash,
+} from "viem"
+import {
+  readContract,
+  simulateContract,
+  waitForTransactionReceipt,
+  writeContract,
+} from "viem/actions"
 
 export interface Wallet {
   readonly id: string
@@ -26,6 +50,26 @@ export interface Wallet {
   /** A data: URI the wallet announced, or nothing for the ones added here. */
   readonly icon: string | null
 }
+
+/** Where pins are attested, as the server tells the page. */
+export interface Eas {
+  readonly chainId: number
+  readonly address: string
+  readonly schemaRegistry: string
+  readonly schema: string
+  readonly schemaText: string
+}
+
+const EasAbi = parseAbi([
+  "function attest((bytes32 schema, (address recipient, uint64 expirationTime, bool revocable, bytes32 refUID, bytes data, uint256 value) data) request) payable returns (bytes32)",
+  "function revoke((bytes32 schema, (bytes32 uid, uint256 value) data) request) payable",
+  "event Attested(address indexed recipient, address indexed attester, bytes32 uid, bytes32 indexed schemaUID)",
+])
+
+const RegistryAbi = parseAbi([
+  "function register(string schema, address resolver, bool revocable) returns (bytes32)",
+  "function getSchema(bytes32 uid) view returns ((bytes32 uid, address resolver, bool revocable, string schema))",
+])
 
 const CoinbaseId = "coinbase-smart-wallet"
 
@@ -35,6 +79,9 @@ const BrowserId = "browser"
 
 /** How long wallets get to answer the page's request to announce themselves. */
 const AnnounceWaitMs = 150
+
+/** How long a sent transaction gets to land before the page stops waiting. */
+const ReceiptWaitMs = 120_000
 
 const config = createConfig({
   chains: [
@@ -179,14 +226,12 @@ async function connectorFor(id: string) {
 }
 
 /**
- * Connects the chosen wallet and hands back the account to sign in with. A
- * wallet that is still connected from an earlier try, which the server may
- * have turned away, is reused rather than asked again. The wallet is not
- * asked to switch chains: a sign-in is a signature, good from any chain, and
- * a switch some wallets only answer on the phone would leave the page
- * waiting.
+ * Connects the chosen wallet and hands back its account. A wallet that is
+ * still connected from an earlier try is reused rather than asked again.
+ * The wallet is not asked to switch chains here: that waits for a pin, so
+ * connecting never hangs on a prompt some wallets only show on the phone.
  */
-export async function connectWallet(id: string): Promise<string> {
+export async function connectWallet(id: string): Promise<Address> {
   const current = getAccount(config)
 
   if (current.status === "connected" && current.connector.id === id) {
@@ -204,11 +249,156 @@ export async function connectWallet(id: string): Promise<string> {
   return connected.accounts[0]
 }
 
-/** A personal_sign of the message by the connected wallet. */
-export function signInMessage(message: string): Promise<string> {
-  return signMessage(config, {
-    message,
+/**
+ * Picks a connection back up after a reload, without a prompt, if the wallet
+ * still allows it; null when it does not.
+ */
+export async function reconnectWallet(id: string): Promise<Address | null> {
+  await wait(AnnounceWaitMs)
+
+  try {
+    await reconnect(config, {
+      connectors: [
+        await connectorFor(id),
+      ],
+    })
+  } catch {
+    return null
+  }
+
+  const account = getAccount(config)
+
+  return account.status === "connected" ? account.address : null
+}
+
+/** The connected wallet's client on Base, the wallet switched there if need be. */
+async function clientOnBase() {
+  if (getAccount(config).chainId !== base.id) {
+    await switchChain(config, {
+      chainId: base.id,
+    })
+  }
+
+  return getConnectorClient(config)
+}
+
+async function landed(
+  client: Awaited<ReturnType<typeof getConnectorClient>>,
+  hash: Hash,
+) {
+  const receipt = await waitForTransactionReceipt(client, {
+    hash,
+    timeout: ReceiptWaitMs,
   })
+
+  if (receipt.status !== "success") {
+    throw new Error("The transaction was reverted.")
+  }
+
+  return receipt
+}
+
+/**
+ * Pins a slug: an attestation under the map's schema from the connected
+ * wallet. The first pin ever also registers the schema, one transaction
+ * more. Each call is tried first, so a refusal shows before the wallet opens.
+ */
+export async function pinSlug(eas: Eas, slug: string): Promise<Hex> {
+  const client = await clientOnBase()
+  const registry = eas.schemaRegistry as Address
+  const known = await readContract(client, {
+    address: registry,
+    abi: RegistryAbi,
+    functionName: "getSchema",
+    args: [
+      eas.schema as Hex,
+    ],
+  })
+
+  if (known.uid === zeroHash) {
+    const { request } = await simulateContract(client, {
+      address: registry,
+      abi: RegistryAbi,
+      functionName: "register",
+      args: [
+        eas.schemaText,
+        zeroAddress,
+        true,
+      ],
+      account: client.account,
+      chain: base,
+    })
+
+    await landed(client, await writeContract(client, request))
+  }
+
+  const { request } = await simulateContract(client, {
+    address: eas.address as Address,
+    abi: EasAbi,
+    functionName: "attest",
+    args: [
+      {
+        schema: eas.schema as Hex,
+        data: {
+          recipient: zeroAddress,
+          expirationTime: 0n,
+          revocable: true,
+          refUID: zeroHash,
+          data: encodeAbiParameters(
+            [
+              {
+                type: "string",
+              },
+            ],
+            [
+              slug,
+            ],
+          ),
+          value: 0n,
+        },
+      },
+    ],
+    account: client.account,
+    chain: base,
+  })
+  const receipt = await landed(client, await writeContract(client, request))
+  const [attested] = parseEventLogs({
+    abi: EasAbi,
+    eventName: "Attested",
+    logs: receipt.logs,
+  })
+
+  if (!attested) {
+    throw new Error("The attestation left no trace in the receipt.")
+  }
+
+  return attested.args.uid
+}
+
+/** Takes a pin off: revokes its attestation, which only its attester can. */
+export async function unpinSlug(eas: Eas, uid: string): Promise<Hash> {
+  const client = await clientOnBase()
+  const { request } = await simulateContract(client, {
+    address: eas.address as Address,
+    abi: EasAbi,
+    functionName: "revoke",
+    args: [
+      {
+        schema: eas.schema as Hex,
+        data: {
+          uid: uid as Hex,
+          value: 0n,
+        },
+      },
+    ],
+    account: client.account,
+    chain: base,
+  })
+  const hash = await writeContract(client, request)
+
+  await landed(client, hash)
+
+  return hash
 }
 
 export async function disconnectWallet(): Promise<void> {
@@ -217,4 +407,12 @@ export async function disconnectWallet(): Promise<void> {
   } catch {
     // A wallet that is already gone has nothing to disconnect.
   }
+
+  // Coinbase's SDK keeps its session until told, as wagmi's own connector tells it.
+  const provider = coinbase ? await coinbase.catch(() => null) : null
+
+  await (provider as {
+    disconnect?: () => Promise<void>
+  } | null)
+    ?.disconnect?.()
 }

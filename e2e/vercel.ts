@@ -2,8 +2,8 @@
  * The Vercel deployment, stood up locally for the end-to-end run: the static
  * files `bun run build` wrote to dist/, the rewrites in vercel.json, and the
  * functions in api/ answering as Request to Response, all under Node, the
- * runtime they run on there. The store is whatever TURSO_DATABASE_URL names,
- * which the suite points at a libsql server of its own.
+ * runtime they run on there. The pins come from whatever EAS the suite's
+ * variables name on the chain HOMEBASE_BASE_RPC reaches, a local one here.
  *
  *   node --import ./e2e/luma-stub.ts e2e/vercel.ts
  */
