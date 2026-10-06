@@ -64,6 +64,113 @@
   .btn-brand:hover {
     background: var(--color-brand-dark);
   }
+
+  .btn-brand:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Map markers. MapLibre moves .hb-marker; the button inside carries the states. */
+  .hb-marker {
+    width: 36px;
+    height: 44px;
+  }
+
+  .hb-marker-cluster {
+    width: 40px;
+    height: 40px;
+  }
+
+  .hb-marker[data-selected] {
+    z-index: 2;
+  }
+
+  .hb-pin {
+    position: relative;
+    display: block;
+    width: 36px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    transform-origin: 50% 100%;
+    transition: transform 150ms ease;
+  }
+
+  .hb-pin-head {
+    position: absolute;
+    inset: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 2px solid #fff;
+    background: var(--color-brand);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+
+  .hb-pin-head svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .hb-pin-tip {
+    position: absolute;
+    left: 50%;
+    bottom: 3px;
+    width: 12px;
+    height: 12px;
+    background: var(--color-brand);
+    border-right: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    transform: translateX(-50%) rotate(45deg);
+  }
+
+  .hb-pin:hover,
+  .hb-marker[data-hovered] .hb-pin {
+    transform: scale(1.1);
+  }
+
+  .hb-marker[data-selected] .hb-pin {
+    transform: scale(1.2);
+  }
+
+  .hb-marker[data-selected] .hb-pin-head,
+  .hb-marker[data-selected] .hb-pin-tip {
+    background: var(--color-brand-dark);
+  }
+
+  .hb-pin:focus-visible .hb-pin-head,
+  .hb-cluster:focus-visible {
+    outline: 3px solid rgba(0, 0, 255, 0.35);
+    outline-offset: 2px;
+  }
+
+  .hb-cluster {
+    width: 40px;
+    height: 40px;
+    border-radius: 9999px;
+    border: 2px solid #fff;
+    background: var(--color-brand);
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: transform 150ms ease;
+  }
+
+  .hb-cluster:hover {
+    transform: scale(1.08);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hb-pin,
+    .hb-cluster {
+      transition: none;
+    }
+  }
 }
 
 @keyframes fade-in {
@@ -75,4 +182,3 @@
     opacity: 1;
   }
 }
-
