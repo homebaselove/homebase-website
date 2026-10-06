@@ -701,21 +701,59 @@ try {
   await settledBetween(again, -1, 2)
   await shot(again, "05-world")
   check(
-    "the map opens on the whole world",
+    "the map opens on the whole world, the event a round badge on it",
     (await zoomOf(again)) < 2
       && (await again.locator("article[aria-label]").count()) === 0
-      && (await again.locator(".hb-world[data-away]").count()) === 0,
+      && (await again.locator(".hb-world[data-away]").count()) === 0
+      && (await again
+          .locator("button.hb-badge[data-slug=e2e-demo-day]")
+          .count())
+        === 1,
     `zoom ${await zoomOf(again)}`,
   )
 
-  // The house pin flies the camera in, and the card leaves the pin uncovered.
-  await again.locator(".hb-pin").first().click()
+  // Hovering the badge previews the event, with its step to Luma.
+  await again.locator("button[data-slug=e2e-demo-day]").hover()
+  await again.locator(".hb-preview").waitFor({
+    timeout: 5_000,
+  })
+  await shot(again, "05-hover")
+  check(
+    "hovering a badge previews the event, one click from Luma",
+    (await again.locator(".hb-preview a[href*=\"e2e-demo-day\"]").count())
+        === 1
+      && (await again.locator(".hb-preview").innerText())
+        .includes("Based House Lisbon · Demo Day"),
+  )
+  await again.mouse.move(5, 5)
+  await again.waitForTimeout(400)
+  check(
+    "the preview goes once the pointer has left",
+    (await again.locator(".hb-preview").count()) === 0,
+  )
+
+  // The badge flies the camera in, where the event is a pin on its spot, and
+  // the card leaves the pin uncovered.
+  const flightStart = Date.now()
+
+  await again.locator("button[data-slug=e2e-demo-day]").click()
   await again.locator("article[aria-label]").waitFor({
     timeout: 10_000,
   })
+
+  const cardShownAfter = Date.now() - flightStart
+
   await settledBetween(again, 11, 17)
+
+  const flightTook = Date.now() - flightStart
+
   await again.waitForTimeout(400)
   await shot(again, "05-event")
+  check(
+    "the card shows at once and the flight takes its time, an arc rather than a jump",
+    cardShownAfter < 1_000 && flightTook >= 1_500 && flightTook <= 6_000,
+    `card after ${cardShownAfter} ms, settled after ${flightTook} ms`,
+  )
   check(
     "the pin flies the camera in to the event, clear of its card",
     (await zoomOf(again)) >= 11
@@ -807,6 +845,224 @@ try {
         ]),
     second.join(" "),
   )
+
+  // A second city, a week later and up the coast: at the world the two share
+  // one badge, with the count and the ring for the soonest.
+  await again
+    .getByRole("button", {
+      name: "Add an event",
+    })
+    .click()
+  await lookUpAndPin(again, "https://luma.com/e2e-locker-night")
+  check(
+    "a second city is pinned",
+    (await mapJson()).events.length === 2,
+  )
+  await again.keyboard.press("Escape")
+  await settledBetween(again, -1, 2)
+  await again.waitForTimeout(300)
+  await shot(again, "06-two-cities-world")
+  check(
+    "two cities near each other share one badge at the world, with the count and the ring for the soonest",
+    (await again.locator(".hb-badge-cluster .hb-badge-count").innerText())
+        === "2"
+      && (await again.locator("button[data-slug]").count()) === 0
+      && (await again
+          .locator(".hb-marker[data-next] .hb-badge-cluster")
+          .count())
+        === 1,
+  )
+
+  await again.locator(".hb-badge-cluster").hover()
+  await again.locator(".hb-preview").waitFor({
+    timeout: 5_000,
+  })
+  await shot(again, "06-cluster-preview")
+
+  const previewText = await again.locator(".hb-preview").innerText()
+
+  check(
+    "the shared badge previews both events as links, marks the soonest, and keeps Luma text as text",
+    (await again.locator(".hb-preview a[href*=\"e2e-\"]").count()) === 2
+      && previewText.includes("2 events here")
+      && /next up/i.test(previewText)
+      && previewText.includes("Locker night <b>& more</b>")
+      && (await again.locator(".hb-preview b").count()) === 0,
+    previewText.replace(/\s+/g, " "),
+  )
+  await again.locator(".hb-preview-event").first().hover()
+  await again.waitForTimeout(400)
+  check(
+    "the preview stays while the pointer is on it",
+    (await again.locator(".hb-preview").count()) === 1,
+  )
+  await again.mouse.move(5, 5)
+  await again.waitForTimeout(400)
+
+  const splitStart = Date.now()
+
+  await again.locator(".hb-badge-cluster").click()
+  await settledBetween(again, 3, 10)
+
+  const splitTook = Date.now() - splitStart
+
+  await again.waitForTimeout(300)
+  await shot(again, "06-split")
+  check(
+    "pressing the shared badge flies in until the cities stand apart, the ring on the soonest",
+    (await again.locator("button[data-slug]").count()) === 2
+      && (await again.locator(".hb-badge-cluster").count()) === 0
+      && (await again
+          .locator(".hb-marker[data-next] button[data-slug=e2e-build-night]")
+          .count()) === 1
+      && (await again
+          .locator(".hb-marker[data-next] button[data-slug=e2e-locker-night]")
+          .count()) === 0,
+    `zoom ${await zoomOf(again)} after ${splitTook} ms`,
+  )
+
+  // The list and the map point at each other.
+  await again.locator("#event-e2e-locker-night [role=button]").hover()
+  await again.waitForTimeout(200)
+
+  const rowLiftsBadge = (await again
+    .locator(".hb-marker[data-hovered] button[data-slug=e2e-locker-night]")
+    .count()) === 1
+
+  await again.locator("button[data-slug=e2e-build-night]").hover()
+  await again.waitForTimeout(200)
+
+  const badgeLightsRow = (await again
+    .locator("#event-e2e-build-night")
+    .getAttribute("class") ?? "")
+    .includes("bg-gray-50")
+
+  await again.mouse.move(5, 5)
+  await again.waitForTimeout(400)
+  check(
+    "hovering a row lifts its badge, and hovering a badge lights its row",
+    rowLiftsBadge && badgeLightsRow,
+  )
+
+  // The keyboard reaches a badge, and Enter opens the card with all the preview had.
+  await again.locator("button[data-slug=e2e-build-night]").focus()
+  await again.keyboard.press("Enter")
+  await again.locator("article[aria-label]").waitFor({
+    timeout: 10_000,
+  })
+  await settledBetween(again, 11, 17)
+
+  const card = again.locator("article[aria-label]")
+
+  check(
+    "Enter on a focused badge opens the card, which holds the title, the date and the Luma link the preview offered",
+    (await card.locator("h3").innerText()) === "Lisbon build night"
+      && (await card.locator("a[href*=\"e2e-build-night\"]").count()) === 1
+      && (await card.innerText()).includes("Fri, Nov 20"),
+  )
+  await again.keyboard.press("Escape")
+  await settledBetween(again, -1, 2)
+
+  // Zooming by hand brings the world button, which takes the camera back.
+  await again.locator(".maplibregl-ctrl-zoom-in").click()
+  await settledBetween(again, 1, 1.9)
+  await again.locator(".maplibregl-ctrl-zoom-in").click()
+  await settledBetween(again, 2, 6)
+
+  const awayShown = (await again.locator(".hb-world[data-away]").count()) === 1
+
+  await again.locator(".hb-world-button").click()
+  await settledBetween(again, -1, 2)
+  check(
+    "zooming by hand brings the world button, which takes the camera back to the world",
+    awayShown && (await again.locator(".hb-world[data-away]").count()) === 0,
+    `zoom ${await zoomOf(again)}`,
+  )
+
+  // The wheel scrolls the page over the map, and zooms it only with the key held.
+  const centreOfMap = async () => {
+    const box = await again.locator("[data-zoom]").boundingBox()
+
+    if (box) {
+      await again.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    }
+  }
+
+  await centreOfMap()
+
+  const beforeWheel = await zoomOf(again)
+  const scrollBefore = await again.evaluate(() => scrollY)
+
+  await again.mouse.wheel(0, 240)
+  await again.waitForTimeout(700)
+
+  const afterPlainWheel = await zoomOf(again)
+  const scrollAfter = await again.evaluate(() => scrollY)
+
+  // The key held, as MapLibre sees it: a wheel event with the key on its canvas.
+  await again.evaluate(() => {
+    document.querySelector(".maplibregl-canvas")?.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaY: -240,
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+  })
+  await again.waitForTimeout(900)
+
+  const afterKeyedWheel = await zoomOf(again)
+
+  check(
+    "the wheel scrolls the page over the map, and zooms it only with the key held",
+    afterPlainWheel === beforeWheel
+      && scrollAfter > scrollBefore
+      && afterKeyedWheel > beforeWheel,
+    `zoom ${beforeWheel} then ${afterPlainWheel} then ${afterKeyedWheel}; page ${scrollBefore} then ${scrollAfter}; view ${await again
+      .locator("[data-zoom]")
+      .getAttribute("data-view")}`,
+  )
+  await again.locator(".hb-world-button").click()
+  await settledBetween(again, -1, 2)
+
+  // Every control is big enough for a finger: 24 pixels each way, the badge over 44.
+  const small = await again.evaluate(() => {
+    const section = document.getElementById("map-heading")?.closest("section")
+
+    if (!section) {
+      return [
+        "no map section",
+      ]
+    }
+
+    return [
+      ...section.querySelectorAll<HTMLElement>("button, a, [role=button]"),
+    ]
+      .filter((control) => control.offsetParent !== null)
+      .map((control) => {
+        const box = control.getBoundingClientRect()
+
+        return {
+          name: `${control.tagName.toLowerCase()}.${
+            control.className.split(" ")[0]
+          }`,
+          width: Math.round(box.width),
+          height: Math.round(box.height),
+        }
+      })
+      .filter((control) => control.width < 24 || control.height < 24)
+      .map((control) => `${control.name} ${control.width}x${control.height}`)
+  })
+  const badgeBox = await again.locator(".hb-badge").first().boundingBox()
+
+  check(
+    "every control on the map and in the list is at least 24 pixels each way, and a badge over 44",
+    small.length === 0 && badgeBox !== null && badgeBox.width >= 44 && badgeBox
+          .height >= 44,
+    small.join(", ") || `badge ${badgeBox?.width}x${badgeBox?.height}`,
+  )
+
   await again
     .getByRole("button", {
       name: "Add an event",
@@ -883,6 +1139,77 @@ try {
     `zoom ${await zoomOf(linked)}`,
   )
   await visitor.close()
+
+  // With reduced motion asked for, the flight is a jump.
+  const calm = await browser.newContext({
+    viewport: {
+      width: 1280,
+      height: 900,
+    },
+    reducedMotion: "reduce",
+  })
+  const still = await open(calm)
+
+  await still.evaluate(() =>
+    document.getElementById("map-heading")?.closest("section")?.scrollIntoView({
+      block: "start",
+    })
+  )
+  await settledBetween(still, -1, 2)
+
+  const jumpStart = Date.now()
+
+  await still.locator(".hb-badge-cluster").click()
+  await settledBetween(still, 3, 10)
+
+  const jumpTook = Date.now() - jumpStart
+
+  check(
+    "with reduced motion asked for, the flight is a jump",
+    jumpTook < 900,
+    `${jumpTook} ms`,
+  )
+  await calm.close()
+
+  // On a touchscreen there is no hover: a tap on the shared badge splits it,
+  // and a tap on a badge goes straight to the card.
+  const touch = await browser.newContext({
+    viewport: {
+      width: 390,
+      height: 844,
+    },
+    deviceScaleFactor: 2,
+    hasTouch: true,
+    isMobile: true,
+  })
+  const thumb = await open(touch)
+
+  await thumb.evaluate(() =>
+    document.getElementById("map-heading")?.closest("section")?.scrollIntoView({
+      block: "start",
+    })
+  )
+  await settledBetween(thumb, -2, 2)
+  await thumb.locator(".hb-badge-cluster").tap()
+  await settledBetween(thumb, 3, 10)
+  await thumb.locator("button[data-slug=e2e-build-night]").tap()
+  await thumb.locator("article[aria-label]").waitFor({
+    timeout: 10_000,
+  })
+  await settledBetween(thumb, 11, 17)
+  await thumb.waitForTimeout(300)
+  await shot(thumb, "09-touch-card")
+  check(
+    "on a touchscreen a tap splits the shared badge, a tap opens the card, and no preview appears",
+    (await thumb.locator("article[aria-label] h3").innerText())
+        === "Lisbon build night"
+      && (await thumb.locator(".hb-preview").count()) === 0
+      && (await pinUncovered(thumb)),
+    `hover-capable: ${await thumb.evaluate(() =>
+      matchMedia("(hover: hover)").matches
+    )}`,
+  )
+  await touch.close()
 } catch (error) {
   check("the run completed", false, String(error))
 

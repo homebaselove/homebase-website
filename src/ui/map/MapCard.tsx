@@ -98,6 +98,11 @@ export function MapCard() {
 
   const pinned = useComputed(() => shown.value.filter(hasPin))
 
+  // The soonest upcoming event, first in the list, wears a mark there and on the map.
+  const next = useComputed(() =>
+    filter.value === "upcoming" ? shown.value[0]?.slug ?? null : null
+  )
+
   const selectedEvent = useComputed(() =>
     shown.value.find((event) => event.slug === selected.value) ?? null
   )
@@ -239,6 +244,7 @@ export function MapCard() {
             events={pinned}
             selected={selected}
             hovered={hovered}
+            next={next}
             onSelect={select}
             onUnavailable={() => {
               mapUnavailable.value = true
@@ -290,6 +296,7 @@ export function MapCard() {
             events={shown}
             selected={selected}
             hovered={hovered}
+            next={next}
             onSelect={selectFromList}
             loading={events.value === null}
             failed={loadFailed.value}

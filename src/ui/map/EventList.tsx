@@ -14,6 +14,8 @@ interface Props {
   readonly events: ReadonlySignal<MapEvent[]>
   readonly selected: Signal<string | null>
   readonly hovered: Signal<string | null>
+  /** The soonest upcoming event, which wears a mark in the list and on the map. */
+  readonly next: ReadonlySignal<string | null>
   readonly onSelect: (slug: string) => void
   readonly loading: boolean
   readonly failed: boolean
@@ -81,6 +83,7 @@ export function EventList(props: Props) {
           event={event}
           selected={props.selected}
           hovered={props.hovered}
+          next={props.next}
           onSelect={() => props.onSelect(event.slug)}
         />
       ))}
@@ -92,12 +95,14 @@ function EventRow(props: {
   event: MapEvent
   selected: Signal<string | null>
   hovered: Signal<string | null>
+  next: ReadonlySignal<string | null>
   onSelect: () => void
 }) {
   const { event } = props
   // Each row watches only its own answer, so a hover redraws two rows, not all.
   const selected = useComputed(() => props.selected.value === event.slug)
   const hovered = useComputed(() => props.hovered.value === event.slug)
+  const next = useComputed(() => props.next.value === event.slug)
   const when = useMemo(() => describeWhen(event), [
     event.start,
     event.end,
@@ -161,6 +166,11 @@ function EventRow(props: {
 
         <div class="min-w-0 flex-1">
           <p class="text-sm text-brand font-semibold">
+            {next.value && (
+              <span class="mr-1.5 rounded-full border-[1px] border-brand/40 bg-brand/10 px-1.5 text-[11px] font-bold uppercase tracking-wide align-middle">
+                Next up
+              </span>
+            )}
             {when.date}
             <span class="text-gray-500 font-normal">
               {" · "}
@@ -187,7 +197,7 @@ function EventRow(props: {
           href={event.url}
           target="_blank"
           rel="noopener noreferrer"
-          class="self-center shrink-0 text-sm text-brand hover:underline"
+          class="self-center shrink-0 py-2 px-1 -mr-1 text-sm text-brand hover:underline"
           onClick={(click) => click.stopPropagation()}
         >
           Luma ↗
