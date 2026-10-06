@@ -119,7 +119,11 @@ export function BasedHouseBlueprint() {
       style="perspective: 1000px; touch-action: pan-y"
       onPointerMove={track}
       onPointerDown={(e) => {
-        e.currentTarget.setPointerCapture(e.pointerId)
+        // Only a real pointer can be captured; a synthetic one still tilts.
+        if (e.isTrusted) {
+          e.currentTarget.setPointerCapture(e.pointerId)
+        }
+
         track(e)
       }}
       onPointerUp={(e) => {
