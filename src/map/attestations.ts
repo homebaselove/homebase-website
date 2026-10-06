@@ -48,6 +48,12 @@ export interface Eas {
   /** The schema's UID. */
   readonly schema: string
   readonly schemaText: string
+  /**
+   * The RPC the page reads the chain with before and after a pin: Base's
+   * public one, never a provider URL from the environment, which could
+   * carry a key; a test's own chain when it reads logs instead of the indexer.
+   */
+  readonly rpc: string
 }
 
 export interface Config {
@@ -86,6 +92,7 @@ export function configured(
   const eas = env.HOMEBASE_EAS?.trim() ?? ""
   const registry = env.HOMEBASE_EAS_REGISTRY?.trim() ?? ""
   const indexer = env.HOMEBASE_EAS_INDEXER?.trim()
+  const local = indexer === "logs"
 
   return {
     eas: {
@@ -96,11 +103,12 @@ export function configured(
         : SchemaRegistryAddress,
       schema: SchemaUid,
       schemaText: SchemaText,
+      rpc: local ? env.HOMEBASE_BASE_RPC || BaseRpcUrl : BaseRpcUrl,
     },
     admins: listed.length > 0 ? listed : [
       HomebaseWallet,
     ],
-    indexer: indexer === "logs" ? null : indexer || IndexerUrl,
+    indexer: local ? null : indexer || IndexerUrl,
   }
 }
 

@@ -11,8 +11,10 @@
  * coinbaseWallet connector does, with one difference: no permissions
  * request before the accounts, which that SDK does not answer.
  *
- * A pin is an attestation on Base, sent and signed through the connected
- * wallet's own provider, so the browser needs no RPC of its own.
+ * A pin is an attestation on Base. The wallet only signs and sends it; the
+ * reads before it, the dry run and the wait for the receipt go through
+ * Base's public RPC, which answers a refused call with the reason, where a
+ * wallet's own relay may not.
  */
 import {
   connect,
@@ -28,21 +30,18 @@ import {
 import { base } from "@wagmi/core/chains"
 import {
   type Address,
+  createPublicClient,
   type EIP1193Provider,
   encodeAbiParameters,
   type Hash,
   type Hex,
+  http as viemHttp,
   parseAbi,
   parseEventLogs,
   zeroAddress,
   zeroHash,
 } from "viem"
-import {
-  readContract,
-  simulateContract,
-  waitForTransactionReceipt,
-  writeContract,
-} from "viem/actions"
+import { writeContract } from "viem/actions"
 
 export interface Wallet {
   readonly id: string
@@ -58,18 +57,59 @@ export interface Eas {
   readonly schemaRegistry: string
   readonly schema: string
   readonly schemaText: string
+  /** The public RPC the page reads the chain with; the wallet only signs. */
+  readonly rpc: string
 }
 
+/** EAS's calls and events, with its errors so a refusal is named, not numbered. */
 const EasAbi = parseAbi([
   "function attest((bytes32 schema, (address recipient, uint64 expirationTime, bool revocable, bytes32 refUID, bytes data, uint256 value) data) request) payable returns (bytes32)",
   "function revoke((bytes32 schema, (bytes32 uid, uint256 value) data) request) payable",
   "event Attested(address indexed recipient, address indexed attester, bytes32 uid, bytes32 indexed schemaUID)",
+  "error AccessDenied()",
+  "error AlreadyRevoked()",
+  "error InsufficientValue()",
+  "error InvalidAttestation()",
+  "error InvalidExpirationTime()",
+  "error InvalidLength()",
+  "error InvalidRevocation()",
+  "error InvalidSchema()",
+  "error Irrevocable()",
+  "error NotFound()",
+  "error NotPayable()",
+  "error WrongSchema()",
 ])
 
 const RegistryAbi = parseAbi([
   "function register(string schema, address resolver, bool revocable) returns (bytes32)",
   "function getSchema(bytes32 uid) view returns ((bytes32 uid, address resolver, bool revocable, string schema))",
+  "error AlreadyExists()",
 ])
+
+const makeReader = (rpc: string) =>
+  createPublicClient({
+    chain: base,
+    transport: viemHttp(rpc),
+  })
+
+type Reader = ReturnType<typeof makeReader>
+
+const readers = new Map<string, Reader>()
+
+/** A client on Base's public RPC, one per address, for everything but signing. */
+function reader(rpc: string): Reader {
+  const found = readers.get(rpc)
+
+  if (found) {
+    return found
+  }
+
+  const made = makeReader(rpc)
+
+  readers.set(rpc, made)
+
+  return made
+}
 
 const CoinbaseId = "coinbase-smart-wallet"
 
@@ -272,7 +312,7 @@ export async function reconnectWallet(id: string): Promise<Address | null> {
 }
 
 /** The connected wallet's client on Base, the wallet switched there if need be. */
-async function clientOnBase() {
+async function signer() {
   if (getAccount(config).chainId !== base.id) {
     await switchChain(config, {
       chainId: base.id,
@@ -282,11 +322,8 @@ async function clientOnBase() {
   return getConnectorClient(config)
 }
 
-async function landed(
-  client: Awaited<ReturnType<typeof getConnectorClient>>,
-  hash: Hash,
-) {
-  const receipt = await waitForTransactionReceipt(client, {
+async function landed(chain: Reader, hash: Hash) {
+  const receipt = await chain.waitForTransactionReceipt({
     hash,
     timeout: ReceiptWaitMs,
   })
@@ -301,12 +338,14 @@ async function landed(
 /**
  * Pins a slug: an attestation under the map's schema from the connected
  * wallet. The first pin ever also registers the schema, one transaction
- * more. Each call is tried first, so a refusal shows before the wallet opens.
+ * more. Each call is tried first on the public RPC, so a refusal shows,
+ * with EAS's own name for it, before the wallet opens.
  */
 export async function pinSlug(eas: Eas, slug: string): Promise<Hex> {
-  const client = await clientOnBase()
+  const chain = reader(eas.rpc)
+  const wallet = await signer()
   const registry = eas.schemaRegistry as Address
-  const known = await readContract(client, {
+  const known = await chain.readContract({
     address: registry,
     abi: RegistryAbi,
     functionName: "getSchema",
@@ -316,7 +355,7 @@ export async function pinSlug(eas: Eas, slug: string): Promise<Hex> {
   })
 
   if (known.uid === zeroHash) {
-    const { request } = await simulateContract(client, {
+    const { request } = await chain.simulateContract({
       address: registry,
       abi: RegistryAbi,
       functionName: "register",
@@ -325,14 +364,13 @@ export async function pinSlug(eas: Eas, slug: string): Promise<Hex> {
         zeroAddress,
         true,
       ],
-      account: client.account,
-      chain: base,
+      account: wallet.account,
     })
 
-    await landed(client, await writeContract(client, request))
+    await landed(chain, await writeContract(wallet, request))
   }
 
-  const { request } = await simulateContract(client, {
+  const { request } = await chain.simulateContract({
     address: eas.address as Address,
     abi: EasAbi,
     functionName: "attest",
@@ -358,10 +396,9 @@ export async function pinSlug(eas: Eas, slug: string): Promise<Hex> {
         },
       },
     ],
-    account: client.account,
-    chain: base,
+    account: wallet.account,
   })
-  const receipt = await landed(client, await writeContract(client, request))
+  const receipt = await landed(chain, await writeContract(wallet, request))
   const [attested] = parseEventLogs({
     abi: EasAbi,
     eventName: "Attested",
@@ -377,8 +414,9 @@ export async function pinSlug(eas: Eas, slug: string): Promise<Hex> {
 
 /** Takes a pin off: revokes its attestation, which only its attester can. */
 export async function unpinSlug(eas: Eas, uid: string): Promise<Hash> {
-  const client = await clientOnBase()
-  const { request } = await simulateContract(client, {
+  const chain = reader(eas.rpc)
+  const wallet = await signer()
+  const { request } = await chain.simulateContract({
     address: eas.address as Address,
     abi: EasAbi,
     functionName: "revoke",
@@ -391,12 +429,11 @@ export async function unpinSlug(eas: Eas, uid: string): Promise<Hash> {
         },
       },
     ],
-    account: client.account,
-    chain: base,
+    account: wallet.account,
   })
-  const hash = await writeContract(client, request)
+  const hash = await writeContract(wallet, request)
 
-  await landed(client, hash)
+  await landed(chain, hash)
 
   return hash
 }

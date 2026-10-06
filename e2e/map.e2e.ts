@@ -656,6 +656,24 @@ try {
       .getByText(`Adding as ${short(wallets.admin)}`)
       .count()) === 1,
   )
+
+  // With the page scrolled so the sections below the map are in view, the
+  // open dialog must still be what the pointer would reach at its centre.
+  await again.evaluate(() => scrollBy(0, 600))
+  await again.waitForTimeout(300)
+
+  const uppermost = await dialog(again).evaluate((panel) => {
+    const box = panel.getBoundingClientRect()
+    const hit = document.elementFromPoint(
+      box.left + box.width / 2,
+      box.top + box.height / 2,
+    )
+
+    return hit !== null && panel.contains(hit)
+  })
+
+  await shot(again, "05-dialog-over-page")
+  check("the dialog lies over every section of the page", uppermost)
   await again.keyboard.press("Escape")
   await again.locator("li[id^=event-] [role=button]").first().click()
   await again
