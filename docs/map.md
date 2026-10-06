@@ -186,6 +186,84 @@ geolocation (a permission prompt on first visit, for a map that already shows
 where to look); a slow turn of the globe while idle (motion for its own sake);
 a dark style (the page is light).
 
+### The badges, the preview, and the hand-off to Luma
+
+The first Homebase map was a wall of round blue houses across a Google map,
+and that boldness is worth keeping. What it lacked was any way to tell what a
+marker was before clicking it, and anything to stop ten of them piling onto
+Europe. The map now draws a round house badge on each event from the world
+down to a region, and the pin on the exact spot from zoom 7 in, where a point
+means something. Where events would overlap at a zoom, one badge carries a
+count. Hovering any marker, on a device whose pointer can hover, opens a
+preview with the title, the date in the event's timezone and a link to Luma;
+a cluster's preview lists up to three of its events, each a link, and says how
+many more a zoom would show. The card keeps Open on Luma, Add to calendar and
+Directions under the place line, in view without scrolling.
+
+What this rests on:
+
+- **Target size.** WCAG 2.2's SC 2.5.8 asks for 24 CSS pixels at level AA
+  and SC 2.5.5 for 44 at AAA; Apple's Human Interface Guidelines say 44
+  points and Material 48 dp. The badge is 52 pixels, the pin a 36 by 44
+  target, the list rows far larger, and clustering keeps neighbouring
+  targets apart instead of overlapping.
+- **What a hover may hold.** Nielsen Norman Group's tooltip guidelines:
+  never hide information needed for a task solely behind a hover, since
+  people may not hover long enough and touch devices cannot hover at all;
+  mind timing, position and keyboard access. Everything in the preview is
+  also in the card, which a tap or Enter opens; the preview only exists
+  where `(hover: hover)` is true, lingers 160 ms after the pointer leaves so
+  the link can be reached, and closes on click or when its marker is redrawn.
+- **Previews that save a step.** Wikipedia's Page Previews, hover cards on
+  links, were tested from 2015 to 2018 with surveys and A/B tests across
+  several language editions; readers found them useful and not distracting,
+  and reached context with fewer page loads. The preview here does the same
+  for Luma: one hover and one click from the world to the RSVP page, with
+  the card there for everything else.
+- **Clusters.** Research on clustering markers (the PeerJ preprint
+  "Rethinking the usage and experience of clustering markers in web mapping"
+  and "The Marker Cluster: A Critical Analysis") finds clusters overused as
+  a performance fix and poorly understood when a count hides what is inside,
+  and best understood for precise point data, which events are. The map
+  clusters only where markers would overlap (48 pixels), keeps the house
+  with the count beside it, and lets the preview list what the cluster
+  holds, so a cluster is never a dead end. With a few dozen events the HTML
+  markers cost nothing; past a few hundred, MapLibre's symbol layers would
+  take over.
+- **The list.** The pattern Airbnb made familiar: a list and a map of the
+  same things, hovering one highlighting the other, choosing one moving the
+  other. The hover sync now runs both ways.
+- **Durations.** Material's guidance puts screen transitions at 300 to 400
+  ms. A map flight is a different thing, the camera travelling, where the
+  time conveys the distance; van Wijk and Nuij's study of zoom-and-pan
+  animation is behind the curve of 1.42 and the 1.8-second flight, and the
+  card appears at once, so nothing waits on it.
+- **Scrolling.** Google added cooperative gesture handling to embedded maps
+  in 2016 because people got stuck on a map that caught their swipe and had
+  to reload the page; two fingers pan and ctrl with the wheel zooms. On
+  since the first version of this map.
+
+Beyond the common pattern: one hover to Luma from the world, clusters
+included; the world as the home view with a flight down and a flight back,
+the world button appearing only when away; a card that shows at once with the
+flight behind it; the pin kept clear of its card by measuring the card; links
+that land on the map; reduced motion honoured by MapLibre itself.
+
+Weighed and left for later, with what would decide each:
+
+- A single click on a marker opening Luma: refused, since one badge can
+  hold several events, a map click leaving the site surprises and a thumb
+  taps by accident while panning, and the card carries the time in the
+  viewer's zone, the calendar, directions and the admin's remove.
+- City names under the badges at the world: fewer hovers, but clutter in a
+  crowded region; try with the real pins.
+- A ring on the soonest event's badge: the list is ordered by date, the map
+  is not, and one mark would carry the order over.
+- Ordering the list by the viewer's part of the world, read from the
+  browser's timezone with no permission prompt: research on map views notes
+  that people expect proximity ordering, and a timezone is a coarse,
+  prompt-free proxy.
+
 ### Google Maps
 
 Nothing to set up. The new map does not use Google Maps, and a search of the
@@ -345,9 +423,14 @@ client through the route manifest. Minified sizes:
 
 ### The experience
 
-- The map opens on the whole world. A pin flies the camera down to its event
+- The map opens on the whole world, each event a round house badge, a count
+  on a badge where events would overlap, and a pin on the exact spot once
+  the camera is near a street. A badge flies the camera down to its event
   and opens the card; closing the card flies back out; a world button under
   the zoom buttons brings the world back whenever the viewer has wandered.
+- Hovering a marker, on a pointer that hovers, previews the event, or up to
+  three of a cluster's events, each a link to Luma. The card keeps Open on
+  Luma, Add to calendar and Directions right under the place line.
 - The list is the map's other half: hovering a row lifts its pin, selecting
   one opens its details and brings its pin into the part of the map the card
   leaves open, beside it on a wide screen and above it on a phone, where the
@@ -449,15 +532,19 @@ layout with and without a card. What that found, and what changed:
 - On a phone, a row chosen from the list opened a card out of sight above;
   the map now scrolls back into view.
 
-**Rendered again for the overview.** OpenFreeMap being unreachable from the
+**Rendered again for the overview and the badges.** OpenFreeMap being unreachable from the
 sandbox, the flat world and the globe were rendered over Natural Earth's
 outlines with the site's own markers, at the map's desktop size (1060 by 560)
 and a phone's (390 by 430), and the flight down to an event with the card in
 place on each. That is where the globe lost two of seven pins behind its
 horizon, where `fitBounds` proved a tenth of a level out, and where the card
-and pin were seen to clear each other on both sizes. The suite's screenshots
-then showed the same on the built site: the world, the pin flown to with its
-card beside it, and the phone deep link with the pin above the card.
+and pin were seen to clear each other on both sizes. The first map's
+round badges were then rendered against today's pins at twenty-four cities,
+on a light and a dark basemap, which showed the pile-ups that clustering has
+to stop and settled the light basemap. The suite's screenshots then showed the
+same on the built site: the world with its badge, the hover preview, the pin
+flown to with its card beside it, and the phone deep link with the pin above
+the card.
 
 **Reviewed for security.** The site now holds no secret and no session, so
 the surface is small: the server only reads, with the indexer's answer
@@ -495,12 +582,14 @@ and sends the transactions the page asks for, and passes every other request
 on to the chain. The run walks through a visitor seeing only the way in, the
 admin connecting and getting the form, a look-up, the first pin as two
 transactions, the schema and then the attestation, found on the chain and
-on the map, the map opening on the whole world after a reload, the pin flying the
-camera in with the card clear of it, the card closing and the world coming
+on the map, the map opening on the whole world after a reload with the event a round
+badge, the badge's hover preview with its link to Luma and the preview going
+once the pointer leaves, the badge flying the camera in to a pin with the
+card clear of it, the card closing and the world coming
 back, the wallet picked back up after a reload, a revocation taking the pin
 off the chain and the map, a later pin as one transaction, disconnecting, a
 stranger turned away without the form, and a deep link on a phone-sized
-screen landing straight on its pin: sixteen checks, a screenshot of each
+screen landing straight on its pin: eighteen checks, a screenshot of each
 step. Only Luma,
 the tiles, the indexer and the chain's distance are stubbed. A failed run
 leaves a screenshot, the page's text and the server's log.
@@ -550,7 +639,8 @@ local stand-ins rather than live services:
    the overview on a desktop and a phone for what Positron labels at that
    zoom and how its ocean sits against the page, and watch one flight down to
    an event and back on a phone for smoothness; the parent tiles MapLibre
-   shows while finer ones arrive should carry it.
+   shows while finer ones arrive should carry it. Hover a badge for the
+   preview, and open the card on a phone, where there is no hover.
 
 ## Later
 

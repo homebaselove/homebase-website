@@ -12,7 +12,12 @@ import type { MapEvent } from "../../map/MapEvent.ts"
 import { vendorPath } from "../../map/vendor.ts"
 import { worldCamera } from "./camera.ts"
 import { WorldControl } from "./controls.ts"
-import { clusterElement, markerElement } from "./markers.ts"
+import {
+  clusterElement,
+  markerElement,
+  previewElement,
+  type Shape,
+} from "./markers.ts"
 
 type MapLibre = typeof import("maplibre-gl")
 
@@ -76,6 +81,15 @@ const PinHeight = 44
 
 /** Room beside the details card that is enough to show the pin there rather than above it. */
 const BesideWidth = 200
+
+/** From this zoom a marker is a pin on its spot; further out it is a round badge. */
+const PinZoom = 7
+
+/** Half a badge, which a preview sits above. */
+const BadgeRadius = 26
+
+/** How long a preview lingers after the pointer leaves it, so the pointer can reach it. */
+const PreviewLinger = 160
 
 interface Props {
   readonly events: ReadonlySignal<MapEvent[]>
@@ -169,6 +183,92 @@ export function MapView(props: Props) {
       live.touchZoomRotate.disableRotation()
       live.keyboard.disableRotation()
 
+      // A preview on hover, for pointers that hover; a finger goes straight to the card.
+      const hoverable = typeof matchMedia === "function"
+        && matchMedia("(hover: hover)").matches
+      const preview = new lib.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        closeOnMove: false,
+        focusAfterOpen: false,
+        className: "hb-preview",
+        maxWidth: "300px",
+      })
+      // The marker the preview is for, so a redraw that drops it closes the preview.
+      let previewing: string | null = null
+      let lingering: ReturnType<typeof setTimeout> | null = null
+
+      const stayPreview = () => {
+        if (lingering) {
+          clearTimeout(lingering)
+          lingering = null
+        }
+      }
+
+      const hidePreview = () => {
+        stayPreview()
+        previewing = null
+        preview.remove()
+      }
+
+      const lingerPreview = () => {
+        stayPreview()
+        lingering = setTimeout(hidePreview, PreviewLinger)
+      }
+
+      preview.on("open", () => {
+        const panel = preview.getElement()
+
+        panel.addEventListener("mouseenter", stayPreview)
+        panel.addEventListener("mouseleave", lingerPreview)
+      })
+
+      const attachPreview = (
+        wrapper: HTMLElement,
+        key: string,
+        lngLat: [number, number],
+        slug: string | null,
+        shape: Shape,
+        content: () => [MapEvent[], number],
+      ) => {
+        wrapper.addEventListener("click", hidePreview)
+
+        if (!hoverable) {
+          return
+        }
+
+        wrapper.addEventListener("mouseenter", () => {
+          stayPreview()
+
+          if (slug) {
+            props.hovered.value = slug
+          }
+
+          const [events, more] = content()
+
+          if (events.length === 0) {
+            return
+          }
+
+          previewing = key
+          preview
+            .setLngLat(lngLat)
+            .setOffset(shape === "pin" ? PinHeight + 6 : BadgeRadius + 8)
+            .setDOMContent(previewElement(events, more))
+
+          if (!preview.isOpen()) {
+            preview.addTo(live)
+          }
+        })
+        wrapper.addEventListener("mouseleave", () => {
+          if (slug && props.hovered.peek() === slug) {
+            props.hovered.value = null
+          }
+
+          lingerPreview()
+        })
+      }
+
       live.addControl(
         new lib.NavigationControl({
           showCompass: false,
@@ -192,6 +292,8 @@ export function MapView(props: Props) {
       // so readiness is the load event, which fires once.
       let ready = false
       let view: View = "free"
+      // The shape the markers on the map have; they are redrawn when the zoom crosses PinZoom.
+      let shaped: Shape = "badge"
 
       /** Where the camera is, written on the container for styles and tests, and told to the world button. */
       const describe = () => {
@@ -213,6 +315,17 @@ export function MapView(props: Props) {
       }
 
       const render = () => {
+        const shape: Shape = live.getZoom() >= PinZoom ? "pin" : "badge"
+
+        if (shape !== shaped) {
+          for (const marker of markers.values()) {
+            marker.remove()
+          }
+
+          markers.clear()
+          shaped = shape
+        }
+
         const bounds = live.getBounds()
         const clusters = index.getClusters(
           [
@@ -269,6 +382,27 @@ export function MapView(props: Props) {
                 false,
               )
             })
+            attachPreview(
+              element,
+              key,
+              [
+                lng,
+                lat,
+              ],
+              null,
+              shape,
+              () => {
+                const events = index
+                  .getLeaves(id, 3)
+                  .map((leaf) => known.get(leaf.properties.slug))
+                  .filter((found): found is MapEvent => found !== undefined)
+
+                return [
+                  events,
+                  properties.point_count - events.length,
+                ]
+              },
+            )
           } else {
             const event = known.get(properties.slug)
 
@@ -276,14 +410,34 @@ export function MapView(props: Props) {
               continue
             }
 
-            element = markerElement(event, () => props.onSelect(event.slug))
+            element = markerElement(
+              event,
+              shape,
+              () => props.onSelect(event.slug),
+            )
+            attachPreview(
+              element,
+              key,
+              [
+                lng,
+                lat,
+              ],
+              event.slug,
+              shape,
+              () => [
+                [
+                  event,
+                ],
+                0,
+              ],
+            )
           }
 
           markers.set(
             key,
             new lib.Marker({
               element,
-              anchor: key.startsWith("cluster:") ? "center" : "bottom",
+              anchor: shape === "pin" ? "bottom" : "center",
               // Whole pixels make a marker stutter along a flight.
               subpixelPositioning: true,
             })
@@ -300,6 +454,10 @@ export function MapView(props: Props) {
             marker.remove()
             markers.delete(key)
           }
+        }
+
+        if (previewing && !keep.has(previewing)) {
+          hidePreview()
         }
 
         reflect()

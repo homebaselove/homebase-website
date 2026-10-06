@@ -701,15 +701,40 @@ try {
   await settledBetween(again, -1, 2)
   await shot(again, "05-world")
   check(
-    "the map opens on the whole world",
+    "the map opens on the whole world, the event a round badge on it",
     (await zoomOf(again)) < 2
       && (await again.locator("article[aria-label]").count()) === 0
-      && (await again.locator(".hb-world[data-away]").count()) === 0,
+      && (await again.locator(".hb-world[data-away]").count()) === 0
+      && (await again
+          .locator("button.hb-badge[data-slug=e2e-demo-day]")
+          .count())
+        === 1,
     `zoom ${await zoomOf(again)}`,
   )
 
-  // The house pin flies the camera in, and the card leaves the pin uncovered.
-  await again.locator(".hb-pin").first().click()
+  // Hovering the badge previews the event, with its step to Luma.
+  await again.locator("button[data-slug=e2e-demo-day]").hover()
+  await again.locator(".hb-preview").waitFor({
+    timeout: 5_000,
+  })
+  await shot(again, "05-hover")
+  check(
+    "hovering a badge previews the event, one click from Luma",
+    (await again.locator(".hb-preview a[href*=\"e2e-demo-day\"]").count())
+        === 1
+      && (await again.locator(".hb-preview").innerText())
+        .includes("Based House Lisbon · Demo Day"),
+  )
+  await again.mouse.move(5, 5)
+  await again.waitForTimeout(400)
+  check(
+    "the preview goes once the pointer has left",
+    (await again.locator(".hb-preview").count()) === 0,
+  )
+
+  // The badge flies the camera in, where the event is a pin on its spot, and
+  // the card leaves the pin uncovered.
+  await again.locator("button[data-slug=e2e-demo-day]").click()
   await again.locator("article[aria-label]").waitFor({
     timeout: 10_000,
   })

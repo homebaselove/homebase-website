@@ -113,6 +113,39 @@ export function EventDetails(props: Props) {
               .join(", ") || "Location to be announced"}
         </p>
 
+        <div class="flex flex-wrap gap-2">
+          <a
+            href={event.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn-brand"
+          >
+            Open on Luma
+          </a>
+
+          <a
+            href={calendar.google}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="rounded-full border-[1px] border-gray-200 px-4 py-2 text-sm hover:bg-gray-50"
+          >
+            Add to calendar
+          </a>
+
+          {hasPin(event) && event.placement === "venue" && (
+            // Google Maps URLs need no key and no billing, unlike the API behind
+            // the old map, and on a phone they open the maps app.
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${event.lat},${event.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="rounded-full border-[1px] border-gray-200 px-4 py-2 text-sm hover:bg-gray-50"
+            >
+              Directions
+            </a>
+          )}
+        </div>
+
         {event.description && (
           <p class="text-sm text-gray-600">
             {event.description}
@@ -152,39 +185,6 @@ export function EventDetails(props: Props) {
             </ul>
           </div>
         )}
-
-        <div class="flex flex-wrap gap-2">
-          <a
-            href={event.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="btn-brand"
-          >
-            Open on Luma
-          </a>
-
-          <a
-            href={calendar.google}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="rounded-full border-[1px] border-gray-200 px-4 py-2 text-sm hover:bg-gray-50"
-          >
-            Add to calendar
-          </a>
-
-          {hasPin(event) && event.placement === "venue" && (
-            // Google Maps URLs need no key and no billing, unlike the API behind
-            // the old map, and on a phone they open the maps app.
-            <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${event.lat},${event.lng}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="rounded-full border-[1px] border-gray-200 px-4 py-2 text-sm hover:bg-gray-50"
-            >
-              Directions
-            </a>
-          )}
-        </div>
 
         {mayRemove && (
           <div class="flex items-center gap-3 border-t-[1px] border-gray-100 pt-3 text-sm">
