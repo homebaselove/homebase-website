@@ -1141,7 +1141,7 @@ test("a request naming another host gets no message and no session, so a page el
     ])
 })
 
-test("with no hosts configured, sign-in serves the local host alone", async () => {
+test("with no hosts configured, sign-in serves the site's own hosts and the local one", async () => {
   const { ctx } = await site({
     env: {
       HOMEBASE_ADMIN_ADDRESSES: wallet,
@@ -1162,6 +1162,8 @@ test("with no hosts configured, sign-in serves the local host alone", async () =
       ctx,
     )
   const local = await ask("localhost:3000")
+  const own = await ask("homebase.love")
+  const www = await ask("www.homebase.love")
   const remote = await ask("homebase.test")
 
   expect(
@@ -1172,12 +1174,22 @@ test("with no hosts configured, sign-in serves the local host alone", async () =
       })
         .message
         .split("\n")[0],
+      own.status,
+      (await own.json() as {
+        message: string
+      })
+        .message
+        .split("\n")[0],
+      www.status,
       remote.status,
     ],
   )
     .toEqual([
       200,
       "localhost:3000 wants you to sign in with your Ethereum account:",
+      200,
+      "homebase.love wants you to sign in with your Ethereum account:",
+      200,
       400,
     ])
 })

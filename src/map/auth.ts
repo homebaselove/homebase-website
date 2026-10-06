@@ -62,6 +62,8 @@ export interface AuthConfig {
    * have the server write one in its own name.
    */
   readonly siteHosts: ReadonlySet<string>
+  /** Whether the local host may sign in too: only while no hosts are configured. */
+  readonly localSignIn: boolean
 }
 
 /** A hostname as a browser sends it: lower case, no scheme, no path, a port kept. */
@@ -73,6 +75,12 @@ const hostOf = (value: string): string | null => {
 }
 
 const LocalHost = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i
+
+/** The site's own hostnames, served wherever HOMEBASE_SITE_HOSTS names none. */
+export const DefaultSiteHosts: readonly string[] = [
+  "homebase.love",
+  "www.homebase.love",
+]
 
 export const isLocalHost = (host: string): boolean => LocalHost.test(host)
 
@@ -111,6 +119,11 @@ export function configFrom(
       })
     )
 
+  const named = (env.HOMEBASE_SITE_HOSTS ?? "")
+    .split(",")
+    .map(hostOf)
+    .filter((host): host is string => host !== null)
+
   return {
     adminAddresses: listed.length > 0 ? listed : DefaultAdmins,
     lock: contract
@@ -130,7 +143,7 @@ export function configFrom(
     cronSecret: env.CRON_SECRET?.trim() || null,
     siteHosts: new Set(
       [
-        ...(env.HOMEBASE_SITE_HOSTS ?? "").split(","),
+        ...(named.length > 0 ? named : DefaultSiteHosts),
         // Vercel names its own hosts, so a deployment there needs no setting.
         env.VERCEL_PROJECT_PRODUCTION_URL ?? "",
         env.VERCEL_BRANCH_URL ?? "",
@@ -139,13 +152,15 @@ export function configFrom(
         .map(hostOf)
         .filter((host): host is string => host !== null),
     ),
+    localSignIn: named.length === 0,
   }
 }
 
 /**
- * Whether a sign-in may be issued and accepted for a host. With no hosts
- * configured only the local ones pass, so a deployment that forgot the setting
- * fails closed instead of binding messages to whatever a request names.
+ * Whether a sign-in may be issued and accepted for a host: the site's own
+ * hosts, and the local one while nothing is configured. A deployment under
+ * another name fails closed instead of binding messages to whatever a request
+ * names.
  */
 export function siteAllowed(config: AuthConfig, host: string): boolean {
   const name = hostOf(host)
@@ -154,9 +169,8 @@ export function siteAllowed(config: AuthConfig, host: string): boolean {
     return false
   }
 
-  return config.siteHosts.size === 0
-    ? LocalHost.test(name)
-    : config.siteHosts.has(name)
+  return config.siteHosts.has(name)
+    || (config.localSignIn && LocalHost.test(name))
 }
 
 const sha256 = (value: string) =>
