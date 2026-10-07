@@ -1,7 +1,8 @@
 /**
  * The Based House story as the homepage tells it: one chapter per house, plus
- * the letter that started it, the workshops that built the foundation, and
- * where it stands today. The figures come from each house's retrospective.
+ * the letter that started it, the workshops that built the foundation, the
+ * interview with Jesse at the third house, and where it stands today. The
+ * figures come from each house's retrospective.
  */
 
 import DevconnectRecapCast from "../assets/story/DevconnectRecapCast.webp"
@@ -9,6 +10,7 @@ import DevconnectStage from "../assets/story/DevconnectStage.webp"
 import EthDenverCrew from "../assets/story/EthDenverCrew.webp"
 import EthDenverReturnCrew from "../assets/story/EthDenverReturnCrew.webp"
 import HomebaseMapAnnouncement from "../assets/story/HomebaseMapAnnouncement.webp"
+import JesseAtBasedHousePoster from "../assets/story/JesseAtBasedHouse.webp"
 import JesseHappyToFund from "../assets/story/JesseHappyToFund.webp"
 import LetterToJesseCast from "../assets/story/LetterToJesseCast.webp"
 import LetterToJesseV2Cast from "../assets/story/LetterToJesseV2Cast.webp"
@@ -44,6 +46,24 @@ export interface StoryStat {
   label: string
 }
 
+/**
+ * A video a chapter leads with in place of photos. It never plays by itself:
+ * it waits on its poster, the frame start seconds in, and play picks up from
+ * there. The pixel size holds its shape while nothing has loaded.
+ */
+export interface StoryVideo {
+  /** A file in public, which the host serves as it is. */
+  src: string
+  poster: string
+  width: number
+  height: number
+  start: number
+  /** How long it runs, which the play button tells before anything loads. */
+  seconds: number
+  /** What the video is, for readers who cannot see it. */
+  label: string
+}
+
 export interface Chapter {
   id: string
   /** First day of the chapter, as YYYY-MM, which orders the timeline. */
@@ -58,6 +78,8 @@ export interface Chapter {
    * sit on top of the card and each links to its source.
    */
   cover?: CoverPhoto[]
+  /** For a chapter that is a video: the video, which is its own source. */
+  video?: StoryVideo
   /** One short paragraph: what happened and why it mattered. */
   summary: string
   stats?: StoryStat[]
@@ -84,6 +106,15 @@ const HomebaseMapAnnouncementUrl = "https://farcaster.xyz/luciano/0x1897f428"
 
 const EthDenverReturnRecapUrl =
   "https://x.com/homebasedotlove/status/2029929738454847972"
+
+/** The long cut of the interview with Jesse, served from public. */
+const JesseAtBasedHouseVideoUrl = "/JesseAtBasedHouse.mp4"
+
+/**
+ * The chapter the reel opens on: the interview, which the trailer on X sends
+ * people here to watch.
+ */
+export const OpeningChapterId = "jesse-at-based-house"
 
 /** Where applications for the next house go. */
 const BasedHouseMumbaiApplyUrl = "https://forms.gle/54EtYRDxcVz3ZPQQ6"
@@ -339,6 +370,30 @@ export const Chapters: Chapter[] = [
         href: "https://farcaster.xyz/luciano/0xd7163964",
       },
     ],
+  },
+  {
+    id: OpeningChapterId,
+    month: "2026-02",
+    when: "Feb 2026",
+    kicker: "The interview",
+    title: "Jesse at Based House",
+    video: {
+      src: JesseAtBasedHouseVideoUrl,
+      poster: JesseAtBasedHousePoster,
+      width: 720,
+      height: 1280,
+      // Frames 70 and 71 at 24 fps are the last of the intro with the whole
+      // brand on them, and the poster is frame 71; the logo starts to
+      // dissolve on the next. A player lands on one of the two, whichever
+      // way it rounds a seek.
+      start: 2.95,
+      seconds: 686,
+      label:
+        "Jesse at Based House: Luciano and Jesse Pollak, the founder of Base, in conversation at Based House ETHDenver, eleven minutes",
+    },
+    summary:
+      "During the third house, Jesse Pollak, the founder of Base, sat down with Luciano on the couch at Based House ETHDenver. Eleven minutes on why the residencies matter, how Based House began, decentralizing Base, systems that scale, finding the people who care, and a new economy where people choose why they wake up every day.",
+    links: [],
   },
   {
     id: "today",

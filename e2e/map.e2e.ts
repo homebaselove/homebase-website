@@ -1608,13 +1608,80 @@ try {
   })
   const still = await open(calm)
 
-  // The story reel: no arrows, one height for every card and every cover,
-  // and the key numbers of a chapter inside What happened.
+  // The story reel opens on the interview, which waits on its poster with
+  // nothing of the browser drawn over it until the reader presses Watch,
+  // beside its text at the height of every card.
   await still.evaluate(() =>
     document.getElementById("story")?.scrollIntoView({
       block: "start",
     })
   )
+
+  const opening = await still.evaluate(() => {
+    const scroller = document.querySelector<HTMLElement>("#story .story-reel")!
+    const card = document.querySelector<HTMLElement>(
+      "#story [data-chapter=jesse-at-based-house]",
+    )!
+    const video = card.querySelector("video")!
+
+    return {
+      dot: document
+        .querySelector("#story [aria-current=step]")
+        ?.getAttribute("aria-label") ?? String(),
+      offCenter: Math.abs(
+        card.offsetLeft + card.offsetWidth / 2
+          - (scroller.scrollLeft + scroller.clientWidth / 2),
+      ),
+      paused: video.paused,
+      controls: video.controls,
+      autoplay: video.autoplay,
+      preload: video.preload,
+      poster: video.poster,
+      src: video.getAttribute("src") ?? String(),
+      watch: card.querySelector(".story-film button")?.textContent?.trim()
+        ?? String(),
+      film: card.querySelector<HTMLElement>(".story-film")!.offsetHeight,
+      inside: card.querySelector("article")!.clientHeight,
+    }
+  })
+
+  check(
+    "the story reel opens on the interview, paused on its poster behind a Watch button",
+    opening.dot === "Feb 2026: Jesse at Based House"
+      && opening.offCenter < 2
+      && opening.paused
+      && !opening.controls
+      && !opening.autoplay
+      && opening.preload === "none"
+      && opening.poster.includes("JesseAtBasedHouse")
+      && opening.src === "/JesseAtBasedHouse.mp4#t=2.95"
+      && opening.watch === "Watch · 11 min"
+      && opening.film === opening.inside,
+    JSON.stringify(opening),
+  )
+
+  await still.locator("#story .story-film button").click()
+
+  const watching = await still.evaluate(() => {
+    const video = document.querySelector<HTMLVideoElement>(
+      "#story [data-chapter=jesse-at-based-house] video",
+    )!
+
+    return {
+      controls: video.controls,
+      button: document.querySelector("#story .story-film button") !== null,
+      focused: document.activeElement === video,
+    }
+  })
+
+  check(
+    "pressing Watch hands the video to the controls of the browser",
+    watching.controls && !watching.button && watching.focused,
+    JSON.stringify(watching),
+  )
+
+  // No arrows, one height for every card and every photo cover, and the
+  // key numbers of a chapter inside What happened.
   await still
     .locator("#story button[aria-label^='Apr – May 2025']")
     .click()
@@ -1645,9 +1712,10 @@ try {
         )
         .length,
       heights: cards.map((card) => card.querySelector("article")!.offsetHeight),
-      covers: cards.map((card) =>
-        card.querySelector<HTMLElement>(".story-cover")?.offsetHeight ?? 0
-      ),
+      covers: [
+        ...document.querySelectorAll<HTMLElement>("#story .story-cover"),
+      ]
+        .map((cover) => cover.offsetHeight),
       cover: document
         .querySelector<HTMLImageElement>(
           "#story [data-chapter=base-batches] .story-cover img",
@@ -1660,9 +1728,10 @@ try {
   })
 
   check(
-    "the story reel has no arrows, and every card and every cover stands at one height",
+    "the story reel has no arrows, and every card and every photo cover stands at one height",
     reel.arrows === 0
       && new Set(reel.heights).size === 1
+      && reel.covers.length === reel.heights.length - 1
       && new Set(reel.covers).size === 1
       && reel.covers[0] > 0,
     `cards ${reel.heights.join(" ")}, covers ${reel.covers.join(" ")}`,
