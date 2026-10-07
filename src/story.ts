@@ -268,9 +268,6 @@ export const Chapters: Chapter[] = [
         alt:
           "The Based House Devconnect crew and friends packed onto a stage in Buenos Aires, arms up and cheering, in front of a wall of blue pixel dots",
         href: DevconnectRecapUrl,
-        // The wall of dots fills the top of the frame and the front row
-        // kneels at the bottom; this is the band that keeps every face.
-        focus: 90,
       },
     ],
     summary:
@@ -319,13 +316,10 @@ export const Chapters: Chapter[] = [
       {
         src: EthDenverReturnCrew,
         width: 720,
-        height: 580,
+        height: 554,
         alt:
           "The third Based House crew piled onto the sectional couches of the Denver house, waving at the camera",
         href: EthDenverReturnRecapUrl,
-        // The back row reaches the top of the frame and the front row the
-        // bottom; this is the band that keeps every face.
-        focus: 10,
       },
     ],
     summary:

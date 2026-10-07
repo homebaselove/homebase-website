@@ -340,13 +340,17 @@ function ChapterCard(props: {
   )
 }
 
+/** How many times wider than tall the cover box is from the sm breakpoint up; client.css draws it. */
+const CoverRatio = 1.3
+
 /**
  * The photos on top of a card. From the sm breakpoint up every cover is the
- * same box, nearly twice as wide as it is tall, so the cards line up: a
- * photo fills it, cropped a little at the edges around its middle or the
- * point it names; a wide strip, or a pair of posts, sits centered on a
- * near-black ground that matches the dark posts themselves, and a post
- * that names its own ground sits whole on that.
+ * same box, in the shape of the crew photos, so the cards line up: a photo
+ * of that shape fills it, cropped a little at the edges around its middle
+ * or the point it names; anything much wider sits whole in the box on a
+ * blur of itself; a pair of posts sits centered on a near-black ground
+ * that matches the dark posts themselves, and a post that names its own
+ * ground sits whole on that.
  * Two photos share the width in proportion to their aspect ratios, so they
  * stand at one height with no margins between or beside them, unless both
  * are wide strips, which stack instead. On phones each cover keeps its own
@@ -370,9 +374,10 @@ function Cover(props: { photos: CoverPhoto[] }) {
     >
       {props.photos.map((photo) => {
         const aspect = photo.width / photo.height
-        // A strip much wider than the box is shown whole, as is a photo on
-        // its own ground; anything closer to the box fills it.
-        const whole = aspect > 2.5 || photo.ground !== undefined
+        // A photo much wider than the box is shown whole, as is a post on
+        // its own ground; anything close to the shape of the box fills it.
+        const whole = aspect > CoverRatio * 1.2 || photo.ground !== undefined
+        const haloed = !pair && whole && photo.ground === undefined
 
         return (
           <a
@@ -383,8 +388,18 @@ function Cover(props: { photos: CoverPhoto[] }) {
             style={pair ? `--aspect: ${aspect.toFixed(4)}` : undefined}
             class={pair
               ? "block min-w-0 transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/60"
-              : "block min-w-0 sm:h-full transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/60"}
+              : "relative block min-w-0 sm:h-full transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/60"}
           >
+            {haloed && (
+              <img
+                src={photo.src}
+                alt={String()}
+                aria-hidden="true"
+                draggable={false}
+                class="hidden sm:block absolute inset-0 w-full h-full object-cover blur-2xl scale-125 opacity-60 pointer-events-none"
+              />
+            )}
+
             <img
               src={photo.src}
               width={photo.width}
@@ -402,8 +417,8 @@ function Cover(props: { photos: CoverPhoto[] }) {
               class={pair
                 ? "w-full h-auto"
                 : whole
-                ? "w-full sm:h-full sm:object-contain"
-                : "w-full sm:h-full sm:object-cover"}
+                ? "relative w-full sm:h-full sm:object-contain"
+                : "relative w-full sm:h-full sm:object-cover"}
             />
           </a>
         )
