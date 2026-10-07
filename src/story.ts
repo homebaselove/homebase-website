@@ -4,8 +4,8 @@
  * where it stands today. The figures come from each house's retrospective.
  */
 
-import DevconnectCrew from "../assets/story/DevconnectCrew.webp"
 import DevconnectRecapCast from "../assets/story/DevconnectRecapCast.webp"
+import DevconnectStage from "../assets/story/DevconnectStage.webp"
 import EthDenverCrew from "../assets/story/EthDenverCrew.webp"
 import EthDenverReturnCrew from "../assets/story/EthDenverReturnCrew.webp"
 import HomebaseMapAnnouncement from "../assets/story/HomebaseMapAnnouncement.webp"
@@ -118,7 +118,7 @@ export const Chapters: Chapter[] = [
       },
     ],
     summary:
-      "Homebase asked Base for a house where based builders and creators could live and build together at the events that matter, as a letter to Jesse shipped as a Farcaster miniapp. The plan had three legs: Build Board online, Based House residencies at Ethereum events, and permanent coworking once the houses proved the appetite.",
+      "Samuel, Rafi and Luciano asked Base for a house where based builders and creators could live and build together at ETHDenver, as a letter to Jesse shipped as a Farcaster miniapp. Then at the very first Based House an idea spawned: Homebase, a three-legged plan consisting of supporting builders with the Build Board, hosting Based House residencies at Ethereum events, and eventually opening permanent coworking once the houses prove the appetite.",
     links: [
       {
         label: "Letter to Jesse V1",
@@ -212,12 +212,12 @@ export const Chapters: Chapter[] = [
         href: "https://farcaster.xyz/rafi/0xdb995f78",
       },
       {
-        label: "New York event",
-        href: "https://farcaster.xyz/luciano/0x2aeb8061",
+        label: "Homebase Map",
+        href: "#map",
       },
       {
-        label: "Homebase Map",
-        href: HomebaseMapAnnouncementUrl,
+        label: "Homebase Live",
+        href: "#live",
       },
     ],
   },
@@ -262,12 +262,15 @@ export const Chapters: Chapter[] = [
     title: "Based House Devconnect",
     cover: [
       {
-        src: DevconnectCrew,
-        width: 1280,
-        height: 768,
+        src: DevconnectStage,
+        width: 1185,
+        height: 913,
         alt:
-          "The Based House Devconnect crew packed onto and around a sofa in Buenos Aires, with the Based House Devconnect logo on the screen behind them",
+          "The Based House Devconnect crew and friends packed onto a stage in Buenos Aires, arms up and cheering, in front of a wall of blue pixel dots",
         href: DevconnectRecapUrl,
+        // The wall of dots fills the top of the frame and the front row
+        // kneels at the bottom; this is the band that keeps every face.
+        focus: 90,
       },
     ],
     summary:

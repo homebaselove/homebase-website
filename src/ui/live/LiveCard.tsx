@@ -307,7 +307,8 @@ export function LiveCard() {
 
   return (
     <section
-      class="relative bg-white w-full rounded-lg shadow-md border-[1px] border-gray-200"
+      id="live"
+      class="relative scroll-mt-8 bg-white w-full rounded-lg shadow-md border-[1px] border-gray-200"
       aria-labelledby="live-heading"
     >
       <div
