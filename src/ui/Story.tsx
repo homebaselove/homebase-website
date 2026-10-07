@@ -327,10 +327,9 @@ function ChapterCard(props: {
                   rel={link.href.startsWith("#") ? undefined : "noopener"}
                   class={today
                     ? "btn-brand text-sm min-h-11"
-                    : "inline-flex items-center gap-1.5 min-h-11 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand"}
+                    : "inline-flex items-center min-h-11 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand"}
                 >
                   {link.label}
-                  {!link.href.startsWith("#") && <OutwardIcon />}
                 </a>
               ))}
             </div>
@@ -428,25 +427,6 @@ function ChevronIcon() {
       class="transition-transform duration-200 motion-reduce:transition-none group-open:rotate-180"
     >
       <path d="m6 9 6 6 6-6" />
-    </svg>
-  )
-}
-
-function OutwardIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2.5"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      <path d="M7 17 17 7" />
-      <path d="M8 7h9v9" />
     </svg>
   )
 }
