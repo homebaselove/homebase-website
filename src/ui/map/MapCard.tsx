@@ -17,29 +17,15 @@ type Filter =
 /** The query parameter that opens an event, so a pin can be linked to. */
 const LinkParam = "event"
 
+/**
+ * The event a shared link names. The page reads it and never writes it: the
+ * site is one page, and its address stays plain whatever is opened on it.
+ */
 function linkedSlug(): string | null {
   try {
     return new URL(location.href).searchParams.get(LinkParam)
   } catch {
     return null
-  }
-}
-
-function writeLink(slug: string | null) {
-  try {
-    const url = new URL(location.href)
-
-    if (slug) {
-      url.searchParams.set(LinkParam, slug)
-    } else {
-      url.searchParams.delete(LinkParam)
-    }
-
-    // String() is an empty string without an empty literal, which the class
-    // scanner misreads, dropping classes from this file.
-    history.replaceState(history.state, String(), url)
-  } catch {
-    // The address bar is a convenience; the page works without it.
   }
 }
 
@@ -135,10 +121,6 @@ export function MapCard() {
     } else if (!shown.value.some((candidate) => candidate.slug === slug)) {
       filter.value = isUpcoming(event, now.value) ? "upcoming" : "past"
     }
-  })
-
-  useSignalEffect(() => {
-    writeLink(selected.value)
   })
 
   const select = (slug: string | null) => {

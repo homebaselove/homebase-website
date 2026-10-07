@@ -454,7 +454,8 @@ client through the route manifest. Minified sizes:
 - Scrolling the page over the map never zooms it; touch panning takes two
   fingers. Animations honour reduced-motion.
 - `?event=<slug>` on the home page scrolls the map into view and opens the
-  event on its pin, so a pin can be shared.
+  event on its pin. The page only reads it: opening a pin never writes the
+  address, which stays plain, as do the buttons that scroll the page.
 - The add form is for a wallet whose pins count. The way in is the wallet
   button in the header, and a wallet the map does not know never sees the
   form.
@@ -618,7 +619,9 @@ screen landing straight on its pin, with the wallet button clear of the
 house there, and the story reel standing on its dots with every card at one
 height and its numbers inside What happened; with the Homebase Live and Donate
 steps in docs/live.md and the funding card's three buttons and the blueprint picked
-up by mouse and by finger and dropped back into place, forty-eight checks, a
+up by mouse and by finger and dropped back into place, with the interview opening
+the reel on its poster and a finger moving up the blueprint scrolling the page,
+fifty-three checks, a
 screenshot of each step. Only Luma,
 the tiles, the indexer and the chain's distance are stubbed. A failed run
 leaves a screenshot, the page's text and the server's log.

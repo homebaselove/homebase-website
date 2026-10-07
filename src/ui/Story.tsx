@@ -15,6 +15,26 @@ const Opening = Math.max(
 )
 
 /**
+ * Scrolls to a section of this page by its anchor without writing the
+ * anchor into the address bar: the site is one page, and its address stays
+ * plain. A reader who asks for reduced motion jumps there.
+ */
+function scrollTo(anchor: string) {
+  const target = document.getElementById(anchor.slice(1))
+
+  if (!target) {
+    return
+  }
+
+  target.scrollIntoView({
+    block: "start",
+    behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth",
+  })
+}
+
+/**
  * The Based House story as a reel: the chapter in focus sits front and
  * center at full size, with the one behind and the one ahead peeking in at
  * a smaller scale. Scrolling, swiping, the dots and the arrow keys all move
@@ -318,7 +338,10 @@ function ChapterCard(props: {
               {chapter.title}
             </h3>
 
-            <details class="group -my-2">
+            <details
+              class="group -my-2"
+              open={chapter.open}
+            >
               <summary class="list-none [&::-webkit-details-marker]:hidden inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-gray-600 cursor-pointer select-none rounded-full -mx-2 px-2 transition-colors hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
                 What happened
                 <ChevronIcon />
@@ -357,6 +380,12 @@ function ChapterCard(props: {
                     href={link.href}
                     target={link.href.startsWith("#") ? undefined : "_blank"}
                     rel={link.href.startsWith("#") ? undefined : "noopener"}
+                    onClick={link.href.startsWith("#")
+                      ? (click) => {
+                        click.preventDefault()
+                        scrollTo(link.href)
+                      }
+                      : undefined}
                     class={today
                       ? "btn-brand text-sm min-h-11"
                       : "inline-flex items-center min-h-11 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand"}
@@ -373,7 +402,7 @@ function ChapterCard(props: {
   )
 }
 
-/** How many times wider than tall the cover box is from the sm breakpoint up; client.css draws it. */
+/** How many times wider than tall the cover box is from the sm breakpoint up; client.css reads it as --cover-ratio. */
 const CoverRatio = 1.3
 
 /**
@@ -453,9 +482,9 @@ function Film(props: { video: StoryVideo; focused: boolean }) {
 /**
  * The photos on top of a card. From the sm breakpoint up every cover is the
  * same box, in the shape of the crew photos, so the cards line up: a photo
- * of that shape fills it, cropped a little at the edges around its middle
- * or the point it names; anything much wider sits whole in the box on a
- * blur of itself; a pair of posts sits centered on a near-black ground
+ * of that shape fills it, cropped a little at the edges around its middle;
+ * anything much wider sits whole in the box on a blur of itself; a pair of
+ * posts sits centered on a near-black ground
  * that matches the dark posts themselves, and a post that names its own
  * ground sits whole on that.
  * Two photos share the width in proportion to their aspect ratios, so they
@@ -477,7 +506,9 @@ function Cover(props: { photos: CoverPhoto[] }) {
         : pair
         ? "story-cover story-pair sm:items-center"
         : "story-cover"}
-      style={ground ? `background: ${ground}` : undefined}
+      style={ground
+        ? `--cover-ratio: ${CoverRatio}; background: ${ground}`
+        : `--cover-ratio: ${CoverRatio}`}
     >
       {props.photos.map((photo) => {
         const aspect = photo.width / photo.height
@@ -503,6 +534,8 @@ function Cover(props: { photos: CoverPhoto[] }) {
                 alt={String()}
                 aria-hidden="true"
                 draggable={false}
+                loading="lazy"
+                decoding="async"
                 class="hidden sm:block absolute inset-0 w-full h-full object-cover blur-2xl scale-125 opacity-60 pointer-events-none"
               />
             )}
@@ -514,13 +547,7 @@ function Cover(props: { photos: CoverPhoto[] }) {
               alt={photo.alt}
               loading="lazy"
               draggable={false}
-              style={pair
-                ? undefined
-                : photo.focus === undefined
-                ? `aspect-ratio: ${aspect.toFixed(4)}`
-                : `aspect-ratio: ${
-                  aspect.toFixed(4)
-                }; object-position: 50% ${photo.focus}%`}
+              style={pair ? undefined : `aspect-ratio: ${aspect.toFixed(4)}`}
               class={pair
                 ? "w-full h-auto"
                 : whole
