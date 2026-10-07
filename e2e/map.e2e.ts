@@ -1466,11 +1466,12 @@ try {
 
   const heroBoxes = await hero.evaluate(() => {
     const button = document.querySelector("[data-wallet]")
+    const links = document.querySelector("nav[aria-label='Social links']")
     const house = button?.closest(".relative")?.querySelector(
       ".text-center > div",
     )
 
-    if (!button || !house) {
+    if (!button || !links || !house) {
       return null
     }
 
@@ -1487,19 +1488,37 @@ try {
 
     return {
       button: box(button),
+      links: box(links),
       house: box(house),
       width: innerWidth,
     }
   })
 
-  check(
-    "on a phone the wallet button sits inside the screen and clear of the house",
+  const clearOfHouse = (
+    item: {
+      left: number
+      right: number
+      bottom: number
+    },
+  ) =>
     heroBoxes !== null
+    && (item.right <= heroBoxes.house.left
+      || item.left >= heroBoxes.house.right
+      || item.bottom <= heroBoxes.house.top)
+  const middle = (item: {
+    top: number
+    bottom: number
+  }) => (item.top + item.bottom) / 2
+
+  check(
+    "on a phone the social links and the wallet button sit inside the screen on one line, clear of the house",
+    heroBoxes !== null
+      && heroBoxes.links.left >= 0
+      && heroBoxes.links.right < heroBoxes.button.left
       && heroBoxes.button.right <= heroBoxes.width
-      && heroBoxes.button.left >= 0
-      && (heroBoxes.button.right <= heroBoxes.house.left
-        || heroBoxes.button.left >= heroBoxes.house.right
-        || heroBoxes.button.bottom <= heroBoxes.house.top),
+      && Math.abs(middle(heroBoxes.links) - middle(heroBoxes.button)) <= 2
+      && clearOfHouse(heroBoxes.links)
+      && clearOfHouse(heroBoxes.button),
     JSON.stringify(heroBoxes),
   )
   await hero.close()

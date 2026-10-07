@@ -1,8 +1,11 @@
 /** @jsxImportSource preact */
 export function Socials() {
   return (
-    <div class="flex items-center justify-center ">
-      <div class="flex flex-wrap justify-center gap-6">
+    <nav
+      aria-label="Social links"
+      class="flex items-center gap-4 max-sm:gap-3"
+    >
+      <div class="contents">
         <a
           href="https://x.com/homebasedotlove"
           target="_blank"
@@ -13,8 +16,8 @@ export function Socials() {
             xmlns="http://www.w3.org/2000/svg"
             x="0px"
             y="0px"
-            width="32"
-            height="32"
+            width="28"
+            height="28"
             viewBox="0 0 30 30"
           >
             <path
@@ -31,8 +34,8 @@ export function Socials() {
           class="flex items-center hover:opacity-80"
         >
           <svg
-            width="32"
-            height="32"
+            width="28"
+            height="28"
             viewBox="0 0 1000 1000"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -60,11 +63,11 @@ export function Socials() {
           aria-label="Fileverse"
           class="flex items-center hover:opacity-80"
         >
-          {/* Fileverse's stacked-pages smiley, cut to three pages so the face still reads at 32px. */}
+          {/* Fileverse's stacked-pages smiley, cut to three pages so the face still reads at 28px. */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="32"
-            height="32"
+            width="28"
+            height="28"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -107,8 +110,8 @@ export function Socials() {
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="32"
-            height="32"
+            width="28"
+            height="28"
             viewBox="0 0 24 24"
             fill="currentColor"
           >
@@ -143,6 +146,6 @@ export function Socials() {
           </svg>
         </a>
       </div>
-    </div>
+    </nav>
   )
 }
