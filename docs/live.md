@@ -97,12 +97,17 @@ SeedMe's own page does it today. Lock $home goes to SeedMe by design.
   funding card's.
 - `bun run e2e`, against the Bun server and the Vercel layout: the admin
   connects from the header and the map offers Add an event; Homebase Live
-  opens empty and offers the admin a calendar; the feed's preview names it
-  and counts what is ahead; adding it is two transactions the first time
-  and its events are listed for everyone; removing it takes them off; Donate
-  sends the chosen amount to the Based House wallet; Donate without a wallet
+  opens empty and offers the admin a calendar; a feed link that is not https
+  is refused with nothing signed; the feed's preview names it and counts what
+  is ahead; adding it is two transactions the first time and its events are
+  listed for everyone; the day an event is listed under follows the chosen
+  zone across the date line; removing it takes them off; Donate refuses an
+  amount of nothing before the wallet is asked, then sends the chosen amount
+  to the Based House wallet; the header dialog names the connected wallet and
+  disconnecting there takes the admin controls away; Donate without a wallet
   opens the way in; a wallet that is nobody connects and sees no way to add
-  anything.
+  anything; on a phone the wallet button sits inside the screen and clear of
+  the house.
 
 ## What still needs a hand
 

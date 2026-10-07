@@ -8,8 +8,13 @@ import {
   type CalendarPreview,
   previewCalendar,
 } from "../../live/client.ts"
-import { isFailure } from "../../wallet/client.ts"
-import { account, isAdmin, shortAddress, signOut } from "../../wallet/client.ts"
+import {
+  account,
+  isAdmin,
+  isFailure,
+  shortAddress,
+  signOut,
+} from "../../wallet/client.ts"
 import { CloseIcon, SpinnerIcon } from "../Icons.tsx"
 import { WalletPicker } from "../wallet/WalletPicker.tsx"
 

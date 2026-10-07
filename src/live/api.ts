@@ -31,6 +31,9 @@ export const ListCacheControl =
 /** How long what a feed said stands before it is read again. */
 export const ReadAgainAfterMs = 5 * 60_000
 
+/** How long a feed that did not answer is left alone before it is tried again. */
+export const RetryAfterMs = 60_000
+
 /** How far ahead the list looks, in days. */
 export const HorizonDays = 120
 
@@ -39,9 +42,6 @@ const ReadParallel = 4
 
 /** Past this many bytes a feed is not a calendar anyone meant to share. */
 const FeedByteLimit = 2_000_000
-
-/** How many events a preview shows. */
-const PreviewEvents = 5
 
 const lookups = createLimiter({
   limit: 30,
@@ -139,6 +139,45 @@ function calendarOf(data: string): string | null {
 
 class FetchError extends Error {}
 
+const TooLarge = "That feed is too large to be a calendar."
+
+/** The body as text, read no further than the limit allows. */
+async function readWithin(response: Response, limit: number): Promise<string> {
+  if (Number(response.headers.get("content-length") ?? 0) > limit) {
+    throw new FetchError(TooLarge)
+  }
+
+  if (!response.body) {
+    return await response.text()
+  }
+
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let size = 0
+
+  for (;;) {
+    const { done, value } = await reader.read()
+
+    if (done) {
+      break
+    }
+
+    size += value.byteLength
+
+    if (size > limit) {
+      await reader.cancel().catch(() => {})
+
+      throw new FetchError(TooLarge)
+    }
+
+    chunks.push(value)
+  }
+
+  return new TextDecoder().decode(
+    chunks.length === 1 ? chunks[0] : Buffer.concat(chunks),
+  )
+}
+
 /** A feed's text, from an allowed host, within the size limit. */
 async function fetchFeed(url: string, ctx: Context): Promise<string> {
   let response: Response
@@ -163,19 +202,16 @@ async function fetchFeed(url: string, ctx: Context): Promise<string> {
     )
   }
 
-  const text = await response.text()
-
-  if (text.length > FeedByteLimit) {
-    throw new FetchError("That feed is too large to be a calendar.")
-  }
-
-  return text
+  return readWithin(response, FeedByteLimit)
 }
 
 interface Reading {
-  /** What the feed said, or null when it was not a calendar. */
+  /** What the feed last said, or null when it never said anything that was a calendar. */
   readonly feed: Feed | null
-  readonly at: number
+  /** Whether the feed answered the last time it was asked. */
+  readonly reachable: boolean
+  /** When the feed is next asked. */
+  readonly again: number
 }
 
 /** What each feed last said, per process. */
@@ -188,18 +224,18 @@ export function forgetReadings(): void {
 
 /**
  * The feed behind a calendar: what it said within the last while, or read
- * again. When the host cannot be reached, the last reading stands; undefined
- * is a feed nothing is known about.
+ * again. When the host cannot be reached, the last reading stands, marked
+ * as such, and the host is left alone for a minute before the next try.
  */
 async function readFeed(
   url: string,
   ctx: Context,
   now: Date,
-): Promise<Feed | null | undefined> {
+): Promise<Reading> {
   const known = readings.get(url)
 
-  if (known && now.getTime() - known.at < ReadAgainAfterMs) {
-    return known.feed
+  if (known && now.getTime() < known.again) {
+    return known
   }
 
   let text: string
@@ -209,7 +245,15 @@ async function readFeed(
   } catch (cause) {
     console.error(`The calendar at ${url} could not be read:`, cause)
 
-    return known?.feed
+    const quiet: Reading = {
+      feed: known?.feed ?? null,
+      reachable: false,
+      again: now.getTime() + RetryAfterMs,
+    }
+
+    readings.set(url, quiet)
+
+    return quiet
   }
 
   let feed: Feed | null
@@ -227,12 +271,15 @@ async function readFeed(
     feed = null
   }
 
-  readings.set(url, {
+  const reading: Reading = {
     feed,
-    at: now.getTime(),
-  })
+    reachable: true,
+    again: now.getTime() + ReadAgainAfterMs,
+  }
 
-  return feed
+  readings.set(url, reading)
+
+  return reading
 }
 
 async function inBatches<A, B>(
@@ -280,30 +327,43 @@ async function list(ctx: Context): Promise<Response> {
   })
 
   const read = await inBatches(unique, ReadParallel, async (calendar) => {
-    const feed = await readFeed(calendar.value, ctx, now)
+    const reading = await readFeed(calendar.value, ctx, now)
+    const events = reading.feed?.events ?? []
 
     return {
       calendar: {
         uid: calendar.uid,
         url: calendar.value,
-        name: feed?.name ?? null,
+        name: reading.feed?.name ?? null,
         addedBy: calendar.by,
         addedAt: new Date(Number(calendar.at) * 1000).toISOString(),
-        reachable: feed !== undefined,
-        events: feed?.events.length ?? 0,
+        reachable: reading.reachable,
+        events: events.length,
       } satisfies Calendar,
-      events: (feed?.events ?? []).map((event): ListedEvent => ({
+      events: events.map((event): ListedEvent => ({
         ...event,
         calendar: calendar.uid,
       })),
     }
   })
 
+  // One event published on two of the calendars is listed once, under the first.
+  const listed = new Set<string>()
+
   return json(
     {
       calendars: read.map((entry) => entry.calendar),
       events: read
         .flatMap((entry) => entry.events)
+        .filter((event) => {
+          if (listed.has(event.id)) {
+            return false
+          }
+
+          listed.add(event.id)
+
+          return true
+        })
         .sort((a, b) => a.start.localeCompare(b.start)),
       eas: config.eas,
       admins: config.admins,
@@ -374,11 +434,12 @@ async function preview(request: Request, ctx: Context): Promise<Response> {
     throw cause
   }
 
+  // Everything ahead, so the page can list it all the moment the calendar is added.
   return json({
     calendar: {
       url: link.url,
       name: feed.name,
-      events: feed.events.slice(0, PreviewEvents),
+      events: feed.events,
       upcoming: feed.events.length,
     },
   })

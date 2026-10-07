@@ -507,7 +507,6 @@ and are never needed on a deployment:
 | `HOMEBASE_EAS_INDEXER`                  | another indexer's URL, or `logs` to read the chain's logs through `HOMEBASE_BASE_RPC` instead |
 | `HOMEBASE_ADMIN_ADDRESSES`              | comma-separated wallets whose attestations count, in place of the Homebase wallet             |
 | `HOMEBASE_BASE_RPC`                     | the Base RPC, already used by the funding card; Base's public endpoint unless set             |
-| `DATA_PATH`                             | Fly: where the calendar sync's SQLite file lives                                              |
 
 ## Validation
 
@@ -615,8 +614,9 @@ camera in to a pin over 1.5 seconds with the card clear of it, the card closing 
 back, the wallet picked back up after a reload, a revocation taking the pin
 off the chain and the map, a later pin as one transaction, disconnecting, a
 stranger turned away without the form, and a deep link on a phone-sized
-screen landing straight on its pin: thirty-one checks, a screenshot of each
-step. Only Luma,
+screen landing straight on its pin, with the wallet button clear of the
+house there; with the Homebase Live and Donate steps in docs/live.md, forty-two
+checks, a screenshot of each step. Only Luma,
 the tiles, the indexer and the chain's distance are stubbed. A failed run
 leaves a screenshot, the page's text and the server's log.
 

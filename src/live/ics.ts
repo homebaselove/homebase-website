@@ -3,7 +3,8 @@
  * occurrences of each event, repeats expanded, exceptions honoured, with
  * the link each carries. Luma puts the event page in the URL field and the
  * stream or venue in LOCATION; Google and Outlook feeds carry a URL when
- * the event has one.
+ * the event has one. One event the feed got wrong is left out; it never
+ * takes the calendar down with it.
  */
 import ICAL from "ical.js"
 
@@ -14,6 +15,7 @@ export interface LiveEvent {
   readonly description: string | null
   /** Where to go: the event's own link, or the stream or venue when that is a link. */
   readonly link: string | null
+  /** For an all-day event, midnight UTC on its date. */
   readonly start: string
   readonly end: string
   readonly allDay: boolean
@@ -36,6 +38,13 @@ const DayMs = 24 * 60 * 60_000
 
 const DescriptionLimit = 2000
 
+/**
+ * How many occurrences of one repeating event are walked, kept or not. A
+ * weekly series started years ago needs its past walked through before its
+ * next occurrence; a series repeating by the minute is cut off here instead.
+ */
+const WalkLimit = 20_000
+
 const Link = /https?:\/\/[^\s<>"']+/i
 
 export class FeedError extends Error {}
@@ -52,6 +61,12 @@ const asLink = (value: unknown): string | null => {
 
 const asText = (value: unknown): string | null =>
   typeof value === "string" && value.trim() ? value.trim() : null
+
+/** A date-only value is midnight UTC on that date, whatever zone the server keeps. */
+const toDate = (time: ICAL.Time): Date =>
+  time.isDate
+    ? new Date(Date.UTC(time.year, time.month - 1, time.day))
+    : time.toJSDate()
 
 /** Reads a feed. Throws FeedError when the text is not a calendar. */
 export function parseFeed(text: string, window: Window): Feed {
@@ -90,6 +105,7 @@ export function parseFeed(text: string, window: Window): Feed {
 
   const events: LiveEvent[] = []
 
+  /** Keeps an occurrence that is ahead and within the horizon; says whether it did. */
   const keep = (
     component: ICAL.Component,
     uid: string,
@@ -97,9 +113,9 @@ export function parseFeed(text: string, window: Window): Feed {
     end: Date,
     allDay: boolean,
     occurrence: boolean,
-  ) => {
+  ): boolean => {
     if (end.getTime() < now || start.getTime() > horizon) {
-      return
+      return false
     }
 
     const title = asText(component.getFirstPropertyValue("summary"))
@@ -118,9 +134,11 @@ export function parseFeed(text: string, window: Window): Feed {
       end: end.toISOString(),
       allDay,
     })
+
+    return true
   }
 
-  for (const [uid, master] of masters) {
+  const expand = (uid: string, master: ICAL.Component) => {
     const event = new ICAL.Event(master, {
       exceptions: exceptions.get(uid) ?? [],
     })
@@ -129,37 +147,52 @@ export function parseFeed(text: string, window: Window): Feed {
       keep(
         master,
         uid,
-        event.startDate.toJSDate(),
-        event.endDate.toJSDate(),
+        toDate(event.startDate),
+        toDate(event.endDate),
         event.startDate.isDate,
         false,
       )
 
-      continue
+      return
     }
 
     const iterator = event.iterator()
+    let kept = 0
 
-    for (
-      let next = iterator.next(), seen = 0;
-      next && seen < limit;
-      next = iterator.next(), seen += 1
-    ) {
+    for (let walked = 0; walked < WalkLimit && kept < limit; walked += 1) {
+      const next = iterator.next()
+
+      if (!next) {
+        break
+      }
+
       const details = event.getOccurrenceDetails(next)
-      const start = details.startDate.toJSDate()
+      const start = toDate(details.startDate)
 
       if (start.getTime() > horizon) {
         break
       }
 
-      keep(
-        details.item.component,
-        uid,
-        start,
-        details.endDate.toJSDate(),
-        details.startDate.isDate,
-        true,
-      )
+      if (
+        keep(
+          details.item.component,
+          uid,
+          start,
+          toDate(details.endDate),
+          details.startDate.isDate,
+          true,
+        )
+      ) {
+        kept += 1
+      }
+    }
+  }
+
+  for (const [uid, master] of masters) {
+    try {
+      expand(uid, master)
+    } catch (cause) {
+      console.error(`An event in the feed could not be read (${uid}):`, cause)
     }
   }
 
@@ -170,16 +203,20 @@ export function parseFeed(text: string, window: Window): Feed {
     }
 
     for (const orphan of orphans) {
-      const event = new ICAL.Event(orphan)
+      try {
+        const event = new ICAL.Event(orphan)
 
-      keep(
-        orphan,
-        uid,
-        event.startDate.toJSDate(),
-        event.endDate.toJSDate(),
-        event.startDate.isDate,
-        true,
-      )
+        keep(
+          orphan,
+          uid,
+          toDate(event.startDate),
+          toDate(event.endDate),
+          event.startDate.isDate,
+          true,
+        )
+      } catch (cause) {
+        console.error(`An event in the feed could not be read (${uid}):`, cause)
+      }
     }
   }
 

@@ -110,9 +110,21 @@ const Day = 24 * 60 * 60_000
 const stamp = (at: number) =>
   new Date(at).toISOString().replace(/[-:]|\.\d{3}/g, String())
 
+/** Noon UTC, a week and two weeks ahead, so a zone east of +12 sees the next day. */
+const noonAhead = (days: number) => {
+  const today = new Date()
+
+  return Date.UTC(
+    today.getUTCFullYear(),
+    today.getUTCMonth(),
+    today.getUTCDate() + days,
+    12,
+  )
+}
+
 const liveIcs = () => {
-  const soon = Date.now() + 7 * Day
-  const later = Date.now() + 14 * Day
+  const soon = noonAhead(7)
+  const later = noonAhead(14)
 
   return [
     "BEGIN:VCALENDAR",

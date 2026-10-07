@@ -20,14 +20,16 @@ interface DayData {
   readonly events: ListedEvent[]
 }
 
-/** A day, as the chosen zone sees it. */
-const dayOf = (iso: string, timeZone: string) =>
-  new Date(iso).toLocaleDateString("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  })
+/** The day an event falls on in the chosen zone; an all-day event keeps its own date in every zone. */
+const dayOf = (event: ListedEvent, timeZone: string) =>
+  event.allDay
+    ? event.start.slice(0, 10)
+    : new Date(event.start).toLocaleDateString("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
 
 function LocationPicker(props: {
   readonly selected: string
@@ -70,7 +72,7 @@ function DayElement(props: {
   const date = new Date(`${day.date}T12:00:00Z`)
 
   return (
-    <div>
+    <div data-day={day.date}>
       <div class="flex items-center gap-2 my-1.5 select-none">
         <div class="w-12 h-12 bg-white rounded-lg shadow-sm flex flex-col overflow-hidden mb-2">
           <div class="bg-brand text-white text-xs font-semibold py-0.5 text-center">
@@ -102,7 +104,7 @@ function DayElement(props: {
       <div class="flex flex-col ml-16 gap-4 mt-2">
         {day.events.map((event) => (
           <div
-            key={event.id}
+            key={`${event.calendar}:${event.id}`}
             class="flex border-t-[1px] border-gray-200 pt-2 w-full"
           >
             <div class="w-full">
@@ -279,7 +281,7 @@ export function LiveCard() {
         continue
       }
 
-      const day = dayOf(event.start, zone)
+      const day = dayOf(event, zone)
 
       byDay.set(day, [
         ...(byDay.get(day) ?? []),

@@ -89,7 +89,7 @@ describe("parseFeed", () => {
         [
           "allday@luma",
           "Open house",
-          new Date(2026, 10, 15).toISOString(),
+          "2026-11-15T00:00:00.000Z",
         ],
         [
           "weekly@luma@2026-11-26T17:00:00.000Z",
@@ -159,5 +159,74 @@ describe("parseFeed", () => {
         }),
     )
       .toThrow(FeedError)
+  })
+})
+
+describe("parseFeed, with feeds that need patience", () => {
+  test("a weekly series that began years ago still shows its next occurrences", () => {
+    const feed = parseFeed(
+      [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "BEGIN:VEVENT",
+        "UID:old@luma",
+        "DTSTART:20200102T170000Z",
+        "DTEND:20200102T180000Z",
+        "RRULE:FREQ=WEEKLY",
+        "SUMMARY:Thursday stream",
+        "END:VEVENT",
+        "END:VCALENDAR",
+      ]
+        .join("\r\n"),
+      {
+        now: Now,
+        horizonDays: 21,
+      },
+    )
+
+    expect(
+      feed.events.map((event) => event.start),
+    )
+      .toEqual([
+        "2026-11-05T17:00:00.000Z",
+        "2026-11-12T17:00:00.000Z",
+        "2026-11-19T17:00:00.000Z",
+      ])
+  })
+
+  test("an event the feed got wrong is left out, and the rest stand", () => {
+    const feed = parseFeed(
+      [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "BEGIN:VEVENT",
+        "UID:broken@luma",
+        "SUMMARY:No start at all",
+        "END:VEVENT",
+        "BEGIN:VEVENT",
+        "UID:odd@luma",
+        "DTSTART:notadate",
+        "SUMMARY:A start that is not one",
+        "END:VEVENT",
+        "BEGIN:VEVENT",
+        "UID:fine@luma",
+        "DTSTART:20261110T180000Z",
+        "DTEND:20261110T190000Z",
+        "SUMMARY:Fine",
+        "END:VEVENT",
+        "END:VCALENDAR",
+      ]
+        .join("\r\n"),
+      {
+        now: Now,
+      },
+    )
+
+    expect(
+      feed.events.map((event) => event.id),
+    )
+      .toEqual([
+        "fine@luma",
+      ])
   })
 })

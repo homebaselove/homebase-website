@@ -8,6 +8,7 @@ import {
   handle,
   ListCacheControl,
   ReadAgainAfterMs,
+  RetryAfterMs,
   type Route,
 } from "./api.ts"
 
@@ -101,6 +102,8 @@ interface World {
   attestations: ReturnType<typeof attestation>[]
   indexerDown: boolean
   feeds: Record<string, string | number>
+  /** A content-length to claim for a feed, in place of the body's. */
+  claimed: Record<string, number>
   asked: {
     schema?: string
   }
@@ -168,6 +171,11 @@ const stubFetch = (async (
   return new Response(feed, {
     headers: {
       "content-type": "text/calendar",
+      ...(world.claimed[url]
+        ? {
+          "content-length": String(world.claimed[url]),
+        }
+        : {}),
     },
   })
 }) as unknown as typeof fetch
@@ -214,6 +222,7 @@ beforeEach(() => {
       [LumaFeed]: LumaIcs,
       [GoogleFeed]: GoogleIcs,
     },
+    claimed: {},
     asked: {},
     fetched: [],
   }
@@ -293,7 +302,7 @@ test("lists the calendars and the events ahead on them, in order of start", asyn
     ])
 })
 
-test("a feed is read again only after a while, and a feed gone quiet keeps its last reading", async () => {
+test("a feed is read again only after a while, and a feed gone quiet keeps its last reading and says so", async () => {
   await get()
   world.feeds[GoogleFeed] = 503
   await get()
@@ -317,20 +326,44 @@ test("a feed is read again only after a while, and a feed gone quiet keeps its l
     body.calendars.map((calendar: {
       name: string
       reachable: boolean
+      events: number
     }) => [
       calendar.name,
       calendar.reachable,
+      calendar.events,
     ]),
   )
     .toEqual([
       [
         "Homebase on Luma",
         true,
+        1,
       ],
       [
         "Workshops",
-        true,
+        false,
+        1,
       ],
+    ])
+
+  // The quiet feed is left alone for a minute, then tried again.
+  await get()
+  expect(
+    world.fetched.length,
+  )
+    .toBe(4)
+
+  now = new Date(now.getTime() + RetryAfterMs + 1)
+  await get()
+  expect(
+    world.fetched,
+  )
+    .toEqual([
+      LumaFeed,
+      GoogleFeed,
+      LumaFeed,
+      GoogleFeed,
+      GoogleFeed,
     ])
 })
 
@@ -463,4 +496,50 @@ test("HEAD is answered like GET and other methods are refused", async () => {
       .status,
   )
     .toBe(405)
+})
+
+test("one event published on two calendars is listed once", async () => {
+  world.feeds[GoogleFeed] = ics("Mirror", [
+    {
+      uid: "demo@luma",
+      start: "20261120T180000Z",
+      end: "20261120T190000Z",
+      summary: "Demo day stream, mirrored",
+    },
+  ])
+
+  const body = await (await get()).json()
+
+  expect(
+    body.events.map((event: {
+      id: string
+      calendar: string
+    }) => [
+      event.id,
+      event.calendar,
+    ]),
+  )
+    .toEqual([
+      [
+        "demo@luma",
+        Uid(1),
+      ],
+    ])
+})
+
+test("a feed that claims to be huge is refused before it is read", async () => {
+  world.claimed[LumaFeed] = 3_000_000
+
+  const response = await post({
+    url: LumaFeed,
+  })
+
+  expect(
+    response.status,
+  )
+    .toBe(502)
+  expect(
+    (await response.json()).error,
+  )
+    .toBe("That feed is too large to be a calendar.")
 })

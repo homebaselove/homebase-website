@@ -102,12 +102,8 @@ export function BasedHouseStory() {
       }}
     >
       <div class="max-w-[640px] mx-auto text-center">
-        <div class="text-sm font-bold uppercase tracking-wide text-brand">
+        <h2 class="text-4xl max-sm:text-3xl font-bold">
           Our Story
-        </div>
-
-        <h2 class="text-4xl max-sm:text-3xl font-bold mt-1">
-          Story
         </h2>
 
         <p class="mt-3 text-gray-600">

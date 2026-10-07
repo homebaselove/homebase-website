@@ -58,11 +58,12 @@ export function FundingCard() {
 
     sending.value = true
 
-    // The test chain, when the map was read on one; Base otherwise.
+    // The test chain, when the map was read on one; Base otherwise. The
+    // amount goes as plain decimal text, which is all the wallet code parses.
     const answer = await sendEther(
       eas.value?.rpc ?? BaseRpcUrl,
       DonationAddress,
-      amount(),
+      value.toFixed(18).replace(/\.?0+$/, String()),
     )
 
     sending.value = false
