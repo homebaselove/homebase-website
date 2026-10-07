@@ -22,8 +22,9 @@ export interface StoryLink {
 /**
  * A photo on the cover of a chapter; clicking it opens href. The pixel size
  * sets its share of the cover beside another photo and holds its space
- * while it loads. A photo that fills the cover is cropped from its middle,
- * or kept from its top when the faces are there.
+ * while it loads. A photo that fills the cover is cropped around its
+ * middle, or around the point focus names, as a percentage of its height
+ * from the top: where the faces are when they are not in the middle.
  */
 export interface CoverPhoto {
   src: string
@@ -31,7 +32,7 @@ export interface CoverPhoto {
   height: number
   alt: string
   href: string
-  focus?: "top"
+  focus?: number
 }
 
 export interface StoryStat {
@@ -300,7 +301,9 @@ export const Chapters: Chapter[] = [
         alt:
           "The third Based House crew piled onto the sectional couches of the Denver house, waving at the camera",
         href: EthDenverReturnRecapUrl,
-        focus: "top",
+        // The back row reaches the top of the frame and the front row the
+        // bottom; this is the band that keeps every face.
+        focus: 20,
       },
     ],
     summary:
