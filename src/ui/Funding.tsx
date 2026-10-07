@@ -9,6 +9,7 @@ import {
   formatEth,
   nextMilestone,
   PresetsEth,
+  SeedMeLockUrl,
   SeedMeUrl,
   segmentFills,
   TargetEth,
@@ -144,16 +145,19 @@ export function FundingCard() {
           </a>
         </>,
         <>
-          Lock <HomeToken /> to gain access to upcoming $seed claims
+          Homebase has been incubating SeedMe since Based House ETHDenver to
+          support the founders in residence
+        </>,
+        <>
+          SeedMe allows you to claim an allocation prior to launch
+        </>,
+        <>
+          Locking <HomeToken /> grants access to SeedMe claims
         </>,
         <>
           The more tokens locked over a longer period of time shows commitment,
           potentially earning you more privileges from founders launching on
           SeedMe
-        </>,
-        <>
-          Homebase has been incubating SeedMe since Based House ETHDenver to
-          support the founders in residence
         </>,
       ]}
     >
@@ -194,7 +198,7 @@ export function FundingCard() {
         />
       </div>
 
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-3 gap-3 max-sm:grid-cols-2">
         <a
           href={SeedMeUrl}
           target="_blank"
@@ -203,14 +207,22 @@ export function FundingCard() {
           Buy $home
         </a>
 
+        <a
+          href={SeedMeLockUrl}
+          target="_blank"
+          class="btn-brand max-sm:px-3!"
+        >
+          Lock $home
+        </a>
+
         {/* A donation is ether from the connected wallet to the Based House wallet. */}
         <button
           type="button"
-          class="btn-brand max-sm:px-3!"
+          class="btn-brand max-sm:px-3! max-sm:col-span-2"
           disabled={sending.value}
           onClick={donate}
         >
-          {sending.value ? "Confirm in your wallet…" : "Donate"}
+          {sending.value ? "Confirm in wallet…" : "Donate"}
         </button>
       </div>
 

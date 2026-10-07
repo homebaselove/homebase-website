@@ -46,6 +46,14 @@
   --color-brand-dark: #0000cc;
 }
 
+@layer base {
+  /* A blueprint carried past a side of the screen must not widen the page. */
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+
 @layer components {
   .btn-brand {
     display: inline-flex;
