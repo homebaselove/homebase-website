@@ -13,6 +13,7 @@ import JesseHappyToFund from "../assets/story/JesseHappyToFund.webp"
 import LetterToJesseCast from "../assets/story/LetterToJesseCast.webp"
 import LetterToJesseV2Cast from "../assets/story/LetterToJesseV2Cast.webp"
 import MumbaiAnnouncement from "../assets/story/MumbaiAnnouncement.webp"
+import { SeedMeUrl } from "./funding.ts"
 
 export interface StoryLink {
   label: string
@@ -78,7 +79,11 @@ const EthDenverReturnRecapUrl =
   "https://x.com/homebasedotlove/status/2029929738454847972"
 
 /** Where applications for the next house go. */
-const BasedHouseMumbaiApplyUrl = "https://forms.gle/vXRkM4qnAVeQpX"
+const BasedHouseMumbaiApplyUrl = "https://forms.gle/54EtYRDxcVz3ZPQQ6"
+
+/** The announcement of the next house on X, which its cover opens. */
+const BasedHouseMumbaiAnnouncementUrl =
+  "https://x.com/homebasedotlove/status/2095444222090592396"
 
 export const Chapters: Chapter[] = [
   {
@@ -340,7 +345,7 @@ export const Chapters: Chapter[] = [
         height: 928,
         alt:
           "Homebase posts on X: Announcing Based House Mumbai. We launched Homebase ($HOME) on Base using Bankr to fund Based House with the fees generated from trading the token. We are allocating 100% of the creator fees to a publicly trackable address. Track progress of funding for Based House Mumbai on seedme.xyz, an upcoming product incepted during our most recent Based House during ETHDenver. Vesting will be allocated to development and future incentives. We will issue public statements before moving or selling. Apply to Based House Mumbai at forms.gle/vXRkM4qnAVeQpX",
-        href: BasedHouseMumbaiApplyUrl,
+        href: BasedHouseMumbaiAnnouncementUrl,
         ground: "#fff",
       },
     ],
@@ -352,8 +357,8 @@ export const Chapters: Chapter[] = [
         href: BasedHouseMumbaiApplyUrl,
       },
       {
-        label: "Fund Based House Mumbai",
-        href: "#fund",
+        label: "Track Progress",
+        href: SeedMeUrl,
       },
     ],
   },
