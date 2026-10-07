@@ -344,9 +344,9 @@ function ChapterCard(props: {
 /**
  * The photos on top of a card. From the sm breakpoint up every cover is the
  * same box, nearly twice as wide as it is tall, so the cards line up: a
- * photo fills it, cropped a little at the edges, from its top when it says
- * so; a wide strip, or a pair of posts, sits centered on a near-black
- * ground that matches the dark posts themselves.
+ * photo fills it, cropped a little at the edges around its middle or the
+ * point it names; a wide strip, or a pair of posts, sits centered on a
+ * near-black ground that matches the dark posts themselves.
  * Two photos share the width in proportion to their aspect ratios, so they
  * stand at one height with no margins between or beside them, unless both
  * are wide strips, which stack instead. On phones each cover keeps its own
@@ -389,13 +389,17 @@ function Cover(props: { photos: CoverPhoto[] }) {
               alt={photo.alt}
               loading="lazy"
               draggable={false}
-              style={pair ? undefined : `aspect-ratio: ${aspect.toFixed(4)}`}
+              style={pair
+                ? undefined
+                : photo.focus === undefined
+                ? `aspect-ratio: ${aspect.toFixed(4)}`
+                : `aspect-ratio: ${
+                  aspect.toFixed(4)
+                }; object-position: 50% ${photo.focus}%`}
               class={pair
                 ? "w-full h-auto"
                 : whole
                 ? "w-full sm:h-full sm:object-contain"
-                : photo.focus === "top"
-                ? "w-full sm:h-full sm:object-cover sm:object-top"
                 : "w-full sm:h-full sm:object-cover"}
             />
           </a>
