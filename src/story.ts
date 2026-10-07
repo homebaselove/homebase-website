@@ -4,8 +4,8 @@
  * where it stands today. The figures come from each house's retrospective.
  */
 
-import DevconnectCrew from "../assets/story/DevconnectCrew.webp"
 import DevconnectRecapCast from "../assets/story/DevconnectRecapCast.webp"
+import DevconnectStage from "../assets/story/DevconnectStage.webp"
 import EthDenverCrew from "../assets/story/EthDenverCrew.webp"
 import EthDenverReturnCrew from "../assets/story/EthDenverReturnCrew.webp"
 import HomebaseMapAnnouncement from "../assets/story/HomebaseMapAnnouncement.webp"
@@ -262,12 +262,15 @@ export const Chapters: Chapter[] = [
     title: "Based House Devconnect",
     cover: [
       {
-        src: DevconnectCrew,
-        width: 1280,
-        height: 768,
+        src: DevconnectStage,
+        width: 1185,
+        height: 913,
         alt:
-          "The Based House Devconnect crew packed onto and around a sofa in Buenos Aires, with the Based House Devconnect logo on the screen behind them",
+          "The Based House Devconnect crew and friends packed onto a stage in Buenos Aires, arms up and cheering, in front of a wall of blue pixel dots",
         href: DevconnectRecapUrl,
+        // The wall of dots fills the top of the frame and the front row
+        // kneels at the bottom; this is the band that keeps every face.
+        focus: 90,
       },
     ],
     summary:
