@@ -184,7 +184,8 @@ export function MapCard() {
 
   return (
     <section
-      class="relative bg-white rounded-lg shadow-md border-[1px] border-gray-200 overflow-hidden"
+      id="map"
+      class="relative scroll-mt-8 bg-white rounded-lg shadow-md border-[1px] border-gray-200 overflow-hidden"
       aria-labelledby="map-heading"
     >
       <div

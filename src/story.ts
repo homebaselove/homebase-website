@@ -212,12 +212,12 @@ export const Chapters: Chapter[] = [
         href: "https://farcaster.xyz/rafi/0xdb995f78",
       },
       {
-        label: "New York event",
-        href: "https://farcaster.xyz/luciano/0x2aeb8061",
+        label: "Homebase Map",
+        href: "#map",
       },
       {
-        label: "Homebase Map",
-        href: HomebaseMapAnnouncementUrl,
+        label: "Homebase Live",
+        href: "#live",
       },
     ],
   },
