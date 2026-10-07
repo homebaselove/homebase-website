@@ -1,21 +1,33 @@
 /** @jsxImportSource preact */
-import { useEffect, useRef } from "preact"
+import { useEffect, useLayoutEffect, useRef } from "preact"
 import { useSignal } from "preact/signals"
-import { type Chapter, Chapters, type CoverPhoto } from "../story.ts"
+import {
+  type Chapter,
+  Chapters,
+  type CoverPhoto,
+  OpeningChapterId,
+  type StoryVideo,
+} from "../story.ts"
+
+const Opening = Math.max(
+  0,
+  Chapters.findIndex((chapter) => chapter.id === OpeningChapterId),
+)
 
 /**
  * The Based House story as a reel: the chapter in focus sits front and
  * center at full size, with the one behind and the one ahead peeking in at
  * a smaller scale. Scrolling, swiping, the dots and the arrow keys all move
  * the focus; off-center chapters are inert so focus never lands in a card
- * the reader cannot see. From the sm breakpoint up every card stands as
- * tall as the tallest, so the reel reads as one band whichever chapter is
- * in focus; on a phone, where one card fills the screen, each keeps its own
- * height. No apostrophes or quotes in prose here: the class scanner pairs
- * any quote with the next one of any kind.
+ * the reader cannot see. The reel opens on the interview rather than the
+ * first letter, with the story so far one step back. From the sm breakpoint
+ * up every card stands as tall as the tallest, so the reel reads as one band
+ * whichever chapter is in focus; on a phone, where one card fills the
+ * screen, each keeps its own height. No apostrophes or quotes in prose here:
+ * the class scanner pairs any quote with the next one of any kind.
  */
 export function BasedHouseStory() {
-  const active = useSignal(0)
+  const active = useSignal(Opening)
   const reel = useRef<HTMLOListElement>(null)
 
   const cards = () =>
@@ -23,7 +35,7 @@ export function BasedHouseStory() {
       reel.current?.querySelectorAll<HTMLElement>("[data-chapter]") ?? [],
     )
 
-  const goTo = (index: number) => {
+  const center = (index: number, behavior: ScrollBehavior) => {
     const scroller = reel.current
     const card = cards()[index]
 
@@ -31,13 +43,23 @@ export function BasedHouseStory() {
       return
     }
 
-    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
-
     scroller.scrollTo({
       left: card.offsetLeft - (scroller.clientWidth - card.offsetWidth) / 2,
-      behavior: reduced ? "auto" : "smooth",
+      behavior,
     })
   }
+
+  const goTo = (index: number) => {
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
+
+    center(index, reduced ? "auto" : "smooth")
+  }
+
+  // Before the first paint, so the reel is already on the opening chapter
+  // when it shows and nobody sees it travel there.
+  useLayoutEffect(() => {
+    center(Opening, "instant")
+  }, [])
 
   // The chapter whose center is nearest the center of the reel is the one in
   // focus, read on each scroll frame so swipes and the buttons agree.
@@ -268,8 +290,17 @@ function ChapterCard(props: {
         <article
           // Only the chapter in focus can be read or tabbed into.
           inert={!focused}
-          class="w-full bg-white rounded-2xl shadow-md border-[1px] border-gray-200 overflow-hidden flex flex-col"
+          class={chapter.video
+            ? "w-full bg-white rounded-2xl shadow-md border-[1px] border-gray-200 overflow-hidden flex flex-col sm:flex-row"
+            : "w-full bg-white rounded-2xl shadow-md border-[1px] border-gray-200 overflow-hidden flex flex-col"}
         >
+          {chapter.video && (
+            <Film
+              video={chapter.video}
+              focused={focused}
+            />
+          )}
+
           {chapter.cover && <Cover photos={chapter.cover} />}
 
           <div class="flex-1 p-6 max-sm:p-5 flex flex-col gap-4">
@@ -318,25 +349,99 @@ function ChapterCard(props: {
               </div>
             </details>
 
-            <div class="flex flex-wrap gap-2 mt-auto pt-1">
-              {chapter.links.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  target={link.href.startsWith("#") ? undefined : "_blank"}
-                  rel={link.href.startsWith("#") ? undefined : "noopener"}
-                  class={today
-                    ? "btn-brand text-sm min-h-11"
-                    : "inline-flex items-center min-h-11 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand"}
-                >
-                  {link.label}
-                </a>
-              ))}
-            </div>
+            {chapter.links.length > 0 && (
+              <div class="flex flex-wrap gap-2 mt-auto pt-1">
+                {chapter.links.map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    target={link.href.startsWith("#") ? undefined : "_blank"}
+                    rel={link.href.startsWith("#") ? undefined : "noopener"}
+                    class={today
+                      ? "btn-brand text-sm min-h-11"
+                      : "inline-flex items-center min-h-11 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand"}
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         </article>
       </div>
     </li>
+  )
+}
+
+/**
+ * A video in place of the photos. It never plays by itself: it waits on its
+ * poster, the last frame of its intro with the whole brand on it, and play
+ * picks up from that frame. Until the reader presses play nothing loads and
+ * the browser draws nothing over the poster, since its controls would put a
+ * loading spinner or a play button across the logo; a button in the empty
+ * blue below the brand starts it instead, and from then on the controls are
+ * the ones the browser draws, full screen and volume among them. On a phone
+ * the video stands at its own shape across the top of the card; from the sm
+ * breakpoint up it takes the left of the card at the height every card
+ * shares, on the blue of its own intro, with a floor under that height so it
+ * stays big enough to watch whatever the other cards hold. It pauses when
+ * its chapter leaves the focus.
+ */
+function Film(props: { video: StoryVideo; focused: boolean }) {
+  const { video } = props
+  const player = useRef<HTMLVideoElement>(null)
+  const started = useSignal(false)
+
+  useEffect(() => {
+    if (!props.focused) {
+      player.current?.pause()
+    }
+  }, [props.focused])
+
+  const start = () => {
+    const element = player.current
+
+    if (!element) {
+      return
+    }
+
+    started.value = true
+    element.controls = true
+    element.focus({
+      preventScroll: true,
+    })
+    element.play()
+  }
+
+  return (
+    <div class="story-film relative shrink-0 bg-brand sm:w-[46%] sm:min-h-[420px]">
+      <video
+        ref={player}
+        src={`${video.src}#t=${video.start}`}
+        poster={video.poster}
+        width={video.width}
+        height={video.height}
+        controls={started.value}
+        playsInline
+        preload="none"
+        aria-label={video.label}
+        style={`aspect-ratio: ${video.width} / ${video.height}`}
+        class="block w-full h-auto object-contain sm:absolute sm:inset-0 sm:h-full focus:outline-none"
+      />
+
+      {!started.value && (
+        <button
+          type="button"
+          class="group absolute inset-0 cursor-pointer focus:outline-none"
+          onClick={start}
+        >
+          <span class="absolute left-1/2 top-[78%] -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-white min-h-11 px-5 text-base font-bold text-brand shadow-md transition-transform duration-150 group-hover:scale-105 group-focus-visible:ring-4 group-focus-visible:ring-white/60 motion-reduce:transition-none">
+            <PlayIcon />
+            Watch · {Math.round(video.seconds / 60)} min
+          </span>
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -409,6 +514,20 @@ function Cover(props: { photos: CoverPhoto[] }) {
         )
       })}
     </div>
+  )
+}
+
+function PlayIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11.04-6.86a1 1 0 0 0 0-1.72L9.5 4.28A1 1 0 0 0 8 5.14Z" />
+    </svg>
   )
 }
 
