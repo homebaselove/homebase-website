@@ -118,7 +118,7 @@ export const Chapters: Chapter[] = [
       },
     ],
     summary:
-      "Homebase asked Base for a house where based builders and creators could live and build together at the events that matter, as a letter to Jesse shipped as a Farcaster miniapp. The plan had three legs: Build Board online, Based House residencies at Ethereum events, and permanent coworking once the houses proved the appetite.",
+      "Samuel, Rafi and Luciano asked Base for a house where based builders and creators could live and build together at ETHDenver, as a letter to Jesse shipped as a Farcaster miniapp. Then at the very first Based House an idea spawned: Homebase, a three-legged plan consisting of supporting builders with the Build Board, hosting Based House residencies at Ethereum events, and eventually opening permanent coworking once the houses prove the appetite.",
     links: [
       {
         label: "Letter to Jesse V1",
