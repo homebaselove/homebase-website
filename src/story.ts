@@ -79,6 +79,8 @@ export interface Chapter {
   video?: StoryVideo
   /** One short paragraph: what happened and why it mattered. */
   summary: string
+  /** Whether What happened starts open rather than folded. */
+  open?: boolean
   stats?: StoryStat[]
   links: StoryLink[]
 }
@@ -105,6 +107,10 @@ const JesseAtDevconnectUrl =
 
 /** Jesse at Based House ETHDenver, as Base posted it on X. */
 const JesseAtEthDenverUrl = "https://x.com/base/status/2038724087078601044"
+
+/** The interview on decentralizing contribution to Base, as Homebase posted it on X. */
+const DecentralizingContributionUrl =
+  "https://x.com/homebasedotlove/status/2095201550037848456"
 
 const HomebaseMapAnnouncementUrl = "https://farcaster.xyz/luciano/0x1897f428"
 
@@ -401,10 +407,16 @@ export const Chapters: Chapter[] = [
     },
     summary:
       "Jesse Pollak, the founder of Base, stopped by Based House ETHDenver to meet each resident and learn more about how Base can support them. He then sat down with Luciano for an interview about how to decentralize contribution to Base.",
+    // Beside the video the text has the room, so this one opens read.
+    open: true,
     links: [
       {
         label: "Jesse at Based House",
         href: JesseAtEthDenverUrl,
+      },
+      {
+        label: "Decentralizing contribution to Base",
+        href: DecentralizingContributionUrl,
       },
     ],
   },

@@ -1694,6 +1694,29 @@ try {
     JSON.stringify(watching),
   )
 
+  // The interview reads open beside its video, with its two posts under it.
+  const interview = await still.evaluate(() => {
+    const card = document.querySelector<HTMLElement>(
+      "#story [data-chapter=jesse-at-based-house]",
+    )!
+
+    return {
+      open: card.querySelector("details")?.open ?? false,
+      buttons: [
+        ...card.querySelectorAll<HTMLAnchorElement>(".flex-wrap a"),
+      ]
+        .map((link) => `${link.textContent?.trim()} -> ${link.href}`),
+    }
+  })
+
+  check(
+    "the interview starts with What happened open, and offers both posts of the visit",
+    interview.open
+      && interview.buttons.join(" | ")
+        === "Jesse at Based House -> https://x.com/base/status/2038724087078601044 | Decentralizing contribution to Base -> https://x.com/homebasedotlove/status/2095201550037848456",
+    JSON.stringify(interview),
+  )
+
   // No arrows, one height for every card and every photo cover, and the
   // key numbers of a chapter inside What happened.
   await still
@@ -1773,6 +1796,29 @@ try {
       && /10k\+\s+viewers/.test(numbers)
       && !/map of every meetup/.test(numbers),
     numbers.replace(/\s+/g, " "),
+  )
+
+  // A button down the page scrolls there and leaves the address plain.
+  await still
+    .locator("#story [data-chapter=base-batches] .flex-wrap a", {
+      hasText: "Homebase Map",
+    })
+    .click()
+  await still.waitForTimeout(600)
+
+  const landed = await still.evaluate(() => ({
+    address: location.href.slice(location.origin.length),
+    mapTop: Math.round(
+      document.getElementById("map")!.getBoundingClientRect().top,
+    ),
+  }))
+
+  check(
+    "the Homebase Map button scrolls to the map and leaves the address plain",
+    landed.address === "/"
+      && landed.mapTop >= 0
+      && landed.mapTop <= 48,
+    JSON.stringify(landed),
   )
 
   await still.evaluate(() =>

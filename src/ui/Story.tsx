@@ -15,6 +15,26 @@ const Opening = Math.max(
 )
 
 /**
+ * Scrolls to a section of this page by its anchor without writing the
+ * anchor into the address bar: the site is one page, and its address stays
+ * plain. A reader who asks for reduced motion jumps there.
+ */
+function scrollTo(anchor: string) {
+  const target = document.getElementById(anchor.slice(1))
+
+  if (!target) {
+    return
+  }
+
+  target.scrollIntoView({
+    block: "start",
+    behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth",
+  })
+}
+
+/**
  * The Based House story as a reel: the chapter in focus sits front and
  * center at full size, with the one behind and the one ahead peeking in at
  * a smaller scale. Scrolling, swiping, the dots and the arrow keys all move
@@ -318,7 +338,10 @@ function ChapterCard(props: {
               {chapter.title}
             </h3>
 
-            <details class="group -my-2">
+            <details
+              class="group -my-2"
+              open={chapter.open}
+            >
               <summary class="list-none [&::-webkit-details-marker]:hidden inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-gray-600 cursor-pointer select-none rounded-full -mx-2 px-2 transition-colors hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
                 What happened
                 <ChevronIcon />
@@ -357,6 +380,12 @@ function ChapterCard(props: {
                     href={link.href}
                     target={link.href.startsWith("#") ? undefined : "_blank"}
                     rel={link.href.startsWith("#") ? undefined : "noopener"}
+                    onClick={link.href.startsWith("#")
+                      ? (click) => {
+                        click.preventDefault()
+                        scrollTo(link.href)
+                      }
+                      : undefined}
                     class={today
                       ? "btn-brand text-sm min-h-11"
                       : "inline-flex items-center min-h-11 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand"}
