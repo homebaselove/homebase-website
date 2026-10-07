@@ -24,7 +24,9 @@ export interface StoryLink {
  * sets its share of the cover beside another photo and holds its space
  * while it loads. A photo that fills the cover is cropped around its
  * middle, or around the point focus names, as a percentage of its height
- * from the top: where the faces are when they are not in the middle.
+ * from the top: where the faces are when they are not in the middle. A
+ * photo with a ground is shown whole on a ground of that color instead,
+ * as a post is, with nothing cropped away.
  */
 export interface CoverPhoto {
   src: string
@@ -33,6 +35,7 @@ export interface CoverPhoto {
   alt: string
   href: string
   focus?: number
+  ground?: string
 }
 
 export interface StoryStat {
@@ -296,14 +299,14 @@ export const Chapters: Chapter[] = [
     cover: [
       {
         src: EthDenverReturnCrew,
-        width: 675,
-        height: 520,
+        width: 720,
+        height: 580,
         alt:
           "The third Based House crew piled onto the sectional couches of the Denver house, waving at the camera",
         href: EthDenverReturnRecapUrl,
         // The back row reaches the top of the frame and the front row the
         // bottom; this is the band that keeps every face.
-        focus: 20,
+        focus: 10,
       },
     ],
     summary:
@@ -333,11 +336,12 @@ export const Chapters: Chapter[] = [
     cover: [
       {
         src: MumbaiAnnouncement,
-        width: 980,
-        height: 184,
+        width: 1190,
+        height: 928,
         alt:
-          "Homebase posts on X: Announcing Based House Mumbai. Apply to Based House Mumbai at forms.gle/vXRkM4qnAVeQpX",
+          "Homebase posts on X: Announcing Based House Mumbai. We launched Homebase ($HOME) on Base using Bankr to fund Based House with the fees generated from trading the token. We are allocating 100% of the creator fees to a publicly trackable address. Track progress of funding for Based House Mumbai on seedme.xyz, an upcoming product incepted during our most recent Based House during ETHDenver. Vesting will be allocated to development and future incentives. We will issue public statements before moving or selling. Apply to Based House Mumbai at forms.gle/vXRkM4qnAVeQpX",
         href: BasedHouseMumbaiApplyUrl,
+        ground: "#fff",
       },
     ],
     summary:
