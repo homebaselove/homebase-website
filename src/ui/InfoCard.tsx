@@ -4,9 +4,9 @@ import { HomeTokenUrl } from "../funding.ts"
 import { InfoIcon } from "./Icons.tsx"
 
 /**
- * The card shell the funding and lock cards share: a header row with an info
- * button that discloses the bullets SeedMe shows behind the same button. The
- * button keeps one label and lets aria-expanded carry whether it is open.
+ * The card shell of the funding card: a header row with an info button that
+ * discloses the bullets SeedMe shows behind the same button. The button keeps
+ * one label and lets aria-expanded carry whether it is open.
  */
 export function InfoCard(props) {
   const open = useSignal(false)

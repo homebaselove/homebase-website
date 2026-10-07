@@ -102,6 +102,13 @@ const DevconnectArtworkUrl =
 const DevconnectRecapVideoUrl =
   "https://x.com/kismetcasa/status/2009009948446085511"
 
+/** Jesse at Based House Devconnect, as Homebase posted it on X. */
+const JesseAtDevconnectUrl =
+  "https://x.com/homebasedotlove/status/1990826468872503329"
+
+/** Jesse at Based House ETHDenver, as Base posted it on X. */
+const JesseAtEthDenverUrl = "https://x.com/base/status/2038724087078601044"
+
 const HomebaseMapAnnouncementUrl = "https://farcaster.xyz/luciano/0x1897f428"
 
 const EthDenverReturnRecapUrl =
@@ -299,9 +306,6 @@ export const Chapters: Chapter[] = [
         alt:
           "The Based House Devconnect crew and friends packed onto a stage in Buenos Aires, arms up and cheering, in front of a wall of blue pixel dots",
         href: DevconnectRecapUrl,
-        // The wall of dots fills the top of the frame and the front row
-        // kneels at the bottom; this is the band that keeps every face.
-        focus: 90,
       },
     ],
     summary:
@@ -338,6 +342,10 @@ export const Chapters: Chapter[] = [
         label: "Recap Video",
         href: DevconnectRecapVideoUrl,
       },
+      {
+        label: "Jesse at Based House",
+        href: JesseAtDevconnectUrl,
+      },
     ],
   },
   {
@@ -350,13 +358,10 @@ export const Chapters: Chapter[] = [
       {
         src: EthDenverReturnCrew,
         width: 720,
-        height: 580,
+        height: 554,
         alt:
           "The third Based House crew piled onto the sectional couches of the Denver house, waving at the camera",
         href: EthDenverReturnRecapUrl,
-        // The back row reaches the top of the frame and the front row the
-        // bottom; this is the band that keeps every face.
-        focus: 10,
       },
     ],
     summary:
@@ -398,8 +403,13 @@ export const Chapters: Chapter[] = [
         "Jesse at Based House: Luciano and Jesse Pollak, the founder of Base, in conversation at Based House ETHDenver, eleven minutes",
     },
     summary:
-      "During the third house, Jesse Pollak, the founder of Base, sat down with Luciano on the couch at Based House ETHDenver. Eleven minutes on why the residencies matter, how Based House began, decentralizing Base, systems that scale, finding the people who care, and a new economy where people choose why they wake up every day.",
-    links: [],
+      "Jesse Pollak, the founder of Base, stopped by Based House ETHDenver to meet each resident and learn more about how Base can support them. He then sat down with Luciano for an interview about how to decentralize contribution to Base.",
+    links: [
+      {
+        label: "Jesse at Based House",
+        href: JesseAtEthDenverUrl,
+      },
+    ],
   },
   {
     id: "today",
