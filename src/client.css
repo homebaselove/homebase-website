@@ -66,8 +66,8 @@
   }
 
   /* The story reel: cards share one width that leaves the neighbors peeking
-     in on either side, and the scrollbar stays hidden because the dots and
-     arrows are the controls. */
+     in on either side, and the scrollbar stays hidden because the dots are
+     the controls, along with scrolling itself. */
   .story-reel {
     --story-card: min(calc(100% - 5rem), 640px);
     --story-gap: 0.5rem;
@@ -78,6 +78,23 @@
   @media (min-width: 40rem) {
     .story-reel {
       --story-gap: 1rem;
+    }
+  }
+
+  /* The cover of a card: on phones as tall as its photos; from the sm
+     breakpoint up one box on every card, with a near-black ground behind a
+     post that does not fill it. The box is 1.9 times as wide as it is tall:
+     rendered side by side, 2:1 cut faces off the bottom of the Devconnect
+     crew and 16:9 cut people off the sides of the ETHDenver crew, and this
+     keeps every face and the whole map. */
+  .story-cover {
+    background: #0f0f0f;
+    overflow: hidden;
+  }
+
+  @media (min-width: 40rem) {
+    .story-cover {
+      aspect-ratio: 1.9 / 1;
     }
   }
 

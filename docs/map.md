@@ -615,8 +615,9 @@ back, the wallet picked back up after a reload, a revocation taking the pin
 off the chain and the map, a later pin as one transaction, disconnecting, a
 stranger turned away without the form, and a deep link on a phone-sized
 screen landing straight on its pin, with the wallet button clear of the
-house there; with the Homebase Live and Donate steps in docs/live.md, forty-two
-checks, a screenshot of each step. Only Luma,
+house there, and the story reel standing on its dots with every card at one
+height and its numbers inside What happened; with the Homebase Live and Donate
+steps in docs/live.md, forty-five checks, a screenshot of each step. Only Luma,
 the tiles, the indexer and the chain's distance are stubbed. A failed run
 leaves a screenshot, the page's text and the server's log.
 

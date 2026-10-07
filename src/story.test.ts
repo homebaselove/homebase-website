@@ -7,7 +7,8 @@ test("chapters run in order from the first letter to today", () => {
   )
     .toEqual([
       ...Chapters.map((chapter) => chapter.month),
-    ].sort())
+    ]
+      .sort())
 })
 
 test("each chapter has its own id", () => {
@@ -53,6 +54,11 @@ test("a cover holds at most two photos, each sized and described", () => {
       ],
       [
         "ethdenver-2025",
+        true,
+        true,
+      ],
+      [
+        "base-batches",
         true,
         true,
       ],

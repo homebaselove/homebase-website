@@ -8,6 +8,7 @@ import DevconnectCrew from "../assets/story/DevconnectCrew.webp"
 import DevconnectRecapCast from "../assets/story/DevconnectRecapCast.webp"
 import EthDenverCrew from "../assets/story/EthDenverCrew.webp"
 import EthDenverReturnCrew from "../assets/story/EthDenverReturnCrew.webp"
+import HomebaseMapAnnouncement from "../assets/story/HomebaseMapAnnouncement.webp"
 import JesseHappyToFund from "../assets/story/JesseHappyToFund.webp"
 import LetterToJesseCast from "../assets/story/LetterToJesseCast.webp"
 import LetterToJesseV2Cast from "../assets/story/LetterToJesseV2Cast.webp"
@@ -21,7 +22,8 @@ export interface StoryLink {
 /**
  * A photo on the cover of a chapter; clicking it opens href. The pixel size
  * sets its share of the cover beside another photo and holds its space
- * while it loads.
+ * while it loads. A photo that fills the cover is cropped from its middle,
+ * or kept from its top when the faces are there.
  */
 export interface CoverPhoto {
   src: string
@@ -29,6 +31,7 @@ export interface CoverPhoto {
   height: number
   alt: string
   href: string
+  focus?: "top"
 }
 
 export interface StoryStat {
@@ -64,6 +67,8 @@ const EthDenverRecapVideoUrl =
   "https://x.com/lucianodeangeIo/status/1899183264759439586?s=20"
 
 const DevconnectRecapUrl = "https://farcaster.xyz/luciano/0x78eb1ae0"
+
+const HomebaseMapAnnouncementUrl = "https://farcaster.xyz/luciano/0x1897f428"
 
 const EthDenverReturnRecapUrl =
   "https://x.com/homebasedotlove/status/2029929738454847972"
@@ -159,6 +164,16 @@ export const Chapters: Chapter[] = [
     when: "Apr – May 2025",
     kicker: "Building the foundation",
     title: "Base Batches workshops and the Homebase Map",
+    cover: [
+      {
+        src: HomebaseMapAnnouncement,
+        width: 1116,
+        height: 558,
+        alt:
+          "The Homebase Map as announced: under the Homebase wordmark, a world map with a house pin on every Base meetup, from the Americas to Europe, Africa, Asia and Oceania, with a button to find your location and one to connect a wallet",
+        href: HomebaseMapAnnouncementUrl,
+      },
+    ],
     summary:
       "Homebase ran the workshops for the very first Base Batches, for the community by the community: ten online sessions with Base DevRel and house alumni, plus an IRL format community hosts ran in 50+ cities. The Homebase Map put every Base meetup on one map, with onchain attendance.",
     stats: [
@@ -171,8 +186,8 @@ export const Chapters: Chapter[] = [
         label: "cities with community hosts",
       },
       {
-        value: "1",
-        label: "map of every meetup",
+        value: "10k+",
+        label: "viewers",
       },
     ],
     links: [
@@ -186,7 +201,7 @@ export const Chapters: Chapter[] = [
       },
       {
         label: "Homebase Map",
-        href: "https://farcaster.xyz/luciano/0x1897f428",
+        href: HomebaseMapAnnouncementUrl,
       },
     ],
   },
@@ -285,6 +300,7 @@ export const Chapters: Chapter[] = [
         alt:
           "The third Based House crew piled onto the sectional couches of the Denver house, waving at the camera",
         href: EthDenverReturnRecapUrl,
+        focus: "top",
       },
     ],
     summary:

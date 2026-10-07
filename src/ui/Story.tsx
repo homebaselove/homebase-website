@@ -6,10 +6,13 @@ import { type Chapter, Chapters, type CoverPhoto } from "../story.ts"
 /**
  * The Based House story as a reel: the chapter in focus sits front and
  * center at full size, with the one behind and the one ahead peeking in at
- * a smaller scale. Scrolling, swiping, the arrows, the dots and the keyboard
- * all move the focus; off-center chapters are inert so focus never lands in
- * a card the reader cannot see. No apostrophes or quotes in prose here: the
- * class scanner pairs any quote with the next one of any kind.
+ * a smaller scale. Scrolling, swiping, the dots and the arrow keys all move
+ * the focus; off-center chapters are inert so focus never lands in a card
+ * the reader cannot see. From the sm breakpoint up every card stands as
+ * tall as the tallest, so the reel reads as one band whichever chapter is
+ * in focus; on a phone, where one card fills the screen, each keeps its own
+ * height. No apostrophes or quotes in prose here: the class scanner pairs
+ * any quote with the next one of any kind.
  */
 export function BasedHouseStory() {
   const active = useSignal(0)
@@ -111,24 +114,10 @@ export function BasedHouseStory() {
         </p>
       </div>
 
-      <div class="w-full max-w-[860px] mx-auto flex items-start gap-2">
-        <ArrowButton
-          direction="left"
-          label="Previous chapter"
-          disabled={active.value === 0}
-          onClick={() => goTo(active.value - 1)}
-        />
-
+      <div class="w-full max-w-[760px] mx-auto">
         <Rail
           active={active.value}
           goTo={goTo}
-        />
-
-        <ArrowButton
-          direction="right"
-          label="Next chapter"
-          disabled={active.value === last}
-          onClick={() => goTo(active.value + 1)}
         />
       </div>
 
@@ -143,7 +132,7 @@ export function BasedHouseStory() {
       <ol
         ref={reel}
         tabIndex={0}
-        class="story-reel relative flex items-start overflow-x-auto overscroll-x-contain snap-x snap-mandatory py-3 -my-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded-xl"
+        class="story-reel relative flex items-start sm:items-stretch overflow-x-auto overscroll-x-contain snap-x snap-mandatory py-3 -my-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded-xl"
       >
         <li
           aria-hidden="true"
@@ -238,25 +227,6 @@ function Rail(props: { active: number; goTo: (index: number) => void }) {
   )
 }
 
-function ArrowButton(props: {
-  direction: "left" | "right"
-  label: string
-  disabled: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={props.label}
-      disabled={props.disabled}
-      class="shrink-0 rounded-full border-[1px] p-3 transition-colors border-gray-200 text-gray-600 hover:border-brand/40 hover:bg-brand/10 hover:text-brand disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-600"
-      onClick={props.onClick}
-    >
-      <ArrowIcon direction={props.direction} />
-    </button>
-  )
-}
-
 function ChapterCard(props: {
   chapter: Chapter
   index: number
@@ -302,7 +272,7 @@ function ChapterCard(props: {
         >
           {chapter.cover && <Cover photos={chapter.cover} />}
 
-          <div class="p-6 max-sm:p-5 flex flex-col gap-4">
+          <div class="flex-1 p-6 max-sm:p-5 flex flex-col gap-4">
             <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <span class="text-sm font-bold uppercase tracking-wide text-brand">
                 {chapter.kicker}
@@ -323,28 +293,30 @@ function ChapterCard(props: {
                 <ChevronIcon />
               </summary>
 
-              <p class="text-gray-700 leading-relaxed pt-2">
-                {chapter.summary}
-              </p>
-            </details>
+              <div class="flex flex-col gap-4 pt-2 pb-2">
+                <p class="text-gray-700 leading-relaxed">
+                  {chapter.summary}
+                </p>
 
-            {chapter.stats && (
-              <dl class="grid grid-cols-2 sm:flex gap-3">
-                {chapter.stats.map((stat) => (
-                  <div
-                    key={stat.label}
-                    class="sm:flex-1 sm:basis-0 max-sm:odd:last:col-span-2 max-[359px]:col-span-2 min-w-0 rounded-lg bg-gray-50 px-3 py-2.5"
-                  >
-                    <dd class="text-2xl max-sm:text-xl font-bold leading-none text-brand">
-                      {stat.value}
-                    </dd>
-                    <dt class="text-sm text-gray-500 mt-1 break-words">
-                      {stat.label}
-                    </dt>
-                  </div>
-                ))}
-              </dl>
-            )}
+                {chapter.stats && (
+                  <dl class="grid grid-cols-2 sm:flex gap-3">
+                    {chapter.stats.map((stat) => (
+                      <div
+                        key={stat.label}
+                        class="sm:flex-1 sm:basis-0 max-sm:odd:last:col-span-2 max-[359px]:col-span-2 min-w-0 rounded-lg bg-gray-50 px-3 py-2.5"
+                      >
+                        <dd class="text-2xl max-sm:text-xl font-bold leading-none text-brand">
+                          {stat.value}
+                        </dd>
+                        <dt class="text-sm text-gray-500 mt-1 break-words">
+                          {stat.label}
+                        </dt>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+              </div>
+            </details>
 
             <div class="flex flex-wrap gap-2 mt-auto pt-1">
               {chapter.links.map((link) => (
@@ -370,11 +342,15 @@ function ChapterCard(props: {
 }
 
 /**
- * The photos on top of a card. One photo keeps its own shape up to a cap on
- * its height. Two share the width in proportion to their aspect ratios, so
- * they stand at one height with no margins between or beside them, unless
- * both are wide strips, which stack instead. Phones always stack. Each
- * photo opens its source.
+ * The photos on top of a card. From the sm breakpoint up every cover is the
+ * same box, nearly twice as wide as it is tall, so the cards line up: a
+ * photo fills it, cropped a little at the edges, from its top when it says
+ * so; a wide strip, or a pair of posts, sits centered on a near-black
+ * ground that matches the dark posts themselves.
+ * Two photos share the width in proportion to their aspect ratios, so they
+ * stand at one height with no margins between or beside them, unless both
+ * are wide strips, which stack instead. On phones each cover keeps its own
+ * height. Each photo opens its source.
  */
 function Cover(props: { photos: CoverPhoto[] }) {
   const pair = props.photos.length > 1
@@ -384,38 +360,47 @@ function Cover(props: { photos: CoverPhoto[] }) {
   return (
     <div
       class={stacked
-        ? "story-pair story-pair-stack bg-gray-100"
+        ? "story-cover story-pair story-pair-stack sm:justify-center"
         : pair
-        ? "story-pair bg-gray-100"
-        : "bg-gray-100"}
+        ? "story-cover story-pair sm:items-center"
+        : "story-cover"}
     >
-      {props.photos.map((photo) => (
-        <a
-          key={photo.src}
-          href={photo.href}
-          target="_blank"
-          rel="noopener"
-          style={pair
-            ? `--aspect: ${(photo.width / photo.height).toFixed(4)}`
-            : undefined}
-          class="block min-w-0 transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/60"
-        >
-          <img
-            src={photo.src}
-            width={photo.width}
-            height={photo.height}
-            alt={photo.alt}
-            loading="lazy"
-            draggable={false}
-            style={pair
-              ? undefined
-              : `aspect-ratio: ${(photo.width / photo.height).toFixed(4)}`}
+      {props.photos.map((photo) => {
+        const aspect = photo.width / photo.height
+        // A strip much wider than the box is shown whole; anything closer
+        // to the box fills it.
+        const whole = aspect > 2.5
+
+        return (
+          <a
+            key={photo.src}
+            href={photo.href}
+            target="_blank"
+            rel="noopener"
+            style={pair ? `--aspect: ${aspect.toFixed(4)}` : undefined}
             class={pair
-              ? "w-full h-auto"
-              : "w-full object-cover sm:max-h-[360px]"}
-          />
-        </a>
-      ))}
+              ? "block min-w-0 transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/60"
+              : "block min-w-0 sm:h-full transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/60"}
+          >
+            <img
+              src={photo.src}
+              width={photo.width}
+              height={photo.height}
+              alt={photo.alt}
+              loading="lazy"
+              draggable={false}
+              style={pair ? undefined : `aspect-ratio: ${aspect.toFixed(4)}`}
+              class={pair
+                ? "w-full h-auto"
+                : whole
+                ? "w-full sm:h-full sm:object-contain"
+                : photo.focus === "top"
+                ? "w-full sm:h-full sm:object-cover sm:object-top"
+                : "w-full sm:h-full sm:object-cover"}
+            />
+          </a>
+        )
+      })}
     </div>
   )
 }
@@ -454,25 +439,6 @@ function OutwardIcon() {
     >
       <path d="M7 17 17 7" />
       <path d="M8 7h9v9" />
-    </svg>
-  )
-}
-
-function ArrowIcon(props: { direction: "left" | "right" }) {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      {props.direction === "left"
-        ? <path d="m15 18-6-6 6-6" />
-        : <path d="m9 18 6-6-6-6" />}
     </svg>
   )
 }

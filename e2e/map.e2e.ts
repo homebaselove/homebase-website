@@ -1515,6 +1515,90 @@ try {
   })
   const still = await open(calm)
 
+  // The story reel: no arrows, one height for every card and every cover,
+  // and the key numbers of a chapter inside What happened.
+  await still.evaluate(() =>
+    document.getElementById("story")?.scrollIntoView({
+      block: "start",
+    })
+  )
+  await still
+    .locator("#story button[aria-label^='Apr – May 2025']")
+    .click()
+  await still.waitForFunction(
+    () => {
+      const cover = document.querySelector<HTMLImageElement>(
+        "#story [data-chapter=base-batches] .story-cover img",
+      )
+
+      return cover !== null && cover.complete && cover.naturalWidth > 0
+    },
+    null,
+    {
+      timeout: 30_000,
+    },
+  )
+  await still.waitForTimeout(300)
+
+  const reel = await still.evaluate(() => {
+    const cards = [
+      ...document.querySelectorAll<HTMLElement>("#story [data-chapter]"),
+    ]
+
+    return {
+      arrows: document
+        .querySelectorAll(
+          "#story button[aria-label='Previous chapter'], #story button[aria-label='Next chapter']",
+        )
+        .length,
+      heights: cards.map((card) => card.querySelector("article")!.offsetHeight),
+      covers: cards.map((card) =>
+        card.querySelector<HTMLElement>(".story-cover")?.offsetHeight ?? 0
+      ),
+      cover: document
+        .querySelector<HTMLImageElement>(
+          "#story [data-chapter=base-batches] .story-cover img",
+        )
+        ?.src ?? String(),
+      numbersShown: document
+        .querySelector<HTMLElement>("#story [data-chapter=base-batches] dl")
+        ?.checkVisibility() ?? null,
+    }
+  })
+
+  check(
+    "the story reel has no arrows, and every card and every cover stands at one height",
+    reel.arrows === 0
+      && new Set(reel.heights).size === 1
+      && new Set(reel.covers).size === 1
+      && reel.covers[0] > 0,
+    `cards ${reel.heights.join(" ")}, covers ${reel.covers.join(" ")}`,
+  )
+  check(
+    "the third chapter carries the Homebase Map post as its cover, with its key numbers kept inside What happened",
+    reel.cover.includes("HomebaseMapAnnouncement")
+      && reel.numbersShown === false,
+    `${reel.cover} numbers shown: ${reel.numbersShown}`,
+  )
+
+  await still.locator("#story [data-chapter=base-batches] summary").click()
+  await still.waitForTimeout(300)
+  await shot(still, "11-story-numbers")
+
+  const numbers = await still
+    .locator("#story [data-chapter=base-batches] dl")
+    .innerText()
+
+  check(
+    "opening What happened shows the numbers, 10k+ viewers among them",
+    (await still
+      .locator("#story [data-chapter=base-batches] dl")
+      .evaluate((list) => list.checkVisibility()))
+      && /10k\+\s+viewers/.test(numbers)
+      && !/map of every meetup/.test(numbers),
+    numbers.replace(/\s+/g, " "),
+  )
+
   await still.evaluate(() =>
     document.getElementById("map-heading")?.closest("section")?.scrollIntoView({
       block: "start",
