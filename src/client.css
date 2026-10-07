@@ -83,7 +83,8 @@
 
   /* The cover of a card: on phones as tall as its photos; from the sm
      breakpoint up one box on every card, with a near-black ground behind a
-     post that does not fill it. The box is 1.9 times as wide as it is tall:
+     post that does not fill it, unless the post names its own ground. The
+     box is 1.9 times as wide as it is tall:
      rendered side by side, 2:1 cut faces off the bottom of the Devconnect
      crew and 16:9 cut people off the sides of the ETHDenver crew, and this
      keeps every face and the whole map. */

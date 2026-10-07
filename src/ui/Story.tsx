@@ -346,7 +346,8 @@ function ChapterCard(props: {
  * same box, nearly twice as wide as it is tall, so the cards line up: a
  * photo fills it, cropped a little at the edges around its middle or the
  * point it names; a wide strip, or a pair of posts, sits centered on a
- * near-black ground that matches the dark posts themselves.
+ * near-black ground that matches the dark posts themselves, and a post
+ * that names its own ground sits whole on that.
  * Two photos share the width in proportion to their aspect ratios, so they
  * stand at one height with no margins between or beside them, unless both
  * are wide strips, which stack instead. On phones each cover keeps its own
@@ -357,6 +358,8 @@ function Cover(props: { photos: CoverPhoto[] }) {
   const stacked = pair
     && props.photos.every((photo) => photo.width / photo.height > 2)
 
+  const ground = pair ? undefined : props.photos[0].ground
+
   return (
     <div
       class={stacked
@@ -364,12 +367,13 @@ function Cover(props: { photos: CoverPhoto[] }) {
         : pair
         ? "story-cover story-pair sm:items-center"
         : "story-cover"}
+      style={ground ? `background: ${ground}` : undefined}
     >
       {props.photos.map((photo) => {
         const aspect = photo.width / photo.height
-        // A strip much wider than the box is shown whole; anything closer
-        // to the box fills it.
-        const whole = aspect > 2.5
+        // A strip much wider than the box is shown whole, as is a photo on
+        // its own ground; anything closer to the box fills it.
+        const whole = aspect > 2.5 || photo.ground !== undefined
 
         return (
           <a
