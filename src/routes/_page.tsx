@@ -24,7 +24,7 @@ export default function() {
       </div>
 
       <div
-        class={`flex flex-col pt-14 w-full max-w-[960px] mx-auto px-4 z-10 relative gap-8`}
+        class={`flex flex-col pt-14 w-full max-w-[960px] mx-auto px-4 z-20 relative gap-8`}
       >
         <BasedHouseCard />
       </div>

@@ -373,7 +373,7 @@ function ChapterCard(props: {
   )
 }
 
-/** How many times wider than tall the cover box is from the sm breakpoint up; client.css draws it. */
+/** How many times wider than tall the cover box is from the sm breakpoint up; client.css reads it as --cover-ratio. */
 const CoverRatio = 1.3
 
 /**
@@ -453,9 +453,9 @@ function Film(props: { video: StoryVideo; focused: boolean }) {
 /**
  * The photos on top of a card. From the sm breakpoint up every cover is the
  * same box, in the shape of the crew photos, so the cards line up: a photo
- * of that shape fills it, cropped a little at the edges around its middle
- * or the point it names; anything much wider sits whole in the box on a
- * blur of itself; a pair of posts sits centered on a near-black ground
+ * of that shape fills it, cropped a little at the edges around its middle;
+ * anything much wider sits whole in the box on a blur of itself; a pair of
+ * posts sits centered on a near-black ground
  * that matches the dark posts themselves, and a post that names its own
  * ground sits whole on that.
  * Two photos share the width in proportion to their aspect ratios, so they
@@ -477,7 +477,9 @@ function Cover(props: { photos: CoverPhoto[] }) {
         : pair
         ? "story-cover story-pair sm:items-center"
         : "story-cover"}
-      style={ground ? `background: ${ground}` : undefined}
+      style={ground
+        ? `--cover-ratio: ${CoverRatio}; background: ${ground}`
+        : `--cover-ratio: ${CoverRatio}`}
     >
       {props.photos.map((photo) => {
         const aspect = photo.width / photo.height
@@ -503,6 +505,8 @@ function Cover(props: { photos: CoverPhoto[] }) {
                 alt={String()}
                 aria-hidden="true"
                 draggable={false}
+                loading="lazy"
+                decoding="async"
                 class="hidden sm:block absolute inset-0 w-full h-full object-cover blur-2xl scale-125 opacity-60 pointer-events-none"
               />
             )}
@@ -514,13 +518,7 @@ function Cover(props: { photos: CoverPhoto[] }) {
               alt={photo.alt}
               loading="lazy"
               draggable={false}
-              style={pair
-                ? undefined
-                : photo.focus === undefined
-                ? `aspect-ratio: ${aspect.toFixed(4)}`
-                : `aspect-ratio: ${
-                  aspect.toFixed(4)
-                }; object-position: 50% ${photo.focus}%`}
+              style={pair ? undefined : `aspect-ratio: ${aspect.toFixed(4)}`}
               class={pair
                 ? "w-full h-auto"
                 : whole

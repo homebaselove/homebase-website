@@ -26,10 +26,8 @@ export interface StoryLink {
  * A photo on the cover of a chapter; clicking it opens href. The pixel size
  * sets its share of the cover beside another photo and holds its space
  * while it loads. A photo that fills the cover is cropped around its
- * middle, or around the point focus names, as a percentage of its height
- * from the top: where the faces are when they are not in the middle. A
- * photo with a ground is shown whole on a ground of that color instead,
- * as a post is, with nothing cropped away.
+ * middle. A photo with a ground is shown whole on a ground of that color
+ * instead, as a post is, with nothing cropped away.
  */
 export interface CoverPhoto {
   src: string
@@ -37,7 +35,6 @@ export interface CoverPhoto {
   height: number
   alt: string
   href: string
-  focus?: number
   ground?: string
 }
 

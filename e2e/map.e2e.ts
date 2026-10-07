@@ -1322,25 +1322,31 @@ try {
   )
 
   // The blueprint: picked up with the mouse it follows, and dropped it falls
-  // back into place.
+  // back into place, taking its time even as the mouse moves on. Its carry
+  // is read off its own transform, which holds the carry exactly, where the
+  // box of a tilted slab would not.
   const blueprint = again.locator("[data-blueprint=frame]")
-  const slabBox = async () =>
-    (await again.locator("[data-blueprint=slab]").boundingBox())!
-  const centreOf = (box: {
-    x: number
-    y: number
-    width: number
-    height: number
-  }) => ({
-    x: box.x + box.width / 2,
-    y: box.y + box.height / 2,
-  })
+  const carryOf = (page: Page) =>
+    page.evaluate(() => {
+      const matrix = new DOMMatrix(
+        getComputedStyle(document.querySelector("[data-blueprint=slab]")!)
+          .transform,
+      )
+
+      return {
+        x: Math.round(matrix.m41 * 10) / 10,
+        y: Math.round(matrix.m42 * 10) / 10,
+      }
+    })
 
   await blueprint.scrollIntoViewIfNeeded()
   await again.waitForTimeout(300)
 
-  const rested = centreOf(await slabBox())
-  const grabAt = centreOf((await blueprint.boundingBox())!)
+  const frameBox = (await blueprint.boundingBox())!
+  const grabAt = {
+    x: frameBox.x + frameBox.width / 2,
+    y: frameBox.y + frameBox.height / 2,
+  }
 
   await again.mouse.move(grabAt.x, grabAt.y)
   await again.mouse.down()
@@ -1352,21 +1358,28 @@ try {
   })
   await again.waitForTimeout(150)
 
-  const carried = centreOf(await slabBox())
+  const carried = await carryOf(again)
 
   await shot(again, "12-blueprint-carried")
   await again.mouse.up()
-  await again.waitForTimeout(1100)
+  await again.mouse.move(grabAt.x + 110, grabAt.y + 50)
+  await again.waitForTimeout(200)
 
-  const dropped = centreOf(await slabBox())
+  const falling = await carryOf(again)
+
+  await again.waitForTimeout(1000)
+
+  const dropped = await carryOf(again)
 
   check(
-    "the blueprint follows the mouse when picked up, and falls back into place when dropped",
-    Math.abs(carried.x - rested.x - 120) <= 16
-      && Math.abs(carried.y - rested.y - 60) <= 16
-      && Math.abs(dropped.x - rested.x) <= 2
-      && Math.abs(dropped.y - rested.y) <= 2,
-    `rest ${rested.x},${rested.y} carried ${carried.x},${carried.y} dropped ${dropped.x},${dropped.y}`,
+    "the blueprint follows the mouse when picked up, and falls back into place when dropped, even as the mouse moves on",
+    carried.x === 120
+      && carried.y === 60
+      && falling.x > 0
+      && falling.x < 120
+      && dropped.x === 0
+      && dropped.y === 0,
+    `carried ${carried.x},${carried.y} falling ${falling.x},${falling.y} dropped ${dropped.x},${dropped.y}`,
   )
 
   // The header: the connected wallet by name, and the way out.
@@ -1629,7 +1642,8 @@ try {
         .querySelector("#story [aria-current=step]")
         ?.getAttribute("aria-label") ?? String(),
       offCenter: Math.abs(
-        card.offsetLeft + card.offsetWidth / 2
+        card.offsetLeft
+          + card.offsetWidth / 2
           - (scroller.scrollLeft + scroller.clientWidth / 2),
       ),
       paused: video.paused,
@@ -1829,20 +1843,23 @@ try {
   await thumb.waitForTimeout(300)
 
   const finger = await touch.newCDPSession(thumb)
-  const fingerSlab = async () => {
-    const box = (await thumb.locator("[data-blueprint=slab]").boundingBox())!
+  const fingerSlab = () =>
+    thumb.evaluate(() => {
+      const matrix = new DOMMatrix(
+        getComputedStyle(document.querySelector("[data-blueprint=slab]")!)
+          .transform,
+      )
 
-    return {
-      x: box.x + box.width / 2,
-      y: box.y + box.height / 2,
-    }
-  }
-  const frameBox = (await fingerFrame.boundingBox())!
+      return {
+        x: Math.round(matrix.m41 * 10) / 10,
+        y: Math.round(matrix.m42 * 10) / 10,
+      }
+    })
+  const fingerBox = (await fingerFrame.boundingBox())!
   const touchAt = {
-    x: frameBox.x + frameBox.width / 2,
-    y: frameBox.y + frameBox.height / 2,
+    x: fingerBox.x + fingerBox.width / 2,
+    y: fingerBox.y + fingerBox.height / 2,
   }
-  const restedUnderFinger = await fingerSlab()
   const pageBefore = await thumb.evaluate(() => scrollY)
 
   await finger.send("Input.dispatchTouchEvent", {
@@ -1884,13 +1901,59 @@ try {
   const droppedByFinger = await fingerSlab()
 
   check(
-    "on a touchscreen a finger picks the blueprint up, the page stays put, and it falls back on release",
-    Math.abs(carriedByFinger.x - restedUnderFinger.x - 80) <= 16
-      && Math.abs(carriedByFinger.y - restedUnderFinger.y - 60) <= 16
+    "on a touchscreen a finger moving sideways picks the blueprint up, the page stays put, and it falls back on release",
+    carriedByFinger.x === 80
+      && carriedByFinger.y === 60
       && pageDuring === pageBefore
-      && Math.abs(droppedByFinger.x - restedUnderFinger.x) <= 2
-      && Math.abs(droppedByFinger.y - restedUnderFinger.y) <= 2,
-    `rest ${restedUnderFinger.x},${restedUnderFinger.y} carried ${carriedByFinger.x},${carriedByFinger.y} dropped ${droppedByFinger.x},${droppedByFinger.y}; page ${pageBefore} then ${pageDuring}`,
+      && droppedByFinger.x === 0
+      && droppedByFinger.y === 0,
+    `carried ${carriedByFinger.x},${carriedByFinger.y} dropped ${droppedByFinger.x},${droppedByFinger.y}; page ${pageBefore} then ${pageDuring}`,
+  )
+
+  // A finger moving up the blueprint scrolls the page as it would anywhere,
+  // and leaves the blueprint at rest.
+  const swipeFrom = await thumb.evaluate(() => scrollY)
+
+  await finger.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [
+      touchAt,
+    ],
+  })
+  for (
+    const step of [
+      1,
+      2,
+      3,
+      4,
+    ]
+  ) {
+    await finger.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [
+        {
+          x: touchAt.x,
+          y: touchAt.y - 40 * step,
+        },
+      ],
+    })
+    await thumb.waitForTimeout(40)
+  }
+  await finger.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  })
+  await thumb.waitForTimeout(1100)
+
+  const swipeTo = await thumb.evaluate(() => scrollY)
+  const afterSwipe = await fingerSlab()
+
+  check(
+    "on a touchscreen a finger moving up the blueprint scrolls the page and leaves the blueprint at rest",
+    swipeTo > swipeFrom
+      && afterSwipe.x === 0
+      && afterSwipe.y === 0,
+    `page ${swipeFrom} then ${swipeTo}; blueprint ${afterSwipe.x},${afterSwipe.y}`,
   )
   await touch.close()
 } catch (error) {

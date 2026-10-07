@@ -1,5 +1,5 @@
 /** @jsxImportSource preact */
-import { useRef } from "preact"
+import { useEffect, useRef } from "preact"
 import { useSignal } from "preact/signals"
 import BasePaint414 from "../../assets/BasedPaint414.png"
 import { FundingCard } from "./Funding.tsx"
@@ -64,6 +64,9 @@ const CarryPerDegree = 8
 /** How much of its width the blueprint may carry past a side of the screen. */
 const Overhang = 0.6
 
+/** How long the fall back into place takes, during which a hovering mouse is ignored. */
+const FallMs = 750
+
 const Still: Point = {
   x: 0,
   y: 0,
@@ -77,17 +80,22 @@ const clamp = (value: number, low: number, high: number) =>
  * frame owns the perspective and the pointer math, so the angles come from
  * an untransformed box and the slab has a place to fall back to. A hovering
  * mouse tilts it toward the pointer. Pressing picks it up, with the mouse or
- * a finger: it follows the pointer, tilts with the carry, casts a deeper
- * shadow, and can go no further than most of its width past a side of the
- * screen or its own height up or down. On release it falls back into place with a small
- * bounce. Readers who ask for reduced motion get the resting slab, and a
+ * with a finger moving sideways, since a finger moving up or down scrolls
+ * the page as ever: it follows the pointer, tilts with the carry, casts a
+ * deeper shadow, and can go no further than most of its width past a side
+ * of the screen or its own height up or down. On release it falls back into
+ * place with a small bounce, which a mouse passing over it does not cut
+ * short. One pointer holds it at a time, and only the first button of a
+ * mouse. Readers who ask for reduced motion get the resting slab, and a
  * carried one that returns without the bounce.
  */
 export function BasedHouseBlueprint() {
   const frame = useRef<HTMLDivElement>(null)
   const pending = useRef(0)
+  const returning = useRef(0)
   const grip = useRef<
     {
+      pointerId: number
       pointer: Point
       offset: Point
       tilt: Point
@@ -103,6 +111,11 @@ export function BasedHouseBlueprint() {
   })
   const hovering = useSignal(false)
   const held = useSignal(false)
+
+  useEffect(() => () => {
+    cancelAnimationFrame(pending.current)
+    clearTimeout(returning.current)
+  }, [])
 
   const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches
 
@@ -121,13 +134,18 @@ export function BasedHouseBlueprint() {
     y: at.x * MaxTilt,
   })
 
+  const glareAt = (at: Point): Point => ({
+    x: (at.x + 1) * 50,
+    y: (at.y + 1) * 50,
+  })
+
   const onNextFrame = (update: () => void) => {
     cancelAnimationFrame(pending.current)
     pending.current = requestAnimationFrame(update)
   }
 
   const hover = (e: PointerEvent) => {
-    if (!frame.current || calm()) {
+    if (!frame.current || returning.current || calm()) {
       return
     }
 
@@ -135,10 +153,7 @@ export function BasedHouseBlueprint() {
 
     onNextFrame(() => {
       rotation.value = tiltToward(at)
-      glare.value = {
-        x: (at.x + 1) * 50,
-        y: (at.y + 1) * 50,
-      }
+      glare.value = glareAt(at)
       hovering.value = true
     })
   }
@@ -146,7 +161,7 @@ export function BasedHouseBlueprint() {
   const pickUp = (e: PointerEvent) => {
     const el = frame.current
 
-    if (!el) {
+    if (!el || grip.current) {
       return
     }
 
@@ -154,6 +169,7 @@ export function BasedHouseBlueprint() {
     const at = within(e)
 
     grip.current = {
+      pointerId: e.pointerId,
       pointer: {
         x: e.clientX,
         y: e.clientY,
@@ -170,19 +186,18 @@ export function BasedHouseBlueprint() {
       },
     }
     cancelAnimationFrame(pending.current)
+    clearTimeout(returning.current)
+    returning.current = 0
     held.value = true
     hovering.value = false
     rotation.value = grip.current.tilt
-    glare.value = {
-      x: (at.x + 1) * 50,
-      y: (at.y + 1) * 50,
-    }
+    glare.value = glareAt(at)
   }
 
   const carry = (e: PointerEvent) => {
     const hold = grip.current
 
-    if (!hold) {
+    if (!hold || e.pointerId !== hold.pointerId) {
       return
     }
 
@@ -207,15 +222,14 @@ export function BasedHouseBlueprint() {
         x: clamp(hold.tilt.x - to.y / CarryPerDegree, -MaxTilt, MaxTilt),
         y: clamp(hold.tilt.y + to.x / CarryPerDegree, -MaxTilt, MaxTilt),
       }
-      glare.value = {
-        x: (at.x + 1) * 50,
-        y: (at.y + 1) * 50,
-      }
+      glare.value = glareAt(at)
     })
   }
 
-  const drop = () => {
-    if (!grip.current) {
+  const drop = (e: PointerEvent) => {
+    const hold = grip.current
+
+    if (!hold || e.pointerId !== hold.pointerId) {
       return
     }
 
@@ -225,6 +239,10 @@ export function BasedHouseBlueprint() {
     hovering.value = false
     offset.value = Still
     rotation.value = Rest
+    clearTimeout(returning.current)
+    returning.current = window.setTimeout(() => {
+      returning.current = 0
+    }, FallMs)
   }
 
   const settle = () => {
@@ -247,7 +265,7 @@ export function BasedHouseBlueprint() {
       class={held.value
         ? "aspect-square relative z-30 select-none cursor-grabbing"
         : "aspect-square relative select-none cursor-grab"}
-      style="perspective: 1000px; touch-action: none"
+      style="perspective: 1000px; touch-action: pan-y pinch-zoom"
       onPointerMove={(e) => {
         if (grip.current) {
           carry(e)
@@ -256,6 +274,10 @@ export function BasedHouseBlueprint() {
         }
       }}
       onPointerDown={(e) => {
+        if (e.button !== 0) {
+          return
+        }
+
         // Only a real pointer can be captured; a synthetic one is still held.
         if (e.isTrusted) {
           e.currentTarget.setPointerCapture(e.pointerId)
