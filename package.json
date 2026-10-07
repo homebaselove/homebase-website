@@ -24,8 +24,6 @@
     "@effect/opentelemetry": "^0.53.12",
     "@effect/platform": "^0.87.11",
     "@effect/platform-bun": "^0.72.15",
-    "@effect/sql": "^0.37.12",
-    "@effect/sql-sqlite-bun": "^0.38.12",
     "@farcaster/frame-sdk": "^0.0.63",
     "@opentelemetry/sdk-logs": "^0.203.0",
     "@opentelemetry/sdk-metrics": "^2.0.1",
@@ -43,7 +41,6 @@
     "preact": "nounder/preact-uno#d747dca",
     "supercluster": "^9.1.0",
     "tw-animate-css": "^1.3.4",
-    "ulid": "^3.0.1",
     "viem": "^2.57.3"
   }
 }

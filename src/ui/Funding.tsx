@@ -3,15 +3,21 @@ import { useEffect } from "preact"
 import { useSignal } from "preact/signals"
 import {
   BasedHouseMumbaiUrl,
+  BaseRpcUrl,
   Campaign,
+  DonationAddress,
   formatEth,
   nextMilestone,
   PresetsEth,
   SeedMeUrl,
   segmentFills,
   TargetEth,
+  transactionUrl,
 } from "../funding.ts"
+import { eas } from "../map/client.ts"
+import { account, isFailure, sendEther } from "../wallet/client.ts"
 import { HomeToken, InfoCard } from "./InfoCard.tsx"
+import { ConnectDialog } from "./wallet/ConnectDialog.tsx"
 
 interface Funding {
   raisedEth: number
@@ -24,6 +30,49 @@ export function FundingCard() {
   // String() is an empty string without an empty literal, which the class
   // scanner misreads, dropping classes from this file.
   const custom = useSignal(String())
+  const connecting = useSignal(false)
+  const sending = useSignal(false)
+  const sent = useSignal<string | null>(null)
+  const problem = useSignal<string | null>(null)
+
+  /** The amount to give, as typed or as chosen. */
+  const amount = () => (custom.value.trim() || String(preset.value)).trim()
+
+  const donate = async () => {
+    problem.value = null
+    sent.value = null
+
+    if (!account.value) {
+      connecting.value = true
+
+      return
+    }
+
+    const value = Number(amount())
+
+    if (!Number.isFinite(value) || value <= 0) {
+      problem.value = "Enter an amount above zero."
+
+      return
+    }
+
+    sending.value = true
+
+    // The test chain, when the map was read on one; Base otherwise.
+    const answer = await sendEther(
+      eas.value?.rpc ?? BaseRpcUrl,
+      DonationAddress,
+      amount(),
+    )
+
+    sending.value = false
+
+    if (isFailure(answer)) {
+      problem.value = answer.error
+    } else {
+      sent.value = answer
+    }
+  }
 
   useEffect(() => {
     const fetchFunding = async () => {
@@ -153,14 +202,50 @@ export function FundingCard() {
           Buy $home
         </a>
 
-        <a
-          href={SeedMeUrl}
-          target="_blank"
+        {/* A donation is ether from the connected wallet to the Based House wallet. */}
+        <button
+          type="button"
           class="btn-brand max-sm:px-3!"
+          disabled={sending.value}
+          onClick={donate}
         >
-          Donate
-        </a>
+          {sending.value ? "Confirm in your wallet…" : "Donate"}
+        </button>
       </div>
+
+      {sent.value && (
+        <p
+          role="status"
+          class="text-sm text-gray-600"
+        >
+          Thank you! Your donation is on Base.{" "}
+          <a
+            href={transactionUrl(sent.value)}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-brand underline"
+          >
+            See the transaction
+          </a>
+        </p>
+      )}
+
+      {problem.value && (
+        <p
+          role="alert"
+          class="text-sm text-red-600"
+        >
+          {problem.value}
+        </p>
+      )}
+
+      {connecting.value && (
+        <ConnectDialog
+          onClose={() => {
+            connecting.value = false
+          }}
+        />
+      )}
     </InfoCard>
   )
 }

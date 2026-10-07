@@ -1,6 +1,7 @@
 /** @jsxImportSource preact */
 import { HouseLogo } from "./HouseLogo.tsx"
 import { Socials } from "./Socials.tsx"
+import { ConnectButton } from "./wallet/ConnectButton.tsx"
 import { Wordmark } from "./Wordmark.tsx"
 
 export function Header() {
@@ -13,6 +14,10 @@ export function Header() {
         "
     >
       <div class="relative overflow-hidden">
+        <div class="absolute top-4 right-4 z-20 max-sm:top-3 max-sm:right-3">
+          <ConnectButton />
+        </div>
+
         <div class="w-full max-w-[960px] mx-auto px-6 text-center flex flex-col items-center">
           <div class="mt-12 w-24 max-sm:w-20 text-white">
             <HouseLogo />

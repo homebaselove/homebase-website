@@ -37,11 +37,12 @@ import {
   type Hex,
   http as viemHttp,
   parseAbi,
+  parseEther,
   parseEventLogs,
   zeroAddress,
   zeroHash,
 } from "viem"
-import { writeContract } from "viem/actions"
+import { sendTransaction, writeContract } from "viem/actions"
 
 export interface Wallet {
   readonly id: string
@@ -336,12 +337,13 @@ async function landed(chain: Reader, hash: Hash) {
 }
 
 /**
- * Pins a slug: an attestation under the map's schema from the connected
- * wallet. The first pin ever also registers the schema, one transaction
- * more. Each call is tried first on the public RPC, so a refusal shows,
- * with EAS's own name for it, before the wallet opens.
+ * Attests one string under a schema from the connected wallet: a slug for
+ * the map, a calendar link for Homebase Live. The first attestation under a
+ * schema also registers it, one transaction more. Each call is tried first
+ * on the public RPC, so a refusal shows, with EAS's own name for it, before
+ * the wallet opens.
  */
-export async function pinSlug(eas: Eas, slug: string): Promise<Hex> {
+export async function attestString(eas: Eas, value: string): Promise<Hex> {
   const chain = reader(eas.rpc)
   const wallet = await signer()
   const registry = eas.schemaRegistry as Address
@@ -389,7 +391,7 @@ export async function pinSlug(eas: Eas, slug: string): Promise<Hex> {
               },
             ],
             [
-              slug,
+              value,
             ],
           ),
           value: 0n,
@@ -412,8 +414,8 @@ export async function pinSlug(eas: Eas, slug: string): Promise<Hex> {
   return attested.args.uid
 }
 
-/** Takes a pin off: revokes its attestation, which only its attester can. */
-export async function unpinSlug(eas: Eas, uid: string): Promise<Hash> {
+/** Takes an attestation back, which only its attester can. */
+export async function revokeAttestation(eas: Eas, uid: string): Promise<Hash> {
   const chain = reader(eas.rpc)
   const wallet = await signer()
   const { request } = await chain.simulateContract({
@@ -432,6 +434,29 @@ export async function unpinSlug(eas: Eas, uid: string): Promise<Hash> {
     account: wallet.account,
   })
   const hash = await writeContract(wallet, request)
+
+  await landed(chain, hash)
+
+  return hash
+}
+
+/**
+ * Sends ether to an address and waits for it to land: a donation. The
+ * amount is parsed here, where viem is, from the text as typed.
+ */
+export async function sendEth(
+  rpc: string,
+  to: Address,
+  amountEth: string,
+): Promise<Hash> {
+  const chain = reader(rpc)
+  const wallet = await signer()
+  const hash = await sendTransaction(wallet, {
+    account: wallet.account,
+    chain: wallet.chain,
+    to,
+    value: parseEther(amountEth),
+  })
 
   await landed(chain, hash)
 

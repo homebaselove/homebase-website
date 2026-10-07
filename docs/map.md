@@ -7,9 +7,11 @@ the design, the research behind each decision, and what is left to do.
 
 ## How it works
 
-1. **Connect.** "Connect wallet" opens a dialog listing the wallets on the
-   page and Coinbase's. A wallet whose pins count, the Homebase wallet today,
-   gets the form; everyone else is told so and never sees it.
+1. **Connect.** The one wallet button on the page, top right of the header,
+   opens a dialog listing the wallets on the page and Coinbase's; the same
+   connection serves Homebase Live and the Donate button
+   ([docs/live.md](live.md)). A wallet whose pins count, the Homebase wallet
+   today, sees the map's Add an event button; everyone else never sees it.
 2. **Paste, preview, pin.** The wallet pastes a Luma link and looks it up.
    The server canonicalizes the link (host, slug, no tracking or ticket keys)
    and reads the event: title, start and end in UTC, the venue's IANA
@@ -453,9 +455,9 @@ client through the route manifest. Minified sizes:
   fingers. Animations honour reduced-motion.
 - `?event=<slug>` on the home page scrolls the map into view and opens the
   event on its pin, so a pin can be shared.
-- The add form is for a wallet whose pins count. Everyone else has a
-  connect button, and a wallet the map does not know is told so without
-  ever seeing the form.
+- The add form is for a wallet whose pins count. The way in is the wallet
+  button in the header, and a wallet the map does not know never sees the
+  form.
 - The dialog is rendered at the document's root, since each section of the
   page paints in its own layer and a later one would otherwise cover it.
 - Mobile gets the map above the list and the details over the map's lower
@@ -604,7 +606,7 @@ Chromium. A wallet whose keys the run holds is announced to the page the way
 extensions are (EIP-6963); it answers accounts and the chain itself, signs
 and sends the transactions the page asks for, and passes every other request
 on to the chain. The run walks through a visitor seeing only the way in, the
-admin connecting and getting the form, a look-up, the first pin as two
+admin connecting from the header and getting the form, a look-up, the first pin as two
 transactions, the schema and then the attestation, found on the chain and
 on the map, the map opening on the whole world after a reload with the event a round
 badge, the badge's hover preview with its link to Luma and the preview going

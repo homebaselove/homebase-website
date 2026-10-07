@@ -5,6 +5,9 @@
  * own indexer, the way Coinbase's OnchainKit reads identity badges, or from
  * a chain's logs for a local run; the browser writes them through the
  * connected wallet. Nothing is deployed and nothing is configured.
+ *
+ * Homebase Live keeps its calendars the same way, under a schema of its own,
+ * through the generic reader here.
  */
 import * as AbiFunction from "ox/AbiFunction"
 import * as AbiParameters from "ox/AbiParameters"
@@ -37,9 +40,12 @@ const NoResolver = "0x0000000000000000000000000000000000000000"
  * keccak256(abi.encodePacked(schema, resolver, revocable)), so it is known
  * before anyone registers it.
  */
-export const SchemaUid: string = Hash.keccak256(
-  Hex.concat(Hex.fromString(SchemaText), NoResolver, "0x01"),
-)
+export const schemaUidOf = (schemaText: string): string =>
+  Hash.keccak256(
+    Hex.concat(Hex.fromString(schemaText), NoResolver, "0x01"),
+  )
+
+export const SchemaUid: string = schemaUidOf(SchemaText)
 
 export interface Eas {
   readonly chainId: number
@@ -72,6 +78,14 @@ export interface Pin {
   readonly pinnedAt: bigint
 }
 
+/** An attestation by an allowed wallet, with its data decoded. */
+export interface Attested<T> {
+  readonly uid: string
+  readonly value: T
+  readonly by: string
+  readonly at: bigint
+}
+
 /** Luma's slugs: the path of an event page. */
 const Slug = /^[A-Za-z0-9_-]{1,64}$/
 
@@ -83,6 +97,7 @@ const AddressShape = /^0x[0-9a-fA-F]{40}$/
  */
 export function configured(
   env: Record<string, string | undefined>,
+  schemaText: string = SchemaText,
 ): Config {
   const listed = (env.HOMEBASE_ADMIN_ADDRESSES ?? "")
     .split(",")
@@ -101,8 +116,8 @@ export function configured(
       schemaRegistry: AddressShape.test(registry)
         ? registry
         : SchemaRegistryAddress,
-      schema: SchemaUid,
-      schemaText: SchemaText,
+      schema: schemaUidOf(schemaText),
+      schemaText,
       rpc: local ? env.HOMEBASE_BASE_RPC || BaseRpcUrl : BaseRpcUrl,
     },
     admins: listed.length > 0 ? listed : [
@@ -112,32 +127,59 @@ export function configured(
   }
 }
 
-const SlugData = AbiParameters.from([
+const StringData = AbiParameters.from([
   "string",
 ])
 
-/** The slug inside an attestation's data, or null for data that is not one. */
-function slugOf(data: string): string | null {
+/** The one string inside an attestation's data, or null for data that is not one. */
+export function stringOf(data: string): string | null {
   try {
-    const [slug] = AbiParameters.decode(SlugData, data as Hex.Hex)
+    const [value] = AbiParameters.decode(StringData, data as Hex.Hex)
 
-    return typeof slug === "string" && Slug.test(slug) ? slug : null
+    return typeof value === "string" ? value : null
   } catch {
     return null
   }
 }
 
+/** The slug inside an attestation's data, or null for data that is not one. */
+function slugOf(data: string): string | null {
+  const slug = stringOf(data)
+
+  return slug !== null && Slug.test(slug) ? slug : null
+}
+
+type Reader = {
+  readonly env: Record<string, string | undefined>
+  readonly fetch: typeof fetch
+}
+
+/**
+ * Every standing attestation under the configured schema by an allowed
+ * wallet, oldest first, with its data decoded; one whose data does not
+ * decode is left out.
+ */
+export async function readAttested<T>(
+  ctx: Reader,
+  config: Config,
+  decode: (data: string) => T | null,
+): Promise<Attested<T>[]> {
+  return config.indexer
+    ? fromIndexer(ctx, config, config.indexer, decode)
+    : fromLogs(ctx, config, decode)
+}
+
 /** Every live pin by an allowed wallet, oldest first. */
 export async function readPins(
-  ctx: {
-    readonly env: Record<string, string | undefined>
-    readonly fetch: typeof fetch
-  },
+  ctx: Reader,
   config: Config,
 ): Promise<Pin[]> {
-  return config.indexer
-    ? fromIndexer(ctx, config, config.indexer)
-    : fromLogs(ctx, config)
+  return (await readAttested(ctx, config, slugOf)).map((found) => ({
+    uid: found.uid,
+    slug: found.value,
+    by: found.by,
+    pinnedAt: found.at,
+  }))
 }
 
 const PinsQuery = `query Pins($schema: String!, $attesters: [String!]!) {
@@ -153,13 +195,14 @@ const PinsQuery = `query Pins($schema: String!, $attesters: [String!]!) {
   }
 }`
 
-async function fromIndexer(
+async function fromIndexer<T>(
   ctx: {
     readonly fetch: typeof fetch
   },
   config: Config,
   url: string,
-): Promise<Pin[]> {
+  decode: (data: string) => T | null,
+): Promise<Attested<T>[]> {
   const response = await ctx.fetch(url, {
     method: "POST",
     headers: {
@@ -203,16 +246,16 @@ async function fromIndexer(
   }
 
   return attestations.flatMap((attestation) => {
-    const slug = slugOf(attestation.data)
+    const value = decode(attestation.data)
 
-    return slug === null
+    return value === null
       ? []
       : [
         {
           uid: attestation.id,
-          slug,
+          value,
           by: Address.checksum(attestation.attester as Address.Address),
-          pinnedAt: BigInt(attestation.time),
+          at: BigInt(attestation.time),
         },
       ]
   })
@@ -272,13 +315,11 @@ async function rpc(
  * for a chain a test runs; Base's public endpoint does not serve ranges that
  * wide, which is what the indexer is for.
  */
-async function fromLogs(
-  ctx: {
-    readonly env: Record<string, string | undefined>
-    readonly fetch: typeof fetch
-  },
+async function fromLogs<T>(
+  ctx: Reader,
   config: Config,
-): Promise<Pin[]> {
+  decode: (data: string) => T | null,
+): Promise<Attested<T>[]> {
   const logs = await rpc(ctx, "eth_getLogs", [
     {
       address: config.eas.address,
@@ -296,11 +337,11 @@ async function fromLogs(
   ]) as {
     data: string
   }[]
-  const pins: Pin[] = []
+  const found: Attested<T>[] = []
 
   for (const log of logs) {
     const uid = log.data.slice(0, 66)
-    const found = AbiFunction.decodeResult(
+    const attestation = AbiFunction.decodeResult(
       getAttestation,
       await rpc(ctx, "eth_call", [
         {
@@ -317,17 +358,19 @@ async function fromLogs(
       attester: string
       data: string
     }
-    const slug = found.revocationTime === 0n ? slugOf(found.data) : null
+    const value = attestation.revocationTime === 0n
+      ? decode(attestation.data)
+      : null
 
-    if (slug !== null) {
-      pins.push({
+    if (value !== null) {
+      found.push({
         uid,
-        slug,
-        by: Address.checksum(found.attester as Address.Address),
-        pinnedAt: found.time,
+        value,
+        by: Address.checksum(attestation.attester as Address.Address),
+        at: attestation.time,
       })
     }
   }
 
-  return pins
+  return found
 }

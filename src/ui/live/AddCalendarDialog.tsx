@@ -2,33 +2,44 @@
 import { useEffect, useRef } from "preact"
 import { createPortal } from "preact/compat"
 import { useSignal } from "preact/signals"
-import { isFailure, pin, type Preview, preview } from "../../map/client.ts"
-import type { MapEvent } from "../../map/MapEvent.ts"
-import { describeWhen } from "../../map/time.ts"
+import {
+  addCalendar,
+  type Calendar,
+  type CalendarPreview,
+  previewCalendar,
+} from "../../live/client.ts"
+import { isFailure } from "../../wallet/client.ts"
 import { account, isAdmin, shortAddress, signOut } from "../../wallet/client.ts"
 import { CloseIcon, SpinnerIcon } from "../Icons.tsx"
 import { WalletPicker } from "../wallet/WalletPicker.tsx"
 
 interface Props {
   readonly onClose: () => void
-  readonly onPinned: (event: MapEvent) => void
+  readonly onAdded: (calendar: Calendar) => void
 }
 
 type Busy =
   | "idle"
   | "looking"
-  | "pinning"
+  | "adding"
+
+const dateOf = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  })
 
 /**
- * Paste a link, see what Luma says about it and pin it. The form is only
- * there for a wallet whose pins count; without a wallet the dialog offers
- * the way in.
+ * Paste a calendar feed link, see what it holds and add it. The form is only
+ * there for a wallet whose calendars count; without a wallet the dialog
+ * offers the way in.
  */
-export function SubmitDialog(props: Props) {
+export function AddCalendarDialog(props: Props) {
   // String() is an empty string without an empty literal, which the class
   // scanner misreads, dropping classes from this file.
   const url = useSignal(String())
-  const found = useSignal<Preview | null>(null)
+  const found = useSignal<CalendarPreview | null>(null)
   const busy = useSignal<Busy>("idle")
   const problem = useSignal<string | null>(null)
   const input = useRef<HTMLInputElement>(null)
@@ -59,7 +70,7 @@ export function SubmitDialog(props: Props) {
     problem.value = null
     found.value = null
 
-    const answer = await preview(url.value)
+    const answer = await previewCalendar(url.value)
 
     busy.value = "idle"
 
@@ -70,38 +81,27 @@ export function SubmitDialog(props: Props) {
     }
   }
 
-  const pinIt = async () => {
-    busy.value = "pinning"
-    problem.value = null
-
+  const addIt = async () => {
     const chosen = found.value
 
     if (!chosen) {
-      busy.value = "idle"
-
       return
     }
 
-    const answer = await pin(chosen.event)
+    busy.value = "adding"
+    problem.value = null
+
+    const answer = await addCalendar(chosen)
 
     busy.value = "idle"
 
     if (isFailure(answer)) {
       problem.value = answer.error
     } else {
-      props.onPinned(answer)
+      props.onAdded(answer)
     }
   }
 
-  const leave = async () => {
-    url.value = String()
-    found.value = null
-    problem.value = null
-    await signOut()
-  }
-
-  // The page's sections each paint in their own layer, so the dialog is
-  // rendered at the document's root to lie over all of them.
   return createPortal(
     <div
       class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 sm:p-4"
@@ -114,21 +114,21 @@ export function SubmitDialog(props: Props) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="submit-heading"
+        aria-labelledby="calendar-heading"
         class="w-full sm:max-w-lg max-h-[92vh] overflow-y-auto bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl p-5 flex flex-col gap-4"
       >
         <div class="flex items-start justify-between gap-3">
           <div>
             <h2
-              id="submit-heading"
+              id="calendar-heading"
               class="text-2xl font-bold leading-tight"
             >
-              {allowed ? "Add a Luma event" : "Connect a wallet"}
+              {allowed ? "Add a calendar" : "Connect a wallet"}
             </h2>
             <p class="text-sm text-gray-500 mt-1">
               {allowed
-                ? "Paste the event’s Luma link. Its time, place and cover come from Luma, and stay in step with it."
-                : "The Homebase wallet adds events to the map. Once $home locking is wired in, anyone who has locked $home will be able to as well."}
+                ? "Paste the iCal link of a Luma calendar, a Google Calendar or an Outlook calendar. Its events are listed here and stay in step with it. On Luma, the link is under Add iCal Subscription on the calendar page."
+                : "The Homebase wallet adds calendars to Homebase Live. Once $home locking is wired in, anyone who has locked $home will be able to as well."}
             </p>
           </div>
 
@@ -157,7 +157,12 @@ export function SubmitDialog(props: Props) {
                 <button
                   type="button"
                   class="text-brand hover:underline"
-                  onClick={leave}
+                  onClick={async () => {
+                    url.value = String()
+                    found.value = null
+                    problem.value = null
+                    await signOut()
+                  }}
                 >
                   Disconnect
                 </button>
@@ -174,19 +179,19 @@ export function SubmitDialog(props: Props) {
                 }}
               >
                 <label
-                  for="luma-link"
+                  for="calendar-link"
                   class="text-sm font-semibold"
                 >
-                  Luma link
+                  Calendar feed link
                 </label>
 
                 <div class="flex gap-2">
                   <input
-                    id="luma-link"
+                    id="calendar-link"
                     ref={input}
                     type="text"
                     inputMode="url"
-                    placeholder="https://luma.com/your-event"
+                    placeholder="https://api.lu.ma/ics/get?entity=calendar&id=cal-…"
                     value={url.value}
                     class="flex-1 min-w-0 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 focus:outline-none focus:border-brand/40 focus:bg-white"
                     onInput={(event) => {
@@ -220,14 +225,14 @@ export function SubmitDialog(props: Props) {
                 <strong title={actor.address}>
                   {shortAddress(actor.address)}
                 </strong>{" "}
-                can’t add events yet. The Homebase wallet can now, and $home
+                can’t add calendars yet. The Homebase wallet can now, and $home
                 lockers will be able to soon.
               </span>
 
               <button
                 type="button"
                 class="text-brand hover:underline"
-                onClick={leave}
+                onClick={() => signOut()}
               >
                 Disconnect
               </button>
@@ -245,82 +250,51 @@ export function SubmitDialog(props: Props) {
         )}
 
         {allowed && found.value && (
-          <PreviewCard
-            found={found.value}
-            busy={busy.value === "pinning"}
-            onPin={pinIt}
-          />
+          <div class="rounded-lg border-[1px] border-gray-200 p-4 flex flex-col gap-2">
+            <h3 class="text-lg font-bold leading-tight">
+              {found.value.name ?? "Calendar"}
+            </h3>
+
+            <p class="text-sm text-gray-600">
+              {found.value.upcoming === 0
+                ? "Nothing ahead on it in the next four months."
+                : found.value.upcoming === 1
+                ? "1 event ahead."
+                : `${found.value.upcoming} events ahead.`}
+            </p>
+
+            {found.value.events.length > 0 && (
+              <ul class="text-sm flex flex-col gap-1">
+                {found.value.events.slice(0, 5).map((event) => (
+                  <li key={event.id}>
+                    <span class="text-brand font-semibold">
+                      {dateOf(
+                        event
+                          .start,
+                      )}
+                    </span>
+                    {" · "}
+                    {event
+                      .title}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <button
+              type="button"
+              class="btn-brand self-start mt-1"
+              disabled={busy.value === "adding"}
+              onClick={addIt}
+            >
+              {busy.value === "adding"
+                ? "Confirm in your wallet…"
+                : "Add it to Homebase Live"}
+            </button>
+          </div>
         )}
       </div>
     </div>,
     document.body,
-  )
-}
-
-function PreviewCard(props: {
-  found: Preview
-  busy: boolean
-  onPin: () => void
-}) {
-  const { event } = props.found
-  const when = describeWhen(event)
-  const note = event.placement === "hidden"
-    ? "The address is for guests only, so the pin lands on the city."
-    : event.placement === "online"
-    ? "An online event: it will be listed, not pinned."
-    : event.placement === "unknown"
-    ? "Luma has no coordinates for this one, so it will be listed, not pinned."
-    : null
-
-  return (
-    <div class="rounded-lg border-[1px] border-gray-200 overflow-hidden">
-      {event.cover && (
-        <img
-          src={event.cover}
-          alt={String()}
-          class="w-full aspect-[2/1] object-cover bg-gray-100"
-        />
-      )}
-
-      <div class="p-4 flex flex-col gap-2">
-        <p class="text-sm text-brand font-semibold">
-          {when.date}
-          <span class="text-gray-500 font-normal">
-            {" · "}
-            {when.time}
-          </span>
-        </p>
-
-        <h3 class="text-lg font-bold leading-tight">
-          {event.title}
-        </h3>
-
-        <p class="text-sm text-gray-600">
-          {event.placement === "online"
-            ? "Online"
-            : [
-              event.venue,
-              event.city,
-            ]
-              .filter(Boolean)
-              .join(" · ") || "No location given"}
-        </p>
-
-        {note && (
-          <p class="text-sm text-gray-500">
-            {note}
-          </p>
-        )}
-
-        <button
-          type="button"
-          class="btn-brand self-start mt-1"
-          disabled={props.busy}
-          onClick={props.onPin}
-        >
-          {props.busy ? "Confirm in your wallet…" : "Pin it to the map"}
-        </button>
-      </div>
-    </div>
   )
 }

@@ -101,6 +101,44 @@ export const Fixtures: Record<string, Record<string, unknown>> = {
   ),
 }
 
+/** The calendar feed the suite adds to Homebase Live, with two streams ahead. */
+export const LiveFeed = "https://api.lu.ma/ics/get?entity=calendar&id=cal-e2e"
+
+const Day = 24 * 60 * 60_000
+
+/** A time as iCalendar writes it in UTC. */
+const stamp = (at: number) =>
+  new Date(at).toISOString().replace(/[-:]|\.\d{3}/g, String())
+
+const liveIcs = () => {
+  const soon = Date.now() + 7 * Day
+  const later = Date.now() + 14 * Day
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Luma//EN",
+    "X-WR-CALNAME:Homebase on Luma",
+    "BEGIN:VEVENT",
+    "UID:demo-stream@luma",
+    `DTSTART:${stamp(soon)}`,
+    `DTEND:${stamp(soon + 60 * 60_000)}`,
+    "SUMMARY:Demo day stream",
+    "DESCRIPTION:Founders demo what they built.",
+    "URL:https://lu.ma/e2e-demo-stream",
+    "END:VEVENT",
+    "BEGIN:VEVENT",
+    "UID:office-hours@luma",
+    `DTSTART:${stamp(later)}`,
+    `DTEND:${stamp(later + 60 * 60_000)}`,
+    "SUMMARY:Office hours",
+    "LOCATION:https://youtube.com/live/e2e",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ]
+    .join("\r\n")
+}
+
 const page = (data: Record<string, unknown>) =>
   new Response(
     `<!doctype html><html><head><title>Luma</title></head><body><script id="__NEXT_DATA__" type="application/json">${
@@ -133,6 +171,14 @@ globalThis.fetch = (async (
       ? input.href
       : input.url,
   )
+
+  if (url.href.startsWith(LiveFeed)) {
+    return new Response(liveIcs(), {
+      headers: {
+        "content-type": "text/calendar",
+      },
+    })
+  }
 
   if (/(^|\.)(lu\.ma|luma\.com)$/.test(url.hostname)) {
     const slug = url.pathname.split("/").filter(Boolean).at(-1) ?? ""

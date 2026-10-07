@@ -11,7 +11,8 @@ The Homebase website serves as a hub for the Base community, featuring:
 - Interactive map of community events, pinned from their Luma links
 - The Based House story: a scroll-snapped reel of every house, the Base Batches
   workshops and the Homebase Map, with each chapter's figures and sources
-- Upcoming workshops and events with timezone support
+- Homebase Live: what is streaming ahead, from calendars the Homebase wallet
+  adds, in any timezone
 - Video gallery of past events and workshops
 - Farcaster Frame integration
 
@@ -50,6 +51,13 @@ bun install
 bun run dev
 ```
 
+## 👛 Wallet
+
+One Connect wallet button, top right of the page, serves the map, Homebase
+Live and the Donate button. Any wallet may connect; the add buttons appear
+only for the Homebase wallet. [docs/live.md](docs/live.md) describes the
+wallet and Homebase Live.
+
 ## 🗺️ Map
 
 Events on the map come from Luma, and the list of them lives on Base: the
@@ -81,19 +89,17 @@ E2E_TARGET=vercel bun run e2e
 
 ### Vercel
 
-Vercel's functions run on Node here (its Bun runtime is still in beta), have no
-persistent disk for SQLite and nowhere to run the sync loops, so it serves the
-client as static files and answers the JSON endpoints with functions in `api/`.
-The events function parses the iCal feed per request and lets the CDN cache it
-for five minutes; the funding answer is cached for two; the map's list for one
-minute. The map's pins are attestations on Base, read per request through
-EAS's indexer and looked up on Luma.
+Vercel's functions run on Node here (its Bun runtime is still in beta), so it
+serves the client as static files and answers the JSON endpoints with functions
+in `api/`.
+The funding answer is cached for two minutes, the map's list for one and
+Homebase Live's for five. The map's pins and Live's calendars are attestations
+on Base, read per request through EAS's indexer; the pins are looked up on
+Luma and the calendars fetched as iCal feeds.
 
 `vercel.json` carries the build command and the routing, so the only project
 settings are the environment variables:
 
-- `HOMEBASE_LIVE_ICAL` — the calendar feed URL. Without it `/events.json`
-  answers with a 500 and the site renders with no events.
 - `HOMEBASE_FUNDING_ADDRESS` — optional. The Bankr address holding the
   creator's share of the $home fees. It defaults to the address in
   `api/funding.ts`, so this only needs setting to point the card somewhere
@@ -105,11 +111,9 @@ settings are the environment variables:
 
 An empty value counts as unset for every optional variable.
 
-The deploy reads its own gaps back: `/events.json` answering 500 means
-`HOMEBASE_LIVE_ICAL` is missing, and a variable added for Production alone is
-not there on a preview deployment of a branch. The map needs no setting: a
-503 from `/map.json` means EAS's indexer could not be reached, and the CDN
-keeps the last list for an hour while that lasts.
+Neither the map nor Homebase Live needs a setting: a 503 from `/map.json` or
+`/live.json` means EAS's indexer could not be reached, and the CDN keeps the
+last list for an hour while that lasts.
 
 $home's creator fees accrue in its pool's fee ledger, a Doppler hook on Base,
 and only reach the address when someone claims them. The card reads that
@@ -132,9 +136,9 @@ bun run build   # writes dist/
 
 ### Fly.io
 
-`bun start` runs the full Bun server — file router, the calendar sync job and
-its SQLite file under `DATA_PATH` — which is what the Dockerfile and `fly.toml`
-deploy. The map reads the same attestations on Base as the Vercel deploy:
+`bun start` runs the full Bun server, which is what the Dockerfile and
+`fly.toml` deploy. It reads the same attestations on Base as the Vercel deploy
+and keeps nothing on disk:
 
 ```bash
 fly deploy

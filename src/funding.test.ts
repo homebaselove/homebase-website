@@ -1,13 +1,21 @@
 import { expect, test } from "bun:test"
 import * as AbiParameters from "ox/AbiParameters"
 import * as Hash from "ox/Hash"
-import { earnedWei, HomePoolId } from "../api/funding.ts"
 import {
+  BaseRpcUrl as ServerRpcUrl,
+  earnedWei,
+  FundingAddress,
+  HomePoolId,
+} from "../api/funding.ts"
+import {
+  BaseRpcUrl,
+  DonationAddress,
   formatEth,
   HomeTokenUrl,
   nextMilestone,
   SeedMeLockUrl,
   segmentFills,
+  transactionUrl,
 } from "./funding.ts"
 
 test("next milestone steps past the amount already raised", () => {
@@ -183,4 +191,22 @@ test("the card links the pool whose fees it counts", () => {
     HomeTokenUrl,
   )
     .toBe(`https://dexscreener.com/base/${HomePoolId}`)
+})
+
+test("a donation goes to the same address whose fees the card counts", () => {
+  expect(
+    DonationAddress,
+  )
+    .toBe(FundingAddress)
+  expect(
+    BaseRpcUrl,
+  )
+    .toBe(ServerRpcUrl)
+})
+
+test("a landed transaction links to its page on BaseScan", () => {
+  expect(
+    transactionUrl("0xabc"),
+  )
+    .toBe("https://basescan.org/tx/0xabc")
 })

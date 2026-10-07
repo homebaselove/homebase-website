@@ -10,6 +10,21 @@ export const SeedMeUrl = "https://seedme.xyz"
 /** Where the lock card sends people, matching SeedMe's own nav. */
 export const SeedMeLockUrl = `${SeedMeUrl}/lock`
 
+/**
+ * Where a donation from a connected wallet goes: the Based House wallet,
+ * the same address whose $home fees the card counts, written out here so
+ * the page carries no chain code. api/funding.ts holds the same address, and
+ * a test keeps the two together.
+ */
+export const DonationAddress = "0x23cEBf0E3529a3Af4756eFAe22E56B9797f008E3"
+
+/** Base's public RPC, for the page to wait on a donation it sent. */
+export const BaseRpcUrl = "https://mainnet.base.org"
+
+/** Where a landed transaction can be seen. */
+export const transactionUrl = (hash: string) =>
+  `https://basescan.org/tx/${hash}`
+
 /** $home, on the pool the socials row already points at. */
 export const HomeTokenUrl =
   "https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24"
