@@ -163,7 +163,7 @@ export const Chapters: Chapter[] = [
     month: "2025-04",
     when: "Apr – May 2025",
     kicker: "Building the foundation",
-    title: "Base Batches workshops and the Homebase Map",
+    title: "Base Batches and the Homebase Map",
     cover: [
       {
         src: HomebaseMapAnnouncement,
