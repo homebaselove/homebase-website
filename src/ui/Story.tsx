@@ -413,7 +413,9 @@ function Film(props: { video: StoryVideo; focused: boolean }) {
     element.focus({
       preventScroll: true,
     })
-    element.play()
+    // A reader who moves to another chapter before the video has started
+    // pauses it mid-request, and the browser rejects the request for it.
+    element.play().catch(() => {})
   }
 
   return (
