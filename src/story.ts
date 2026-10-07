@@ -73,6 +73,13 @@ const EthDenverRecapVideoUrl =
 
 const DevconnectRecapUrl = "https://farcaster.xyz/luciano/0x78eb1ae0"
 
+/** The artwork the Devconnect residents made together, as Kismet posted it. */
+const DevconnectArtworkUrl =
+  "https://x.com/kismetcasa/status/1997792107562758534"
+
+const DevconnectRecapVideoUrl =
+  "https://x.com/kismetcasa/status/2009009948446085511"
+
 const HomebaseMapAnnouncementUrl = "https://farcaster.xyz/luciano/0x1897f428"
 
 const EthDenverReturnRecapUrl =
@@ -290,8 +297,12 @@ export const Chapters: Chapter[] = [
           "https://docs.google.com/presentation/d/1gnJNH1Xijv3xO3tQ3cOg5QIYwq7PfdwLwEH6YvuNfm0/edit?usp=sharing",
       },
       {
-        label: "Public recap",
-        href: DevconnectRecapUrl,
+        label: "Group Artwork",
+        href: DevconnectArtworkUrl,
+      },
+      {
+        label: "Recap Video",
+        href: DevconnectRecapVideoUrl,
       },
     ],
   },
