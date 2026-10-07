@@ -25,11 +25,6 @@ export function BasedHouseCard() {
         <h2 class="text-4xl max-sm:text-3xl font-bold mt-1">
           Based House Mumbai
         </h2>
-
-        <p class="mt-3 text-gray-600">
-          Physical space for builders and creators to gather, work, and learn
-          together. Every creator fee $home earns funds the next one.
-        </p>
       </div>
 
       <div class="grid items-start gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
@@ -89,8 +84,14 @@ export function BasedHouseBlueprint() {
     }
 
     const rect = el.getBoundingClientRect()
-    const nx = Math.max(-1, Math.min(1, ((e.clientX - rect.left) / rect.width) * 2 - 1))
-    const ny = Math.max(-1, Math.min(1, ((e.clientY - rect.top) / rect.height) * 2 - 1))
+    const nx = Math.max(
+      -1,
+      Math.min(1, ((e.clientX - rect.left) / rect.width) * 2 - 1),
+    )
+    const ny = Math.max(
+      -1,
+      Math.min(1, ((e.clientY - rect.top) / rect.height) * 2 - 1),
+    )
 
     cancelAnimationFrame(pending.current)
     pending.current = requestAnimationFrame(() => {

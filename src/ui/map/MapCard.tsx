@@ -1,15 +1,10 @@
 /** @jsxImportSource preact */
 import { useEffect, useRef } from "preact"
 import { useComputed, useSignal, useSignalEffect } from "preact/signals"
-import {
-  account,
-  events,
-  loadEvents,
-  loadFailed,
-  restore,
-} from "../../map/client.ts"
+import { events, loadEvents, loadFailed } from "../../map/client.ts"
 import { hasPin, isUpcoming } from "../../map/event.ts"
 import type { MapEvent } from "../../map/MapEvent.ts"
+import { isAdmin } from "../../wallet/client.ts"
 import { EventDetails } from "./EventDetails.tsx"
 import { EventList } from "./EventList.tsx"
 import { MapView } from "./MapView.tsx"
@@ -61,8 +56,8 @@ export function MapCard() {
   const frame = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Who may pin comes with the list, and the wallet is checked against it.
-    loadEvents().then(restore)
+    // Who may pin comes with the list; the header picks the wallet back up.
+    loadEvents()
 
     // A shared link lands on the map, not at the top of the page above it.
     if (selected.peek()) {
@@ -218,18 +213,18 @@ export function MapCard() {
             {chip("past", "Past", counts.value.past)}
           </div>
 
-          {/* The form is for a wallet whose pins count; everyone else gets the way in. */}
-          <button
-            type="button"
-            class={account.value
-              ? "btn-brand"
-              : "rounded-full border-[1px] border-brand/30 px-3 py-1.5 text-sm text-brand hover:bg-brand/10"}
-            onClick={() => {
-              adding.value = true
-            }}
-          >
-            {account.value ? "Add an event" : "Connect wallet"}
-          </button>
+          {/* The form is for a wallet whose pins count; the way in is the button in the header. */}
+          {isAdmin.value && (
+            <button
+              type="button"
+              class="btn-brand"
+              onClick={() => {
+                adding.value = true
+              }}
+            >
+              Add an event
+            </button>
+          )}
         </div>
       </div>
 
@@ -302,7 +297,7 @@ export function MapCard() {
             failed={loadFailed.value}
             empty={filter.value !== "upcoming"
               ? "No past events here yet."
-              : account.value
+              : isAdmin.value
               ? "No upcoming events pinned yet. Paste a Luma link to add one."
               : "No upcoming events pinned yet."}
           />

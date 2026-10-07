@@ -3,10 +3,10 @@ import { useEffect } from "preact"
 import { BasedHouseCard } from "../ui/BasedHouse.tsx"
 import { Footer } from "../ui/Footer.tsx"
 import { Header } from "../ui/Header.tsx"
+import { LiveCard } from "../ui/live/LiveCard.tsx"
 import { MapCard } from "../ui/map/MapCard.tsx"
 import { BasedHouseStory } from "../ui/Story.tsx"
 import { VideoGallery } from "../ui/VideoGallery.tsx"
-import { WorkshopListCard } from "../ui/Workshop.tsx"
 
 export default function() {
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function() {
       <div
         class={`flex flex-col pt-10 w-full max-w-[840px] mx-auto px-4 z-10 relative gap-8`}
       >
-        <WorkshopListCard />
+        <LiveCard />
       </div>
 
       <div

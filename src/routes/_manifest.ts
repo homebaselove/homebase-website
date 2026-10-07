@@ -27,19 +27,24 @@ const page__about = {
   load: () => import("./about/_page.tsx"),
 } as const
 
-const server__events_json = {
-  path: "/events.json",
-  load: () => import("./events.json/_server.ts"),
-} as const
-
 const server__funding_json = {
   path: "/funding.json",
   load: () => import("./funding.json/_server.ts"),
 } as const
 
+const server__live_json = {
+  path: "/live.json",
+  load: () => import("./live.json/_server.ts"),
+} as const
+
 const server__map_json = {
   path: "/map.json",
   load: () => import("./map.json/_server.ts"),
+} as const
+
+const server__live__preview_json = {
+  path: "/live/preview.json",
+  load: () => import("./live/preview.json/_server.ts"),
 } as const
 
 const server__map__preview_json = {
@@ -58,9 +63,10 @@ export const Pages: Router.PageRoutes = [
 ] as const
 
 export const Servers: Router.ServerRoutes = [
-  server__events_json,
   server__funding_json,
+  server__live_json,
   server__map_json,
+  server__live__preview_json,
   server__map__preview_json
 ] as const
  

@@ -102,12 +102,8 @@ export function BasedHouseStory() {
       }}
     >
       <div class="max-w-[640px] mx-auto text-center">
-        <div class="text-sm font-bold uppercase tracking-wide text-brand">
-          Based House
-        </div>
-
-        <h2 class="text-4xl max-sm:text-3xl font-bold mt-1">
-          Story
+        <h2 class="text-4xl max-sm:text-3xl font-bold">
+          Our Story
         </h2>
 
         <p class="mt-3 text-gray-600">
@@ -171,7 +167,6 @@ export function BasedHouseStory() {
           style="width: calc(50% - var(--story-card) / 2 - var(--story-gap))"
         />
       </ol>
-
     </section>
   )
 }
@@ -291,86 +286,84 @@ function ChapterCard(props: {
         }
       }}
     >
-      {/* The snap target above stays untransformed, so the reel centers on
-          the layout box; the scale lives on this wrapper. */}
+      {
+        /* The snap target above stays untransformed, so the reel centers on
+          the layout box; the scale lives on this wrapper. */
+      }
       <div
         class={focused
           ? "w-full flex transition-[transform,opacity] duration-300 motion-reduce:transition-none scale-100 opacity-100"
           : `w-full flex transition-[transform,opacity] duration-300 motion-reduce:transition-none scale-[0.92] sm:scale-[0.88] opacity-50 hover:opacity-75 ${side}`}
       >
-      <article
-        // Only the chapter in focus can be read or tabbed into.
-        inert={!focused}
-        class="w-full bg-white rounded-2xl shadow-md border-[1px] border-gray-200 overflow-hidden flex flex-col"
-      >
-        {chapter.cover && (
-          <Cover photos={chapter.cover} />
-        )}
+        <article
+          // Only the chapter in focus can be read or tabbed into.
+          inert={!focused}
+          class="w-full bg-white rounded-2xl shadow-md border-[1px] border-gray-200 overflow-hidden flex flex-col"
+        >
+          {chapter.cover && <Cover photos={chapter.cover} />}
 
-        <div class="p-6 max-sm:p-5 flex flex-col gap-4">
-          <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <span class="text-sm font-bold uppercase tracking-wide text-brand">
-              {chapter.kicker}
-            </span>
+          <div class="p-6 max-sm:p-5 flex flex-col gap-4">
+            <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <span class="text-sm font-bold uppercase tracking-wide text-brand">
+                {chapter.kicker}
+              </span>
 
-            <span class="text-sm text-gray-500">
-              {chapter.when}
-            </span>
-          </div>
+              <span class="text-sm text-gray-500">
+                {chapter.when}
+              </span>
+            </div>
 
-          <h3 class="text-3xl max-sm:text-2xl font-bold leading-tight">
-            {chapter.title}
-          </h3>
+            <h3 class="text-3xl max-sm:text-2xl font-bold leading-tight">
+              {chapter.title}
+            </h3>
 
-          <details class="group -my-2">
-            <summary class="list-none [&::-webkit-details-marker]:hidden inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-gray-600 cursor-pointer select-none rounded-full -mx-2 px-2 transition-colors hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
-              What happened
-              <ChevronIcon />
-            </summary>
+            <details class="group -my-2">
+              <summary class="list-none [&::-webkit-details-marker]:hidden inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-gray-600 cursor-pointer select-none rounded-full -mx-2 px-2 transition-colors hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
+                What happened
+                <ChevronIcon />
+              </summary>
 
-            <p class="text-gray-700 leading-relaxed pt-2">
-              {chapter.summary}
-            </p>
-          </details>
+              <p class="text-gray-700 leading-relaxed pt-2">
+                {chapter.summary}
+              </p>
+            </details>
 
-          {chapter.stats && (
-            <dl class="grid grid-cols-2 sm:flex gap-3">
-              {chapter.stats.map((stat) => (
-                <div
-                  key={stat.label}
-                  class="sm:flex-1 sm:basis-0 max-sm:odd:last:col-span-2 max-[359px]:col-span-2 min-w-0 rounded-lg bg-gray-50 px-3 py-2.5"
+            {chapter.stats && (
+              <dl class="grid grid-cols-2 sm:flex gap-3">
+                {chapter.stats.map((stat) => (
+                  <div
+                    key={stat.label}
+                    class="sm:flex-1 sm:basis-0 max-sm:odd:last:col-span-2 max-[359px]:col-span-2 min-w-0 rounded-lg bg-gray-50 px-3 py-2.5"
+                  >
+                    <dd class="text-2xl max-sm:text-xl font-bold leading-none text-brand">
+                      {stat.value}
+                    </dd>
+                    <dt class="text-sm text-gray-500 mt-1 break-words">
+                      {stat.label}
+                    </dt>
+                  </div>
+                ))}
+              </dl>
+            )}
+
+            <div class="flex flex-wrap gap-2 mt-auto pt-1">
+              {chapter.links.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  target={link.href.startsWith("#") ? undefined : "_blank"}
+                  rel={link.href.startsWith("#") ? undefined : "noopener"}
+                  class={today
+                    ? "btn-brand text-sm min-h-11"
+                    : "inline-flex items-center gap-1.5 min-h-11 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand"}
                 >
-                  <dd class="text-2xl max-sm:text-xl font-bold leading-none text-brand">
-                    {stat.value}
-                  </dd>
-                  <dt class="text-sm text-gray-500 mt-1 break-words">
-                    {stat.label}
-                  </dt>
-                </div>
+                  {link.label}
+                  {!link.href.startsWith("#") && <OutwardIcon />}
+                </a>
               ))}
-            </dl>
-          )}
-
-          <div class="flex flex-wrap gap-2 mt-auto pt-1">
-            {chapter.links.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                target={link.href.startsWith("#") ? undefined : "_blank"}
-                rel={link.href.startsWith("#") ? undefined : "noopener"}
-                class={today
-                  ? "btn-brand text-sm min-h-11"
-                  : "inline-flex items-center gap-1.5 min-h-11 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand"}
-              >
-                {link.label}
-                {!link.href.startsWith("#") && (
-                  <OutwardIcon />
-                )}
-              </a>
-            ))}
+            </div>
           </div>
-        </div>
-      </article>
+        </article>
       </div>
     </li>
   )

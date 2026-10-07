@@ -25,7 +25,11 @@ import {
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { foundry } from "viem/chains"
+import { DonationAddress } from "../src/funding.ts"
 import eas from "./contracts/eas.json" with { type: "json" }
+
+/** The calendar feed the Luma stub serves, with two streams ahead. */
+const LiveFeed = "https://api.lu.ma/ics/get?entity=calendar&id=cal-e2e"
 
 const Origin = "http://127.0.0.1:3000"
 
@@ -322,9 +326,6 @@ async function onChain(contracts: Contracts) {
  * its logs in place of EAS's indexer.
  */
 async function startServer(contracts: Contracts) {
-  const dataPath = await NFs.mkdtemp(
-    NPath.join(NOs.tmpdir(), "homebase-e2e-data-"),
-  )
   const vercel = process.env.E2E_TARGET === "vercel"
   const server = Bun.spawn(
     vercel
@@ -343,13 +344,11 @@ async function startServer(contracts: Contracts) {
     {
       env: {
         ...process.env,
-        DATA_PATH: dataPath,
         HOMEBASE_EAS: contracts.eas,
         HOMEBASE_EAS_REGISTRY: contracts.schemaRegistry,
         HOMEBASE_EAS_INDEXER: "logs",
         HOMEBASE_ADMIN_ADDRESSES: wallets.admin,
         HOMEBASE_BASE_RPC: ChainRpc,
-        HOMEBASE_LIVE_ICAL: undefined,
       },
       stdout: "pipe",
       stderr: "pipe",
@@ -573,6 +572,16 @@ async function lookUpAndPin(page: Page, link: string) {
   await page.waitForTimeout(1500)
 }
 
+const liveJson = async () =>
+  (await (await fetch(`${Origin}/live.json?fresh=${Date.now()}`)).json()) as {
+    calendars: {
+      url: string
+    }[]
+    events: {
+      start: string
+    }[]
+  }
+
 const mapJson = async () =>
   (await (await fetch(`${Origin}/map.json?fresh=${Date.now()}`)).json()) as {
     events: {
@@ -626,14 +635,28 @@ try {
       && offered.some((text) => text.includes("Coinbase Wallet")),
     offered.join(" | "),
   )
+  await page.locator("[data-wallet=connected]").waitFor({
+    timeout: 30_000,
+  })
+  await page
+    .getByRole("button", {
+      name: "Add an event",
+    })
+    .click()
   await dialog(page).getByText(`Adding as ${short(wallets.admin)}`).waitFor({
     timeout: 30_000,
   })
   await shot(page, "02-connected")
+
+  const headerReads = await page.locator("[data-wallet=connected]").innerText()
+
   check(
-    "the admin wallet is let in and gets the form",
-    (await dialog(page).getByText("(admin)").count()) === 1
+    "the admin wallet is let in from the header, the map offers Add an event, and the form is there",
+    headerReads.includes(short(wallets.admin))
+      && headerReads.toLowerCase().includes("admin")
+      && (await dialog(page).getByText("(admin)").count()) === 1
       && (await dialog(page).getByLabel("Luma link").count()) === 1,
+    headerReads,
   )
 
   await dialog(page).getByLabel("Luma link").fill(
@@ -1063,6 +1086,263 @@ try {
     small.join(", ") || `badge ${badgeBox?.width}x${badgeBox?.height}`,
   )
 
+  // Homebase Live: the admin adds a calendar feed, its events are listed, and takes it off again.
+  await again.locator("#live-heading").scrollIntoViewIfNeeded()
+  await again.getByText("No calendars yet.").waitFor({
+    timeout: 10_000,
+  })
+  check(
+    "Homebase Live opens empty, and offers the admin a calendar to add",
+    (await again
+          .getByRole("heading", {
+            name: "Homebase Live",
+          })
+          .count()) === 1
+      && (await again
+          .getByRole("button", {
+            name: "Add a calendar",
+          })
+          .count()) === 1
+      && (await again.getByText("Nothing streaming ahead").count()) === 1,
+  )
+
+  const beforeCalendar = await walletCalls(again)
+
+  await again
+    .getByRole("button", {
+      name: "Add a calendar",
+    })
+    .click()
+
+  // A link the server would not fetch is refused before anything is signed.
+  await dialog(again).getByLabel("Calendar feed link").fill(
+    LiveFeed.replace("https://", "http://"),
+  )
+  await dialog(again)
+    .getByRole("button", {
+      name: "Look up",
+    })
+    .click()
+  await dialog(again).getByRole("alert").waitFor({
+    timeout: 10_000,
+  })
+
+  const refusal = await dialog(again).getByRole("alert").innerText()
+
+  check(
+    "a feed link that is not https is refused, and nothing is signed",
+    refusal.includes("https only")
+      && (await walletCalls(again))
+          .slice(beforeCalendar.length)
+          .filter((method) => method === "eth_sendTransaction")
+          .length === 0
+      && (await dialog(again)
+          .getByRole("button", {
+            name: "Add it to Homebase Live",
+          })
+          .count()) === 0,
+    refusal,
+  )
+
+  await dialog(again).getByLabel("Calendar feed link").fill(LiveFeed)
+  await dialog(again)
+    .getByRole("button", {
+      name: "Look up",
+    })
+    .click()
+  await dialog(again)
+    .getByRole("button", {
+      name: "Add it to Homebase Live",
+    })
+    .waitFor({
+      timeout: 30_000,
+    })
+  await shot(again, "07-calendar-preview")
+  check(
+    "the calendar's preview names it and counts what is ahead",
+    (await dialog(again).getByText("Homebase on Luma").count()) === 1
+      && (await dialog(again).getByText("2 events ahead.").count()) === 1,
+  )
+  await dialog(again)
+    .getByRole("button", {
+      name: "Add it to Homebase Live",
+    })
+    .click()
+  await again.locator("[data-calendar]").waitFor({
+    timeout: 30_000,
+  })
+  await again.waitForTimeout(1500)
+  await shot(again, "07-calendar-added")
+
+  const calendarSent = (await walletCalls(again)).slice(beforeCalendar.length)
+  const live = await liveJson()
+
+  check(
+    "adding a calendar is two transactions the first time, its schema and the attestation, and its events are listed for everyone",
+    calendarSent.filter((method) => method === "eth_sendTransaction").length
+        === 2
+      && live.calendars.length === 1
+      && live.calendars[0].url === LiveFeed
+      && live.events.length === 2
+      && (await again.getByText("Demo day stream").count()) === 1
+      && (await again.getByText("Office hours").count()) === 1,
+    `${calendarSent.join(" ")} | ${JSON.stringify(live.calendars)}`,
+  )
+
+  // The day an event is listed under follows the chosen zone: noon UTC is the
+  // next day east of the date line and the same day in Hawaii, two in the
+  // morning in both.
+  const liveRegion = again.getByRole("region", {
+    name: "Homebase Live",
+  })
+  const firstStart = Date.parse(live.events[0].start)
+  const dayAt = (at: number) => new Date(at).toISOString().slice(0, 10)
+  const firstDay = () => liveRegion.locator("[data-day]").first()
+
+  await liveRegion.getByRole("combobox").selectOption("Pacific/Kiritimati")
+  await again.waitForTimeout(300)
+
+  const eastDay = await firstDay().getAttribute("data-day")
+  const eastReads = await firstDay().innerText()
+
+  await liveRegion.getByRole("combobox").selectOption("Pacific/Honolulu")
+  await again.waitForTimeout(300)
+
+  const westDay = await firstDay().getAttribute("data-day")
+  const westReads = await firstDay().innerText()
+
+  check(
+    "the day an event is listed under follows the chosen zone across the date line",
+    eastDay === dayAt(firstStart + 14 * 60 * 60_000)
+      && westDay === dayAt(firstStart - 10 * 60 * 60_000)
+      && eastDay !== westDay
+      && /2:00/.test(eastReads)
+      && /2:00/.test(westReads),
+    `${eastDay} east, ${westDay} west, from ${live.events[0].start}`,
+  )
+
+  await again
+    .getByRole("button", {
+      name: "Remove",
+    })
+    .click()
+  await again.getByText("No calendars yet.").waitFor({
+    timeout: 30_000,
+  })
+  await again.waitForTimeout(1000)
+  check(
+    "removing the calendar takes it off the chain and its events off the list",
+    (await liveJson()).calendars.length === 0
+      && (await again.getByText("Demo day stream").count()) === 0,
+  )
+
+  // A donation: ether from the connected wallet to the Based House wallet.
+  const treasuryBefore = await reader.getBalance({
+    address: DonationAddress,
+  })
+
+  await again.locator("#fund").scrollIntoViewIfNeeded()
+
+  const beforeDonate = await walletCalls(again)
+
+  await again.getByPlaceholder("Custom").fill("0")
+  await again
+    .getByRole("button", {
+      name: "Donate",
+    })
+    .click()
+  await again
+    .getByRole("alert")
+    .filter({
+      hasText: "Enter an amount",
+    })
+    .waitFor({
+      timeout: 10_000,
+    })
+  check(
+    "Donate refuses an amount of nothing before the wallet is asked",
+    (await again
+          .getByRole("alert")
+          .filter({
+            hasText: "Enter an amount",
+          })
+          .innerText()) === "Enter an amount above zero."
+      && (await walletCalls(again))
+          .slice(beforeDonate.length)
+          .filter((method) => method === "eth_sendTransaction")
+          .length === 0,
+  )
+
+  await again
+    .getByRole("button", {
+      name: "0.01 ETH",
+    })
+    .click()
+  await again
+    .getByRole("button", {
+      name: "Donate",
+    })
+    .click()
+  await again.getByRole("status").waitFor({
+    timeout: 30_000,
+  })
+  await shot(again, "07-donated")
+  check(
+    "Donate sends the chosen amount from the wallet to the Based House wallet",
+    (await reader.getBalance({
+              address: DonationAddress,
+            })) - treasuryBefore === 10_000_000_000_000_000n
+      && (await again.getByRole("status").innerText()).includes("Thank you"),
+  )
+
+  // The header: the connected wallet by name, and the way out.
+  await again.locator("[data-wallet=connected]").click()
+  await dialog(again)
+    .getByRole("heading", {
+      name: "Your wallet",
+    })
+    .waitFor({
+      timeout: 10_000,
+    })
+
+  const yourWallet = await dialog(again).innerText()
+
+  await dialog(again)
+    .getByRole("button", {
+      name: "Disconnect",
+    })
+    .click()
+  await again.locator("[data-wallet=none]").waitFor({
+    timeout: 10_000,
+  })
+  await again.waitForTimeout(300)
+  check(
+    "the header dialog names the connected wallet, and disconnecting there takes the admin controls away",
+    yourWallet.includes(short(wallets.admin))
+      && yourWallet.includes("(admin)")
+      && (await dialog(again).count()) === 0
+      && (await again
+          .getByRole("button", {
+            name: "Connect wallet",
+          })
+          .count()) === 1
+      && (await again
+          .getByRole("button", {
+            name: "Add an event",
+          })
+          .count()) === 0
+      && (await again
+          .getByRole("button", {
+            name: "Add a calendar",
+          })
+          .count()) === 0,
+    yourWallet.replace(/\s+/g, " "),
+  )
+
+  await connectWith(again, "Test Wallet")
+  await again.locator("[data-wallet=connected]").waitFor({
+    timeout: 30_000,
+  })
   await again
     .getByRole("button", {
       name: "Add an event",
@@ -1091,27 +1371,68 @@ try {
   )
   await admin.close()
 
-  // A wallet that is nobody: it connects fine, and the map turns it away.
+  // A wallet that is nobody: Donate offers the way in, the wallet connects
+  // fine, and nothing lets it add events or calendars.
   const stranger = await walletContext(wallets.stranger)
   const outsider = await open(stranger)
 
+  await outsider.locator("#fund").scrollIntoViewIfNeeded()
+  await outsider
+    .getByRole("button", {
+      name: "Donate",
+    })
+    .click()
+  await dialog(outsider)
+    .getByRole("heading", {
+      name: "Connect a wallet",
+    })
+    .waitFor({
+      timeout: 10_000,
+    })
+  await dialog(outsider)
+    .getByRole("list", {
+      name: "Wallets",
+    })
+    .waitFor({
+      timeout: 30_000,
+    })
+  check(
+    "Donate without a wallet opens the way in",
+    (await dialog(outsider)
+      .getByRole("list", {
+        name: "Wallets",
+      })
+      .count()) === 1,
+  )
+  await outsider.keyboard.press("Escape")
+
   await connectWith(outsider, "Test Wallet")
-  await outsider.getByRole("alert").waitFor({
+  await outsider.locator("[data-wallet=connected]").waitFor({
     timeout: 30_000,
   })
+  await outsider.waitForTimeout(800)
   await shot(outsider, "06-stranger")
+
+  const strangerReads = await outsider
+    .locator("[data-wallet=connected]")
+    .innerText()
+
   check(
-    "a wallet whose pins would not count is turned away, and never sees the form",
-    (await outsider.getByRole("alert").innerText()).includes(
-      "can't add events yet",
-    )
-      && (await outsider.getByLabel("Luma link").count()) === 0
+    "a wallet that is nobody connects, and sees no way to add events or calendars",
+    strangerReads.includes(short(wallets.stranger))
+      && !strangerReads.toLowerCase().includes("admin")
       && (await outsider
           .getByRole("button", {
             name: "Add an event",
           })
-          .count()) === 0,
-    await outsider.getByRole("alert").innerText(),
+          .count()) === 0
+      && (await outsider
+          .getByRole("button", {
+            name: "Add a calendar",
+          })
+          .count()) === 0
+      && (await outsider.getByLabel("Luma link").count()) === 0,
+    strangerReads,
   )
   await stranger.close()
 
@@ -1138,6 +1459,50 @@ try {
       && (await pinUncovered(linked)),
     `zoom ${await zoomOf(linked)}`,
   )
+
+  const hero = await open(visitor)
+
+  await shot(hero, "10-phone-hero")
+
+  const heroBoxes = await hero.evaluate(() => {
+    const button = document.querySelector("[data-wallet]")
+    const house = button?.closest(".relative")?.querySelector(
+      ".text-center > div",
+    )
+
+    if (!button || !house) {
+      return null
+    }
+
+    const box = (element: Element) => {
+      const rect = element.getBoundingClientRect()
+
+      return {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+      }
+    }
+
+    return {
+      button: box(button),
+      house: box(house),
+      width: innerWidth,
+    }
+  })
+
+  check(
+    "on a phone the wallet button sits inside the screen and clear of the house",
+    heroBoxes !== null
+      && heroBoxes.button.right <= heroBoxes.width
+      && heroBoxes.button.left >= 0
+      && (heroBoxes.button.right <= heroBoxes.house.left
+        || heroBoxes.button.left >= heroBoxes.house.right
+        || heroBoxes.button.bottom <= heroBoxes.house.top),
+    JSON.stringify(heroBoxes),
+  )
+  await hero.close()
   await visitor.close()
 
   // With reduced motion asked for, the flight is a jump.

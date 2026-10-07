@@ -4,6 +4,27 @@ export function Socials() {
     <div class="flex items-center justify-center ">
       <div class="flex flex-wrap justify-center gap-6">
         <a
+          href="https://x.com/homebasedotlove"
+          target="_blank"
+          aria-label="Twitter"
+          class="flex items-center hover:opacity-80"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            x="0px"
+            y="0px"
+            width="32"
+            height="32"
+            viewBox="0 0 30 30"
+          >
+            <path
+              fill="currentColor"
+              d="M26.37,26l-8.795-12.822l0.015,0.012L25.52,4h-2.65l-6.46,7.48L11.28,4H4.33l8.211,11.971L12.54,15.97L3.88,26h2.65 l7.182-8.322L19.42,26H26.37z M10.23,6l12.34,18h-2.1L8.12,6H10.23z"
+            >
+            </path>
+          </svg>
+        </a>
+        <a
           href="http://warpcast.com/homebase"
           target="_blank"
           aria-label="Farcaster"
@@ -31,70 +52,6 @@ export function Socials() {
               fill="currentColor"
             >
             </path>
-          </svg>
-        </a>
-        <a
-          href="https://x.com/homebasedotlove"
-          target="_blank"
-          aria-label="Twitter"
-          class="flex items-center hover:opacity-80"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            x="0px"
-            y="0px"
-            width="32"
-            height="32"
-            viewBox="0 0 30 30"
-          >
-            <path
-              fill="currentColor"
-              d="M26.37,26l-8.795-12.822l0.015,0.012L25.52,4h-2.65l-6.46,7.48L11.28,4H4.33l8.211,11.971L12.54,15.97L3.88,26h2.65 l7.182-8.322L19.42,26H26.37z M10.23,6l12.34,18h-2.1L8.12,6H10.23z"
-            >
-            </path>
-          </svg>
-        </a>
-        <a
-          href="https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24"
-          target="_blank"
-          aria-label="Dexscreener"
-          class="flex items-center hover:opacity-80"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="32"
-            height="32"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
-            <rect
-              x="6.6"
-              y="2.5"
-              width="1.8"
-              height="19"
-              rx="0.9"
-            />
-            <rect
-              x="3.5"
-              y="6"
-              width="8"
-              height="11"
-              rx="1.5"
-            />
-            <rect
-              x="16.6"
-              y="5"
-              width="1.8"
-              height="14"
-              rx="0.9"
-            />
-            <rect
-              x="13.5"
-              y="8.5"
-              width="8"
-              height="8"
-              rx="1.5"
-            />
           </svg>
         </a>
         <a
@@ -139,6 +96,49 @@ export function Socials() {
               d="M5.6 15.2a2.9 2.9 0 0 0 5.8 0z"
               fill="currentColor"
               stroke="none"
+            />
+          </svg>
+        </a>
+        <a
+          href="https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24"
+          target="_blank"
+          aria-label="Dexscreener"
+          class="flex items-center hover:opacity-80"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <rect
+              x="6.6"
+              y="2.5"
+              width="1.8"
+              height="19"
+              rx="0.9"
+            />
+            <rect
+              x="3.5"
+              y="6"
+              width="8"
+              height="11"
+              rx="1.5"
+            />
+            <rect
+              x="16.6"
+              y="5"
+              width="1.8"
+              height="14"
+              rx="0.9"
+            />
+            <rect
+              x="13.5"
+              y="8.5"
+              width="8"
+              height="8"
+              rx="1.5"
             />
           </svg>
         </a>

@@ -24,12 +24,16 @@
   ],
   "rewrites": [
     {
-      "source": "/events.json",
-      "destination": "/api/events"
-    },
-    {
       "source": "/funding.json",
       "destination": "/api/funding"
+    },
+    {
+      "source": "/live.json",
+      "destination": "/api/live"
+    },
+    {
+      "source": "/live/preview.json",
+      "destination": "/api/live-preview"
     },
     {
       "source": "/map.json",
