@@ -14,7 +14,9 @@ export function Header() {
         "
     >
       <div class="relative overflow-hidden">
-        <div class="absolute top-4 right-4 z-20 max-sm:top-3 max-sm:right-3">
+        {/* One bar across the top: the social links on the left, the wallet on the right, on one line. */}
+        <div class="absolute inset-x-4 top-4 z-20 flex items-center justify-between gap-3 text-white max-sm:inset-x-3 max-sm:top-3">
+          <Socials />
           <ConnectButton />
         </div>
 
@@ -23,12 +25,8 @@ export function Header() {
             <HouseLogo />
           </div>
 
-          <div class="mt-7 w-[64%] max-sm:w-[90%] text-white">
+          <div class="mt-7 mb-6 w-[64%] max-sm:w-[90%] text-white">
             <Wordmark />
-          </div>
-
-          <div class="text-white mt-8 mb-5">
-            <Socials />
           </div>
         </div>
 
