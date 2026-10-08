@@ -1855,6 +1855,60 @@ try {
   })
   const thumb = await open(touch)
 
+  // On a phone the reel opens on the interview and holds it while the page
+  // settles: a browser snapping the reel back to its first chapter is undone,
+  // until the reader takes the reel.
+  const nearestChapter = () =>
+    thumb.evaluate(() => {
+      const reel = document.querySelector<HTMLElement>("#story .story-reel")!
+      const middle = reel.scrollLeft + reel.clientWidth / 2
+      let nearest = String()
+      let distance = Infinity
+
+      reel.querySelectorAll<HTMLElement>("[data-chapter]").forEach((card) => {
+        const gap = Math.abs(card.offsetLeft + card.offsetWidth / 2 - middle)
+
+        if (gap < distance) {
+          distance = gap
+          nearest = card.dataset.chapter ?? String()
+        }
+      })
+
+      return nearest
+    })
+  const snapBack = () =>
+    thumb.evaluate(() => {
+      document.querySelector<HTMLElement>("#story .story-reel")!.scrollLeft = 0
+    })
+
+  const opensOn = await nearestChapter()
+
+  await snapBack()
+  await thumb.waitForTimeout(400)
+
+  const heldOn = await nearestChapter()
+
+  await thumb.evaluate(() =>
+    document.querySelector("#story .story-reel")!.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerType: "touch",
+      }),
+    )
+  )
+  await snapBack()
+  await thumb.waitForTimeout(400)
+
+  const releasedTo = await nearestChapter()
+
+  check(
+    "on a phone the reel opens on the interview and puts it back if the browser snaps the reel away, until the reader takes the reel",
+    opensOn === "jesse-at-based-house"
+      && heldOn === "jesse-at-based-house"
+      && releasedTo === "inception",
+    `opens ${opensOn}, held ${heldOn}, released ${releasedTo}`,
+  )
+
   await thumb.evaluate(() =>
     document.getElementById("map-heading")?.closest("section")?.scrollIntoView({
       block: "start",
