@@ -141,7 +141,7 @@ export function FundingCard() {
             target="_blank"
             class="underline hover:text-brand"
           >
-            Based House Mumbai
+            Based House
           </a>
         </>,
         <>
@@ -149,10 +149,7 @@ export function FundingCard() {
           support the founders in residence
         </>,
         <>
-          SeedMe allows you to claim an allocation prior to launch
-        </>,
-        <>
-          Locking <HomeToken /> grants access to SeedMe claims
+          Lock <HomeToken /> to access SeedMe claims
         </>,
         <>
           The more tokens locked over a longer period of time shows commitment,
