@@ -14,6 +14,9 @@ const Opening = Math.max(
   Chapters.findIndex((chapter) => chapter.id === OpeningChapterId),
 )
 
+/** How long after the page has loaded the opening chapter is put back if the reel is found elsewhere. */
+const HoldMs = 5000
+
 /**
  * Scrolls to a section of this page by its anchor without writing the
  * anchor into the address bar: the site is one page, and its address stays
@@ -40,7 +43,8 @@ function scrollTo(anchor: string) {
  * a smaller scale. Scrolling, swiping, the dots and the arrow keys all move
  * the focus; off-center chapters are inert so focus never lands in a card
  * the reader cannot see. The reel opens on the interview rather than the
- * first letter, with the story so far one step back. From the sm breakpoint
+ * first letter, with the story so far one step back, and stays there while
+ * the page settles until the reader takes the reel. From the sm breakpoint
  * up every card stands as tall as the tallest, so the reel reads as one band
  * whichever chapter is in focus; on a phone, where one card fills the
  * screen, each keeps its own height. No apostrophes or quotes in prose here:
@@ -69,16 +73,110 @@ export function BasedHouseStory() {
     })
   }
 
+  /** The chapter whose center is nearest the center of the reel. */
+  const nearestIndex = () => {
+    const scroller = reel.current
+
+    if (!scroller) {
+      return Opening
+    }
+
+    const middle = scroller.scrollLeft + scroller.clientWidth / 2
+    let nearest = 0
+    let distance = Infinity
+
+    cards().forEach((card, index) => {
+      const gap = Math.abs(card.offsetLeft + card.offsetWidth / 2 - middle)
+
+      if (gap < distance) {
+        distance = gap
+        nearest = index
+      }
+    })
+
+    return nearest
+  }
+
+  // Once the reader has taken the reel, by touch, wheel, key or dot, the
+  // opening chapter is no longer put back.
+  const taken = useRef(false)
+
   const goTo = (index: number) => {
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
 
+    taken.current = true
     center(index, reduced ? "auto" : "smooth")
   }
 
   // Before the first paint, so the reel is already on the opening chapter
-  // when it shows and nobody sees it travel there.
+  // when it shows and nobody sees it travel there. A phone may snap the reel
+  // back to its first chapter as the page settles, when fonts arrive or the
+  // viewport changes and the browser snaps the reel afresh, so for a while
+  // after the page has loaded the opening chapter is put back whenever the
+  // reel is found elsewhere, unless the reader has taken it.
   useLayoutEffect(() => {
     center(Opening, "instant")
+
+    const scroller = reel.current
+
+    if (!scroller) {
+      return
+    }
+
+    let holding = true
+    let timer = 0
+
+    const take = () => {
+      taken.current = true
+    }
+
+    const hold = () => {
+      if (holding && !taken.current && nearestIndex() !== Opening) {
+        center(Opening, "instant")
+      }
+    }
+
+    const release = () => {
+      holding = false
+    }
+
+    const loaded = () => {
+      clearTimeout(timer)
+      timer = window.setTimeout(release, HoldMs)
+      hold()
+    }
+
+    const capture = {
+      capture: true,
+      passive: true,
+    }
+
+    scroller.addEventListener("pointerdown", take, capture)
+    scroller.addEventListener("touchstart", take, capture)
+    scroller.addEventListener("wheel", take, capture)
+    scroller.addEventListener("keydown", take, capture)
+    scroller.addEventListener("scroll", hold, {
+      passive: true,
+    })
+    addEventListener("resize", hold)
+    document.fonts?.ready.then(hold)
+
+    if (document.readyState === "complete") {
+      loaded()
+    } else {
+      addEventListener("load", loaded)
+    }
+
+    return () => {
+      clearTimeout(timer)
+      scroller.removeEventListener("pointerdown", take, capture)
+      scroller.removeEventListener("touchstart", take, capture)
+      scroller.removeEventListener("wheel", take, capture)
+      scroller.removeEventListener("keydown", take, capture)
+      scroller.removeEventListener("scroll", hold)
+      removeEventListener("resize", hold)
+      removeEventListener("load", loaded)
+    }
   }, [])
 
   // The chapter whose center is nearest the center of the reel is the one in
@@ -94,21 +192,7 @@ export function BasedHouseStory() {
 
     const settle = () => {
       frame = 0
-
-      const center = scroller.scrollLeft + scroller.clientWidth / 2
-      let nearest = 0
-      let distance = Infinity
-
-      cards().forEach((card, index) => {
-        const gap = Math.abs(card.offsetLeft + card.offsetWidth / 2 - center)
-
-        if (gap < distance) {
-          distance = gap
-          nearest = index
-        }
-      })
-
-      active.value = nearest
+      active.value = nearestIndex()
     }
 
     const onScroll = () => {
