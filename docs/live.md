@@ -33,8 +33,11 @@ wallet for the whole page.
 - Every event carries a link where the feed has one: the URL field first,
   which Luma fills with the event page, else a link in the location, which
   is where a stream usually sits, else the first link in the description.
-  The card lists events by day in the zone the Location picker names, with
-  iCalendar and Google Calendar links and the event's own.
+  The card lists events by day, under Today and Tomorrow when they are, in
+  the zone the Times in picker names: the viewer's own to begin with, and
+  any other by city, region and offset. Each event offers its own link and
+  Add to calendar, which opens Google Calendar or saves an .ics file for
+  Apple Calendar, Outlook and the rest.
 
 ## The wallet
 
@@ -49,7 +52,11 @@ prompt, on every card at once.
 Donate sends the chosen amount of ether from the connected wallet to the
 Based House wallet, the address whose $home fees the funding card counts,
 and shows the transaction on BaseScan once it has landed. Without a wallet,
-Donate opens the way in. Direct donations do not yet show in the amount
+Donate opens the way in, saying what amount is waiting, and the donation
+goes ahead once a wallet connects, the wallet asking first as it always
+does. While a transaction is under way, its button says whether it waits on
+the wallet or on Base, the same words for a donation, a pin, a calendar and
+a removal. Direct donations do not yet show in the amount
 raised, which reads the pool's fee ledger; counting them would mean reading
 the wallet's transfers as well, which is a later step.
 

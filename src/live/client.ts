@@ -5,16 +5,13 @@
  * one a revocation; the server reads the feeds.
  */
 import { signal } from "preact/signals"
-import { call } from "../map/client.ts"
+import { call, freshPath, markChanged } from "../call.ts"
 import {
   account,
   admins,
   type Failure,
   isFailure,
-  sendFailure,
-  store,
-  stored,
-  walletModule,
+  transact,
 } from "../wallet/client.ts"
 import type { Eas } from "../wallet/wagmi.ts"
 import type { Calendar, ListedEvent } from "./api.ts"
@@ -41,17 +38,12 @@ export const liveFailed = signal(false)
 export const liveEas = signal<Eas | null>(null)
 
 export async function loadLive(): Promise<void> {
-  const changed = Number(stored(ChangedKey) ?? 0)
   const answer = await call<{
     calendars: Calendar[]
     events: ListedEvent[]
     eas: Eas
     admins: string[]
-  }>(
-    Date.now() - changed < FreshForMs
-      ? `/live.json?fresh=${changed}`
-      : "/live.json",
-  )
+  }>(freshPath("/live.json", ChangedKey, FreshForMs))
 
   if (isFailure(answer)) {
     liveFailed.value = true
@@ -108,12 +100,13 @@ export async function addCalendar(
     }
   }
 
-  let uid: string
+  const uid = await transact(
+    "calendar",
+    (lib, progress) => lib.attestString(where, found.url, progress),
+  )
 
-  try {
-    uid = await (await walletModule()).attestString(where, found.url)
-  } catch (error) {
-    return sendFailure(error, "calendar")
+  if (isFailure(uid)) {
+    return uid
   }
 
   const added: Calendar = {
@@ -138,7 +131,7 @@ export async function addCalendar(
     })),
   ]
     .sort((a, b) => a.start.localeCompare(b.start))
-  store(ChangedKey, String(Date.now()))
+  markChanged(ChangedKey)
 
   return added
 }
@@ -153,15 +146,18 @@ export async function removeCalendar(uid: string): Promise<Failure | null> {
     }
   }
 
-  try {
-    await (await walletModule()).revokeAttestation(where, uid)
-  } catch (error) {
-    return sendFailure(error, "removal")
+  const revoked = await transact(
+    "removal",
+    (lib, progress) => lib.revokeAttestation(where, uid, progress),
+  )
+
+  if (isFailure(revoked)) {
+    return revoked
   }
 
   calendars.value = (calendars.value ?? []).filter((known) => known.uid !== uid)
   liveEvents.value = liveEvents.value.filter((event) => event.calendar !== uid)
-  store(ChangedKey, String(Date.now()))
+  markChanged(ChangedKey)
 
   return null
 }

@@ -3,10 +3,11 @@
  * the funding card. Any wallet may connect; what it may do follows from
  * whether it is one of the admins the server names with each list. The
  * wallet code itself is fetched on its own the first time it is needed.
+ * Every transaction goes through transact, which keeps its stage.
  */
 import { computed, signal } from "preact/signals"
 import type { Address, EIP1193Provider, Hash } from "viem"
-import type { Wallet } from "./wagmi.ts"
+import type { Progress, Wallet } from "./wagmi.ts"
 
 export type {
   Wallet,
@@ -279,6 +280,46 @@ export async function signOut(): Promise<void> {
 }
 
 /**
+ * Where the transaction under way stands: waiting for the person to approve
+ * it in their wallet, or sent and waiting to land on the chain. Every button
+ * that sends one reads its label from here, so each says the same thing.
+ */
+export const stage = signal<"sign" | "land" | null>(null)
+
+/** What a button that sent a transaction reads while it is under way. */
+export const stageLabel = () =>
+  stage.value === "land" ? "Waiting for Base…" : "Confirm in your wallet…"
+
+/**
+ * Runs one wallet action, a pin, a calendar, a removal or a donation, with
+ * the stage kept up to date and any refusal turned into a sentence.
+ */
+export async function transact<A>(
+  what: string,
+  run: (lib: WalletModule, progress: Progress) => Promise<A>,
+): Promise<A | Failure> {
+  let lib: WalletModule
+
+  try {
+    lib = await walletModule()
+  } catch {
+    return NotLoaded
+  }
+
+  stage.value = "sign"
+
+  try {
+    return await run(lib, (next) => {
+      stage.value = next
+    })
+  } catch (error) {
+    return sendFailure(error, what)
+  } finally {
+    stage.value = null
+  }
+}
+
+/**
  * Sends ether from the connected wallet, and waits for it to land. The
  * amount is text, as typed, so nothing is rounded before the wallet sees it.
  */
@@ -294,9 +335,8 @@ export async function sendEther(
     }
   }
 
-  try {
-    return await (await walletModule()).sendEth(rpc, to as Address, amountEth)
-  } catch (error) {
-    return sendFailure(error, "donation")
-  }
+  return await transact(
+    "donation",
+    (lib, progress) => lib.sendEth(rpc, to as Address, amountEth, progress),
+  )
 }

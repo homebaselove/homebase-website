@@ -5,10 +5,12 @@ import { events, loadEvents, loadFailed } from "../../map/client.ts"
 import { hasPin, isUpcoming } from "../../map/event.ts"
 import type { MapEvent } from "../../map/MapEvent.ts"
 import { isAdmin } from "../../wallet/client.ts"
+import { Choices } from "../Choices.tsx"
+import { Panel, PanelHeader } from "../Panel.tsx"
+import { AddEventDialog } from "./AddEventDialog.tsx"
 import { EventDetails } from "./EventDetails.tsx"
 import { EventList } from "./EventList.tsx"
 import { MapView } from "./MapView.tsx"
-import { SubmitDialog } from "./SubmitDialog.tsx"
 
 type Filter =
   | "upcoming"
@@ -143,73 +145,59 @@ export function MapCard() {
     }
   }
 
-  const chip = (value: Filter, label: string, count: number) => (
-    <button
-      type="button"
-      aria-pressed={filter.value === value}
-      class={filter.value === value
-        ? "rounded-full border-[1px] px-3 py-1.5 text-sm transition-colors border-brand/40 bg-brand/10 text-brand"
-        : "rounded-full border-[1px] px-3 py-1.5 text-sm transition-colors border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"}
-      onClick={() => {
-        filter.value = value
-        selected.value = null
-      }}
-    >
-      {label}
+  const count = (label: string, value: number) => (
+    <>
+      {label}{" "}
       {events.value && (
-        <span class="ml-1 text-gray-400">
-          {count}
+        <span class="text-gray-400 font-normal">
+          {value}
         </span>
       )}
-    </button>
+    </>
   )
 
   return (
-    <section
+    <Panel
       id="map"
-      class="relative scroll-mt-8 bg-white rounded-lg shadow-md border-[1px] border-gray-200 overflow-hidden"
-      aria-labelledby="map-heading"
+      labelledBy="map-heading"
     >
-      <div
-        class="flex flex-wrap items-center justify-between gap-3 border-b-[1px] border-gray-200 p-4"
-        style="background: linear-gradient(to bottom, rgba(245, 245, 245, 1), rgba(255, 255, 255, 1))"
+      <PanelHeader
+        titleId="map-heading"
+        title="Homebase Map"
+        lead="Where the community gathers next, straight from Luma."
       >
-        <div>
-          <h2
-            id="map-heading"
-            class="text-3xl max-sm:text-2xl font-bold leading-none"
-          >
-            Homebase map
-          </h2>
-          <p class="text-gray-500 mt-1.5">
-            Where the community gathers next, straight from Luma.
-          </p>
-        </div>
+        <Choices
+          label="Which events to show"
+          value={filter.value}
+          options={[
+            {
+              value: "upcoming",
+              label: count("Upcoming", counts.value.upcoming),
+            },
+            {
+              value: "past",
+              label: count("Past", counts.value.past),
+            },
+          ]}
+          onChange={(value: Filter) => {
+            filter.value = value
+            selected.value = null
+          }}
+        />
 
-        <div class="flex flex-wrap items-center gap-2">
-          <div
-            role="group"
-            aria-label="Which events to show"
-            class="flex gap-2"
+        {/* The form is for a wallet whose pins count; the way in is the button in the header. */}
+        {isAdmin.value && (
+          <button
+            type="button"
+            class="btn btn-brand"
+            onClick={() => {
+              adding.value = true
+            }}
           >
-            {chip("upcoming", "Upcoming", counts.value.upcoming)}
-            {chip("past", "Past", counts.value.past)}
-          </div>
-
-          {/* The form is for a wallet whose pins count; the way in is the button in the header. */}
-          {isAdmin.value && (
-            <button
-              type="button"
-              class="btn-brand"
-              onClick={() => {
-                adding.value = true
-              }}
-            >
-              Add an event
-            </button>
-          )}
-        </div>
-      </div>
+            Add an event
+          </button>
+        )}
+      </PanelHeader>
 
       <div class="grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div
@@ -288,7 +276,7 @@ export function MapCard() {
       </div>
 
       {adding.value && (
-        <SubmitDialog
+        <AddEventDialog
           onClose={() => {
             adding.value = false
           }}
@@ -299,6 +287,6 @@ export function MapCard() {
           }}
         />
       )}
-    </section>
+    </Panel>
   )
 }

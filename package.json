@@ -32,7 +32,6 @@
     "@opentelemetry/sdk-trace-web": "^2.0.1",
     "@tailwindcss/node": "^4.1.10",
     "@wagmi/core": "^3.6.5",
-    "daisyui": "^5.0.43",
     "effect": "^3.16.12",
     "effect-start": "nounder/effect-start#2120500",
     "ical.js": "^2.1.0",

@@ -1274,10 +1274,10 @@ try {
   )
 
   await again
-    .getByRole("button", {
+    .getByRole("radio", {
       name: "0.01 ETH",
     })
-    .click()
+    .check()
   await again
     .getByRole("button", {
       name: "Donate",
@@ -1295,12 +1295,11 @@ try {
       && (await again.getByRole("status").innerText()).includes("Thank you"),
   )
 
-  // One card: Buy $home and Lock $home on SeedMe, Donate from the wallet.
+  // One card: Donate from the wallet as its one primary action, then Buy
+  // $home and Lock $home on SeedMe.
   const fundButtons = await again.evaluate(() =>
     [
-      ...document.querySelectorAll<HTMLElement>(
-        "#fund a.btn-brand, #fund button.btn-brand",
-      ),
+      ...document.querySelectorAll<HTMLElement>("#fund .btn"),
     ]
       .map((item) =>
         `${item.textContent?.trim()} -> ${
@@ -1310,9 +1309,12 @@ try {
   )
 
   check(
-    "the funding card offers Buy $home and Lock $home on SeedMe, and Donate from the wallet",
+    "the funding card offers Donate from the wallet, then Buy $home and Lock $home on SeedMe",
     fundButtons.join(" | ")
-        === "Buy $home -> https://seedme.xyz | Lock $home -> https://seedme.xyz/lock | Donate -> wallet"
+        === "Donate 0.01 ETH -> wallet | Buy $home -> https://seedme.xyz | Lock $home -> https://seedme.xyz/lock"
+      && (await again
+          .locator("#fund .btn-brand")
+          .count()) === 1
       && (await again
           .getByRole("heading", {
             name: "Lock $home",

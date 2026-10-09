@@ -1,192 +1,148 @@
 /** @jsxImportSource preact */
-import { useState } from "preact"
-import Videos from "../videos.json" with { type: "json" }
-import { CloseIcon, SpinnerIcon, VideoIcon } from "./Icons.tsx"
+import { useRef } from "preact"
+import { useSignal } from "preact/signals"
+import { embedUrl, type Video, Videos, youtubeId } from "../videos.ts"
+import { Dialog } from "./Dialog.tsx"
+import { OutIcon, PlayIcon } from "./Icons.tsx"
+import { SectionHeading } from "./Layout.tsx"
 
-interface Video {
-  title: string
-  imageUrl: string
-  url: string
+/** How many videos show before the reader asks for all of them. */
+const FirstShown = 6
+
+/** A thumbnail and its title, the face of every video in the grid. */
+function Face(props: {
+  readonly video: Video
+  readonly external: boolean
+}) {
+  return (
+    <>
+      <div class="relative overflow-hidden rounded-xl bg-gray-100 shadow-md">
+        <img
+          loading="lazy"
+          src={props.video.imageUrl}
+          // An empty alt without an empty literal, which the class scanner
+          // misreads: the title under the picture already names it.
+          alt={String()}
+          class="w-full aspect-video object-cover transition-transform duration-200 group-hover:scale-[1.03] motion-reduce:transition-none"
+        />
+
+        <span class="absolute inset-0 flex items-center justify-center">
+          <span class="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-brand shadow-md transition-transform duration-150 group-hover:scale-110 motion-reduce:transition-none">
+            {props.external ? <OutIcon size={20} /> : <PlayIcon size={20} />}
+          </span>
+        </span>
+      </div>
+
+      <h3 class="mt-2 line-clamp-2 font-bold leading-snug group-hover:text-brand">
+        {props.video.title}
+      </h3>
+    </>
+  )
 }
 
+/**
+ * Talks and build sessions from the houses. A YouTube video plays here, in a
+ * dialog, through the privacy-enhanced player; a video posted elsewhere
+ * opens where it was posted. The first few show at once, and the rest come
+ * in on a press, with focus on the first of them, so nothing hidden is ever
+ * in the way of the keyboard.
+ */
 export function VideoGallery() {
-  const [isExpanded, setIsExpanded] = useState(false)
-  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null)
-  const [isVideoLoading, setIsVideoLoading] = useState(true)
-
-  const getYoutubeEmbedUrl = (url?: string): string | null => {
-    if (!url) return null
-
-    // Only handle YouTube URLs
-    if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      const videoId = url.includes("youtube.com/watch?v=")
-        ? url.split("v=")[1]?.split("&")[0]
-        : url.includes("youtu.be/")
-        ? url.split("youtu.be/")[1]?.split("?")[0]
-        : null
-
-      return videoId ? `https://www.youtube.com/embed/${videoId}` : null
-    }
-
-    return null
-  }
-
-  const openVideoModal = (video: Video) => {
-    setSelectedVideo(video)
-  }
-
-  const closeVideoModal = () => {
-    setSelectedVideo(null)
-    // Reset loading state for next video
-    setTimeout(() => setIsVideoLoading(true), 300)
-  }
+  const expanded = useSignal(false)
+  const playing = useSignal<Video | null>(null)
+  const list = useRef<HTMLUListElement>(null)
+  const shown = expanded.value ? Videos : Videos.slice(0, FirstShown)
+  const playingId = playing.value && youtubeId(playing.value.url)
 
   return (
-    <div class="relative w-full">
-      <div class="flex justify-between top-0  z-20">
-        <h2 class="flex-col flex py-5 px-5 bg-white items-start w-full">
-          <div class="flex items-center">
-            <span class="text-4xl font-bold text-black">
-              Videos
-            </span>
-          </div>
-        </h2>
-      </div>
+    <section
+      id="videos"
+      class="scroll-mt-8 flex flex-col gap-8"
+    >
+      <SectionHeading
+        title="Videos"
+        lead="Workshops, panels and build sessions from Homebase."
+      />
 
-      <div
-        class={isExpanded
-          ? "flex flex-col px-5 py-3 relative pb-20"
-          : "flex flex-col px-5 py-3 relative overflow-hidden"}
-        style={{
-          maskImage: !isExpanded
-            ? "linear-gradient(to bottom, black 70%, rgba(0,0,0,0.8) 85%, rgba(0,0,0,0.4) 95%, transparent)"
-            : "none",
-          height: isExpanded ? "auto" : "1000px",
-        }}
+      <ul
+        ref={list}
+        class="grid gap-x-4 gap-y-6 grid-cols-2 md:grid-cols-3"
       >
-        <div class="grid gap-4 grid-cols-2 md:grid-cols-3">
-          {(Videos as Video[]).map((video, index) => (
-            <div key={index} class="relative select-none">
-              <div
-                onClick={() =>
-                  openVideoModal(video)}
-                class="block h-full group cursor-pointer"
-              >
-                <div class="group-hover:scale-[1.03] group-hover:rotate-1 transition-all duration-200 h-full flex flex-col">
-                  <img
-                    loading="lazy"
-                    src={video
-                      .imageUrl}
-                    alt={video
-                      .title}
-                    class="w-full aspect-video pointer-events-none group-hover:shadow-3xl transition-all duration-[150ms] object-cover rounded-xl shadow-md"
-                  />
-                  <div class="bg-white flex-grow">
-                    <h3 class="line-clamp-2 mt-2 text-md font-bold">
-                      {video
-                        .title}
-                    </h3>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+        {shown.map((video) => {
+          const playsHere = youtubeId(video.url) !== null
 
-      {!isExpanded && (
-        <div class="sticky bottom-0 left-0 right-0 flex justify-center pb-6 z-20 mt-3">
-          <div class="w-full max-w-[960px] flex justify-center">
-            <div class="relative">
-              <button
-                class="btn-brand relative z-10"
-                onClick={() => setIsExpanded(true)}
-              >
-                See all videos
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Video Modal */}
-      {selectedVideo && (
-        <div
-          class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-          onClick={(e) => {
-            // Close when clicking the backdrop
-            if (e.target === e.currentTarget) {
-              closeVideoModal()
-            }
-          }}
-        >
-          <div
-            class="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl"
-            style={{
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-            }}
-          >
-            <div class="flex justify-between items-center p-5">
-              <h3 class="font-bold text-2xl text-brand truncate pr-4">
-                {selectedVideo?.title}
-              </h3>
-              <button
-                onClick={closeVideoModal}
-                class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100"
-                aria-label="Close modal"
-              >
-                <CloseIcon size={24} />
-              </button>
-            </div>
-            <div class="p-0 flex-grow overflow-hidden relative rounded-b-xl">
-              {getYoutubeEmbedUrl(selectedVideo?.url)
+          return (
+            <li key={video.url}>
+              {playsHere
                 ? (
-                  <div class="aspect-video w-full relative">
-                    {/* Loading indicator */}
-                    {isVideoLoading && (
-                      <div class="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-b-2xl">
-                        <div class="flex flex-col items-center">
-                          <SpinnerIcon
-                            size={36}
-                            class="text-brand mb-2 animate-spin"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <iframe
-                      src={getYoutubeEmbedUrl(selectedVideo?.url)
-                        || undefined}
-                      title={selectedVideo?.title}
-                      class="w-full h-full select-none"
-                      style={{ border: "none" }}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen={true}
-                      onLoad={() => setIsVideoLoading(false)}
-                    >
-                    </iframe>
-                  </div>
+                  <button
+                    type="button"
+                    class="group block w-full text-left rounded-xl hb-focus"
+                    onClick={() => {
+                      playing.value = video
+                    }}
+                  >
+                    <Face
+                      video={video}
+                      external={false}
+                    />
+                  </button>
                 )
                 : (
-                  <div class="flex flex-col items-center justify-center p-12 text-center space-y-4 h-full">
-                    <VideoIcon size={48} class="text-gray-400 mb-2" />
-                    <p class="text-gray-600 text-lg">
-                      This content cannot be embedded.
-                    </p>
-                    <a
-                      href={selectedVideo?.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="btn-brand mt-2 mb-3"
-                    >
-                      Open video externally
-                    </a>
-                  </div>
+                  <a
+                    href={video.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="group block rounded-xl hb-focus"
+                  >
+                    <Face
+                      video={video}
+                      external
+                    />
+                  </a>
                 )}
-            </div>
-          </div>
-        </div>
+            </li>
+          )
+        })}
+      </ul>
+
+      {!expanded.value && Videos.length > FirstShown && (
+        <button
+          type="button"
+          class="btn btn-quiet self-center"
+          onClick={() => {
+            expanded.value = true
+            requestAnimationFrame(() => {
+              list.current
+                ?.children[FirstShown]
+                ?.querySelector<HTMLElement>("button, a")
+                ?.focus()
+            })
+          }}
+        >
+          See all {Videos.length} videos
+        </button>
       )}
-    </div>
+
+      {playing.value && playingId && (
+        <Dialog
+          title={playing.value.title}
+          width={64}
+          onClose={() => {
+            playing.value = null
+          }}
+        >
+          <div class="aspect-video w-full overflow-hidden rounded-xl bg-black">
+            <iframe
+              src={embedUrl(playingId)}
+              title={playing.value.title}
+              class="h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        </Dialog>
+      )}
+    </section>
   )
 }
