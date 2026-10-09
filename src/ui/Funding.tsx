@@ -145,8 +145,15 @@ export function FundingCard() {
           </a>
         </>,
         <>
-          Homebase has been incubating SeedMe since Based House ETHDenver to
-          support the founders in residence
+          Homebase has been incubating{" "}
+          <a
+            href={SeedMeUrl}
+            target="_blank"
+            class="underline hover:text-brand"
+          >
+            SeedMe
+          </a>{" "}
+          since Based House ETHDenver to support the founders in residence
         </>,
         <>
           Lock <HomeToken /> to access SeedMe claims
