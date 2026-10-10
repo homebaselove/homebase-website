@@ -9,7 +9,8 @@ code is the source of truth; this is the map to it.
 `src/index.html` loads `src/client.tsx`, which renders `App`
 (`src/app.tsx`): preact-iso's router over the routes effect-start writes into
 `src/routes/_manifest.ts`, inside an error boundary. There is one page,
-`src/routes/_page.tsx`, and any other path shows it too. The page is a
+`src/routes/_page.tsx`; on Vercel, which serves the page for every path, any
+other path shows it too. The page is a
 column of bands, each a `Band` at the width its content reads best at:
 
 | Band | Component | What it does |
@@ -33,7 +34,7 @@ Every section is now made of the same few pieces:
 
 | Piece | Where | Replaces |
 | --- | --- | --- |
-| `btn` with `btn-brand`, `btn-quiet`, `btn-small`, `btn-text`, `btn-danger`; `btn-icon`; `chip`; `field` | `client.css` | `btn-brand` and a dozen hand-written pill, chip and link styles |
+| `btn` with `btn-brand`, `btn-quiet`, `btn-small`, `btn-text`, `btn-danger`; `btn-icon`; `chip`; `field` | `client.css` | `btn-brand` plus the pill, chip, close-button, text-link and field styles each component wrote for itself |
 | `Dialog` | `ui/Dialog.tsx` | four hand-built modals |
 | `LinkDialog` | `ui/LinkDialog.tsx` | `SubmitDialog` and the old `AddCalendarDialog`, 631 lines that were nearly identical |
 | `useAction` | `ui/useAction.ts` | nine copies of busy, error and try/catch state |
@@ -45,7 +46,7 @@ Every section is now made of the same few pieces:
 | `Disclosure` | `ui/Disclosure.tsx` | the story's What happened and the funding card's info button |
 | `AddToCalendar`, `calendar.ts` | `ui/AddToCalendar.tsx` | Google-only on the map, a data link and Google on Live |
 | `EventWhen`, `placeOf` | `ui/map/EventWhen.tsx`, `map/event.ts` | three copies each of the date line and the place line |
-| `Icons.tsx` | `ui/Icons.tsx` | icons drawn inline in three files |
+| `Icons.tsx` | `ui/Icons.tsx` | the play and chevron icons `Story.tsx` drew for itself |
 
 ## What the review found
 
@@ -138,8 +139,9 @@ below names where it was, what it did to a visitor and what changed.
 
 ### The rest
 
-- A placeholder `/about` page reading About meowus was live, and any other
-  path rendered an empty page. Both now show the homepage.
+- A placeholder `/about` page reading About meowus was live, and on Vercel
+  any other path rendered an empty page. On Vercel both now show the
+  homepage.
 - daisyUI and a pastel theme were configured, but no daisyUI class was used
   anywhere. Both are gone, along with an unused animation and a commented-out
   layout.
@@ -262,13 +264,13 @@ list and the raise keep their skeletons, and Live its spinner.
 - Every choice of one is a native radio, every disclosure a native
   `details` and every dialog a native `dialog`.
 
-## Open questions
+## Decisions
 
-- Raised for Based House counts the $home fee share only, so a donation does
-  not move it (`docs/live.md` notes this as a later step). The card could
-  say so, or count transfers to the address too.
-- The funding bullets link Based House to one form
-  (`BasedHouseMumbaiUrl`, forms.gle/ZKkD9…), the story's Apply button to
-  another (forms.gle/54EtY…), and the announcement image names a third.
-- Donate leads the funding card because the amount choice belongs to it. If
-  buying $home should lead instead, swap which button wears `btn-brand`.
+- Donate is the funding card's one primary action and comes first, since the
+  amount choice belongs to it and Buy and Lock $home leave for SeedMe.
+- The funding card and the story's Apply button open the same application,
+  `BasedHouseMumbaiApplyUrl` in `src/funding.ts`. The Mumbai announcement's
+  description still names the form its image shows, since it describes the
+  image.
+- Raised for Based House counts the $home fee share only; direct donations
+  are not added to it.

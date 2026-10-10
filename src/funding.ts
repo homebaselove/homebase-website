@@ -29,8 +29,11 @@ export const transactionUrl = (hash: string) =>
 export const HomeTokenUrl =
   "https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24"
 
-/** The Based House Mumbai form, where the raise is headed. */
-export const BasedHouseMumbaiUrl = "https://forms.gle/ZKkD9fCnBCx5pitv9"
+/**
+ * The application to Based House Mumbai, where the raise is headed: the
+ * funding card and the story's Apply button both open it.
+ */
+export const BasedHouseMumbaiApplyUrl = "https://forms.gle/Jc6an9SCdYaP95us9"
 
 /** What the raise is for, as it reads on the card. */
 export const Campaign = "Based House"
@@ -74,6 +77,38 @@ export function segmentFills(
     },
     (_, index) => clamp((raised - index * step) / step, 0, 1),
   )
+}
+
+/** Ether has 18 decimal places; anything finer is not an amount. */
+const EtherDecimals = 18
+
+/**
+ * An amount of ether as the plain decimal text the wallet is given and the
+ * Donate button names, or null when it is not an amount above zero. It works
+ * on the text itself, never through a float: 0.1 as a float written to 18
+ * places is 0.100000000000000006, which would send six wei too many.
+ */
+export function etherAmount(typed: string): string | null {
+  let text = typed.trim()
+
+  // A number field may hold an exponent, such as 1e-3; only then is a float
+  // the way in, and it is read to the places ether has.
+  if (!/^\d*\.?\d*$/.test(text)) {
+    const value = Number(text)
+
+    if (!(value > 0) || value >= 1e21) {
+      return null
+    }
+
+    text = value.toFixed(EtherDecimals)
+  }
+
+  const [whole = "", fraction = ""] = text.split(".")
+  const units = whole.replace(/^0+(?=\d)/, "") || "0"
+  const places = fraction.slice(0, EtherDecimals).replace(/0+$/, "")
+  const amount = places ? `${units}.${places}` : units
+
+  return /[1-9]/.test(amount) ? amount : null
 }
 
 /** Trims to the shortest reading that still carries the amount. */

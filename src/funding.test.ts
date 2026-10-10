@@ -8,15 +8,19 @@ import {
   HomePoolId,
 } from "../api/funding.ts"
 import {
+  BasedHouseMumbaiApplyUrl,
   BaseRpcUrl,
   DonationAddress,
+  etherAmount,
   formatEth,
   HomeTokenUrl,
   nextMilestone,
+  PresetsEth,
   SeedMeLockUrl,
   segmentFills,
   transactionUrl,
 } from "./funding.ts"
+import { Chapters } from "./story.ts"
 
 test("next milestone steps past the amount already raised", () => {
   expect(
@@ -209,4 +213,78 @@ test("a landed transaction links to its page on BaseScan", () => {
     transactionUrl("0xabc"),
   )
     .toBe("https://basescan.org/tx/0xabc")
+})
+
+test("an amount reaches the wallet exactly as the person means it", () => {
+  expect(
+    [
+      "0.1",
+      "0.01",
+      "0.001",
+      "1",
+      "00.500",
+      ".25",
+      "2.",
+      "1e-3",
+      "0.1234567890123456789",
+    ]
+      .map(etherAmount),
+  )
+    .toEqual([
+      "0.1",
+      "0.01",
+      "0.001",
+      "1",
+      "0.5",
+      "0.25",
+      "2",
+      "0.001",
+      "0.123456789012345678",
+    ])
+})
+
+test("anything that is not an amount above zero is refused", () => {
+  expect(
+    [
+      "",
+      "0",
+      "0.000",
+      "-1",
+      "-1e-3",
+      "abc",
+      "1e21",
+      "0.0000000000000000001",
+    ]
+      .map(etherAmount),
+  )
+    .toEqual([
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ])
+})
+
+test("every preset amount is offered exactly as it is sent", () => {
+  expect(
+    PresetsEth.map((preset) => etherAmount(String(preset))),
+  )
+    .toEqual(PresetsEth.map((preset) => formatEth(preset)))
+})
+
+test("the funding card and the story apply through the same form", () => {
+  const today = Chapters.find((chapter) => chapter.id === "today")
+
+  expect(
+    today?.links.map((link) => link.href),
+  )
+    .toContain(BasedHouseMumbaiApplyUrl)
+  expect(
+    BasedHouseMumbaiApplyUrl,
+  )
+    .toBe("https://forms.gle/Jc6an9SCdYaP95us9")
 })

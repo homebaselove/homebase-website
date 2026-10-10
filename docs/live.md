@@ -56,9 +56,8 @@ Donate opens the way in, saying what amount is waiting, and the donation
 goes ahead once a wallet connects, the wallet asking first as it always
 does. While a transaction is under way, its button says whether it waits on
 the wallet or on Base, the same words for a donation, a pin, a calendar and
-a removal. Direct donations do not yet show in the amount
-raised, which reads the pool's fee ledger; counting them would mean reading
-the wallet's transfers as well, which is a later step.
+a removal. The amount raised reads the pool's fee ledger only, by design:
+direct donations are not added to it.
 
 Buy $home still goes to SeedMe. $home trades in a Uniswap v4 pool behind a
 Doppler hook, and a swap written here would need the pool's key, a quote

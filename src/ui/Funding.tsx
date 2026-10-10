@@ -3,10 +3,11 @@ import { useEffect } from "preact"
 import { useSignal, useSignalEffect } from "preact/signals"
 import { call } from "../call.ts"
 import {
-  BasedHouseMumbaiUrl,
+  BasedHouseMumbaiApplyUrl,
   BaseRpcUrl,
   Campaign,
   DonationAddress,
+  etherAmount,
   formatEth,
   HomeTokenUrl,
   nextMilestone,
@@ -18,7 +19,12 @@ import {
   transactionUrl,
 } from "../funding.ts"
 import { eas } from "../map/client.ts"
-import { account, sendEther, stageLabel } from "../wallet/client.ts"
+import {
+  account,
+  isFailure,
+  sendEther,
+  stageLabel,
+} from "../wallet/client.ts"
 import { Choices } from "./Choices.tsx"
 import { Disclosure } from "./Disclosure.tsx"
 import { OutIcon } from "./Icons.tsx"
@@ -62,21 +68,19 @@ export function FundingCard() {
   const waiting = useSignal(false)
   const sent = useSignal<{
     hash: string
-    amount: number
+    amount: string
   } | null>(null)
   const problem = useSignal<string | null>(null)
 
-  /** The amount to give, as typed or as chosen; NaN when it is not a number. */
-  const amount = () => Number(custom.value.trim() || preset.value)
-  const valid = (value: number) => Number.isFinite(value) && value > 0
+  /** The amount to give, as typed or as chosen, the way the wallet gets it. */
+  const amount = () => etherAmount(custom.value.trim() || String(preset.value))
 
-  const send = useAction((value: number) =>
+  const send = useAction((ether: string) =>
     sendEther(
-      // The test chain, when the map was read on one; Base otherwise. The
-      // amount goes as plain decimal text, which is all the wallet code parses.
+      // The test chain, when the map was read on one; Base otherwise.
       eas.value?.rpc ?? BaseRpcUrl,
       DonationAddress,
-      value.toFixed(18).replace(/\.?0+$/, String()),
+      ether,
     )
   )
 
@@ -84,9 +88,9 @@ export function FundingCard() {
     problem.value = null
     sent.value = null
 
-    const value = amount()
+    const ether = amount()
 
-    if (!valid(value)) {
+    if (ether === null) {
       problem.value = "Enter an amount above zero."
 
       return
@@ -99,12 +103,12 @@ export function FundingCard() {
       return
     }
 
-    const hash = await send.run(value)
+    const hash = await send.run(ether)
 
     if (hash !== Failed) {
       sent.value = {
         hash,
-        amount: value,
+        amount: ether,
       }
     }
   }
@@ -123,7 +127,7 @@ export function FundingCard() {
     // Longer than the five seconds the endpoint gives the chain read, so
     // the endpoint answers first.
     call<Funding>("/funding.json", {}, 10_000).then((funding) => {
-      if ("raisedEth" in funding && Number.isFinite(funding.raisedEth)) {
+      if (!isFailure(funding) && Number.isFinite(funding?.raisedEth)) {
         raised.value = funding.raisedEth
       } else {
         console.error("Error fetching funding:", funding)
@@ -133,7 +137,7 @@ export function FundingCard() {
     })
   }, [])
 
-  const value = amount()
+  const ether = amount()
 
   return (
     <Panel>
@@ -207,16 +211,16 @@ export function FundingCard() {
           >
             {send.busy.value
               ? stageLabel()
-              : valid(value)
-              ? `Donate ${formatEth(value)} ETH`
+              : ether
+              ? `Donate ${ether} ETH`
               : "Donate"}
           </button>
 
           <Notice tone="done">
             {sent.value && (
               <>
-                Thank you! Your {formatEth(sent.value.amount)}{" "}
-                ETH donation is on Base.{" "}
+                Thank you! Your {sent.value.amount} ETH donation is on
+                Base.{" "}
                 <a
                   href={transactionUrl(sent.value.hash)}
                   target="_blank"
@@ -265,7 +269,7 @@ export function FundingCard() {
             <li>
               100% of <HomeToken /> creator fees are allocated to{" "}
               <a
-                href={BasedHouseMumbaiUrl}
+                href={BasedHouseMumbaiApplyUrl}
                 target="_blank"
                 class="underline hover:text-brand"
               >
@@ -297,9 +301,9 @@ export function FundingCard() {
 
       {connecting.value && (
         <ConnectDialog
-          reason={`Connect a wallet to donate ${
-            formatEth(value)
-          } ETH to Based House. Your wallet asks you to confirm before anything is sent.`}
+          reason={ether
+            ? `Connect a wallet to donate ${ether} ETH to Based House. Your wallet asks you to confirm before anything is sent.`
+            : undefined}
           onClose={() => {
             connecting.value = false
             waiting.value = false
