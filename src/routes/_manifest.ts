@@ -15,18 +15,6 @@ const page__ = {
   load: () => import("./_page.tsx"),
 } as const
 
-const layout__about = {
-  path: "/about",
-  parent: layout__,
-  load: () => import("./about/_layout.tsx"),
-} as const
-
-const page__about = {
-  path: "/about",
-  parent: layout__about,
-  load: () => import("./about/_page.tsx"),
-} as const
-
 const server__funding_json = {
   path: "/funding.json",
   load: () => import("./funding.json/_server.ts"),
@@ -53,13 +41,11 @@ const server__map__preview_json = {
 } as const
 
 export const Layouts: Router.LayoutRoutes = [
-  layout__,
-  layout__about
+  layout__
 ] as const
 
 export const Pages: Router.PageRoutes = [
-  page__,
-  page__about
+  page__
 ] as const
 
 export const Servers: Router.ServerRoutes = [

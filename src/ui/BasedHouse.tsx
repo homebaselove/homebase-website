@@ -3,6 +3,7 @@ import { useEffect, useRef } from "preact"
 import { useSignal } from "preact/signals"
 import BasePaint414 from "../../assets/BasedPaint414.png"
 import { FundingCard } from "./Funding.tsx"
+import { SectionHeading } from "./Layout.tsx"
 
 /**
  * The Based House section: the funding card on the left, the BasedPaint
@@ -17,15 +18,10 @@ export function BasedHouseCard() {
       id="fund"
       class="scroll-mt-8 flex flex-col gap-8"
     >
-      <div class="max-w-[640px] mx-auto text-center">
-        <div class="text-sm font-bold uppercase tracking-wide text-brand">
-          Up next
-        </div>
-
-        <h2 class="text-4xl max-sm:text-3xl font-bold mt-1">
-          Based House Mumbai
-        </h2>
-      </div>
+      <SectionHeading
+        kicker="Up next"
+        title="Based House Mumbai"
+      />
 
       <div class="grid items-start lg:items-center gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <FundingCard />

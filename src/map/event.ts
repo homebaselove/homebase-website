@@ -30,3 +30,36 @@ export function hasPin<T extends Pick<LumaEvent, "lat" | "lng">>(
 }
 
 export const eventUrl = (slug: string) => `https://luma.com/${slug}`
+
+/**
+ * Where an event is, in a few words for a list row, or in full for its card,
+ * where a venue that keeps its address for guests says so.
+ */
+export function placeOf(
+  event: Pick<LumaEvent, "placement" | "venue" | "address" | "city">,
+  detail: "short" | "full",
+): string {
+  if (event.placement === "online") {
+    return detail === "short" ? "Online" : "Online event"
+  }
+
+  if (detail === "full" && event.placement === "hidden") {
+    return `${
+      event.city ?? "Somewhere near here"
+    }. The exact address is shared with guests on Luma.`
+  }
+
+  return (detail === "short"
+    ? [
+      event.venue,
+      event.city,
+    ]
+      .filter(Boolean)
+      .join(" · ")
+    : [
+      event.venue,
+      event.address ?? event.city,
+    ]
+      .filter(Boolean)
+      .join(", ")) || "Location to be announced"
+}

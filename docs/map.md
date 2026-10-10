@@ -199,8 +199,12 @@ means something. Where events would overlap at a zoom, one badge carries a
 count. Hovering any marker, on a device whose pointer can hover, opens a
 preview with the title, the date in the event's timezone and a link to Luma;
 a cluster's preview lists up to three of its events, each a link, and says how
-many more a zoom would show. The card keeps Open on Luma, Add to calendar and
-Directions under the place line, in view without scrolling. The soonest
+many more a zoom would show. The card keeps Open on Luma, Directions and Add
+to calendar under the place line, in view without scrolling; Add to calendar
+opens Google Calendar or saves an .ics file for Apple Calendar, Outlook and
+the rest, linking back to the event. An event held somewhere reads in its own
+zone with the viewer's time beside it, and an online one in the viewer's
+zone, as Luma shows them. The soonest
 upcoming event wears a ring on its marker, breathing once every few seconds
 and still for anyone who asked for less motion, with a Next up tag in the
 list and the preview: the list is ordered by date and the map was not, and
@@ -435,7 +439,7 @@ client through the route manifest. Minified sizes:
   the zoom buttons brings the world back whenever the viewer has wandered.
 - Hovering a marker, on a pointer that hovers, previews the event, or up to
   three of a cluster's events, each a link to Luma. The card keeps Open on
-  Luma, Add to calendar and Directions right under the place line.
+  Luma, Directions and Add to calendar right under the place line.
 - The soonest upcoming event wears a ring on its marker and a Next up tag in
   the list and in the preview, so the map carries the order the list has.
 - The list is the map's other half: hovering a row lifts its pin, selecting
@@ -443,8 +447,9 @@ client through the route manifest. Minified sizes:
   leaves open, beside it on a wide screen and above it on a phone, where the
   map also scrolls back into view; selecting a pin scrolls its row into view.
   Every event is in the list, pinned or not.
-- Times read in the event's timezone, the way Luma shows them, with the
-  viewer's own time alongside when it differs.
+- Times read the way Luma shows them: an event held somewhere in its own
+  timezone, with the viewer's own time alongside when it differs, and an
+  online event in the viewer's timezone, since that is where they join from.
 - Clusters show a count and split when zoomed; a cluster that will not split
   is one venue, and opens its first event instead. Opening an event zooms
   until its pin stands on its own, and its card links the other events at
@@ -459,8 +464,9 @@ client through the route manifest. Minified sizes:
 - The add form is for a wallet whose pins count. The way in is the wallet
   button in the header, and a wallet the map does not know never sees the
   form.
-- The dialog is rendered at the document's root, since each section of the
-  page paints in its own layer and a later one would otherwise cover it.
+- Every dialog is the native modal `<dialog>`, which lies over every section
+  from the top layer wherever it sits in the markup, so none needs moving to
+  the document's root.
 - Mobile gets the map above the list and the details over the map's lower
   edge; desktop gets them side by side.
 

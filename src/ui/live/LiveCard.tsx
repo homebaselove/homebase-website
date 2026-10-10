@@ -1,7 +1,6 @@
 /** @jsxImportSource preact */
 import { useEffect } from "preact"
 import { useComputed, useSignal } from "preact/signals"
-import { createCalendarLinks } from "../../calendar.ts"
 import {
   calendars,
   type ListedEvent,
@@ -10,58 +9,26 @@ import {
   loadLive,
   removeCalendar,
 } from "../../live/client.ts"
-import { isAdmin } from "../../wallet/client.ts"
-import { SpinnerIcon } from "../Icons.tsx"
+import {
+  dayOf,
+  dayTitle,
+  viewerZone,
+  type Zone,
+  zoneLabel,
+  zoneList,
+} from "../../live/days.ts"
+import { timeOf, zoneName } from "../../map/time.ts"
+import { isAdmin, stageLabel } from "../../wallet/client.ts"
+import { AddToCalendar } from "../AddToCalendar.tsx"
+import { OutIcon, SpinnerIcon } from "../Icons.tsx"
+import { Notice } from "../Notice.tsx"
+import { Panel, PanelHeader } from "../Panel.tsx"
+import { useAction } from "../useAction.ts"
 import { AddCalendarDialog } from "./AddCalendarDialog.tsx"
 
 interface DayData {
-  readonly title: string
   readonly date: string
   readonly events: ListedEvent[]
-}
-
-/** The day an event falls on in the chosen zone; an all-day event keeps its own date in every zone. */
-const dayOf = (event: ListedEvent, timeZone: string) =>
-  event.allDay
-    ? event.start.slice(0, 10)
-    : new Date(event.start).toLocaleDateString("en-CA", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
-
-function LocationPicker(props: {
-  readonly selected: string
-  readonly timezones: readonly string[]
-  readonly onChange: (timezone: string) => void
-}) {
-  return (
-    <div class="flex items-center gap-2">
-      <span class="text-sm text-gray-600">
-        Location:
-      </span>
-      <select
-        value={props.selected}
-        class="text-sm border border-gray-300 rounded px-2 py-1 appearance-none w-32"
-        onChange={(event) => {
-          props.onChange((event.target as HTMLSelectElement).value)
-        }}
-      >
-        {props.timezones.map((timezone) => (
-          <option
-            key={timezone}
-            value={timezone}
-          >
-            {timezone
-              .split("/")
-              .at(-1)!
-              .replaceAll("_", " ")}
-          </option>
-        ))}
-      </select>
-    </div>
-  )
 }
 
 function DayElement(props: {
@@ -69,116 +36,74 @@ function DayElement(props: {
   readonly timeZone: string
 }) {
   const { day } = props
-  const date = new Date(`${day.date}T12:00:00Z`)
 
   return (
     <div data-day={day.date}>
-      <div class="flex items-center gap-2 my-1.5 select-none">
-        <div class="w-12 h-12 bg-white rounded-lg shadow-sm flex flex-col overflow-hidden mb-2">
-          <div class="bg-brand text-white text-xs font-semibold py-0.5 text-center">
-            {date.toLocaleDateString("en-US", {
-              month: "short",
-              timeZone: "UTC",
-            })}
-          </div>
-          <div class="flex-1 flex items-center justify-center text-md font-bold">
-            {date.getUTCDate()}
-          </div>
-        </div>
+      <h3 class="sticky top-0 z-10 -mx-4 bg-white/95 px-4 py-2 text-sm font-bold uppercase tracking-wide text-brand backdrop-blur">
+        {dayTitle(day.date, props.timeZone)}
+      </h3>
 
-        <div class="flex flex-col">
-          <span class="text-lg">
-            {day.title}
-          </span>
+      <ul class="flex flex-col divide-y divide-gray-100">
+        {day.events.map((event) => {
+          const start = new Date(event.start)
 
-          <span class="text-md text-gray-500">
-            {date.toLocaleDateString("en-US", {
-              month: "long",
-              day: "numeric",
-              timeZone: "UTC",
-            })}
-          </span>
-        </div>
-      </div>
-
-      <div class="flex flex-col ml-16 gap-4 mt-2">
-        {day.events.map((event) => (
-          <div
-            key={`${event.calendar}:${event.id}`}
-            class="flex border-t-[1px] border-gray-200 pt-2 w-full"
-          >
-            <div class="w-full">
-              <div class="flex flex-wrap items-center w-full gap-1 text-gray-500 text-sm">
-                <div class="flex items-center">
-                  <ClockIcon size="16px" />
-                  <span class="mx-1">
-                    {event.allDay
-                      ? "All day"
-                      : new Date(event.start).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        timeZone: props.timeZone,
-                      })}
-                  </span>
+          return (
+            <li
+              key={`${event.calendar}:${event.id}`}
+              class="flex gap-4 py-3"
+            >
+              <div class="w-[4.5rem] shrink-0 pt-0.5">
+                <div class="text-sm font-bold">
+                  {event.allDay ? "All day" : timeOf(start, props.timeZone)}
                 </div>
 
-                <div class="line-clamp-1">
-                  🗓️{"  "}
-                  <a
-                    title="Add to Apple / iCalendar"
-                    href={createCalendarLinks({
-                      title: event.title,
-                      start: new Date(event.start),
-                      end: new Date(event.end),
-                    })
-                      .ical}
-                    class="hover:underline"
-                  >
-                    iCalendar
-                  </a>
-                  {" • "}
-                  <a
-                    title="Add to Google Calendar"
-                    target="_blank"
-                    href={createCalendarLinks({
-                      title: event.title,
-                      start: new Date(event.start),
-                      end: new Date(event.end),
-                    })
-                      .google}
-                    class="hover:underline"
-                  >
-                    Google
-                  </a>
+                {!event.allDay && (
+                  <div class="text-xs text-gray-500">
+                    {zoneName(start, props.timeZone)}
+                  </div>
+                )}
+              </div>
+
+              <div class="min-w-0 flex-1 flex flex-col gap-1">
+                <h4 class="text-lg font-bold leading-tight">
+                  {event.title}
+                </h4>
+
+                {event.description && (
+                  <p class="text-gray-600 line-clamp-3">
+                    {event.description}
+                  </p>
+                )}
+
+                <div class="flex flex-wrap gap-2 mt-1">
                   {event.link && (
-                    <>
-                      {" • "}
-                      <a
-                        href={event.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="hover:underline"
-                      >
-                        Open event
-                      </a>
-                    </>
+                    <a
+                      href={event.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="btn btn-quiet btn-small"
+                    >
+                      Open event
+                      <OutIcon size={14} />
+                    </a>
                   )}
+
+                  <AddToCalendar
+                    event={{
+                      title: event.title,
+                      start,
+                      end: new Date(event.end),
+                      allDay: event.allDay,
+                      description: event.description,
+                      url: event.link,
+                    }}
+                  />
                 </div>
               </div>
-
-              <div class="block font-semibold text-xl mt-1 mb-2">
-                {event.title}
-              </div>
-
-              {event.description && (
-                <div class="text-gray-600 line-clamp-3">
-                  {event.description}
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
@@ -186,7 +111,9 @@ function DayElement(props: {
 /** The calendars behind the list, for the admin: each with the way to take it off. */
 function CalendarStrip() {
   const removing = useSignal<string | null>(null)
-  const problem = useSignal<string | null>(null)
+  const remove = useAction((uid: string) =>
+    removeCalendar(uid, remove.progress)
+  )
   const list = calendars.value ?? []
 
   return (
@@ -222,49 +149,56 @@ function CalendarStrip() {
             </span>
             <button
               type="button"
-              class="text-red-600 hover:underline disabled:opacity-50"
-              disabled={removing.value === calendar.uid}
+              class="btn-text btn-danger"
+              disabled={remove.busy.value}
               onClick={async () => {
                 removing.value = calendar.uid
-                problem.value = null
-
-                const failure = await removeCalendar(calendar.uid)
-
+                await remove.run(calendar.uid)
                 removing.value = null
-
-                if (failure) {
-                  problem.value = failure.error
-                }
               }}
             >
-              {removing.value === calendar.uid ? "Removing…" : "Remove"}
+              {removing.value === calendar.uid
+                ? stageLabel(remove.stage.value)
+                : "Remove"}
             </button>
           </span>
         ))}
       </div>
 
-      {problem.value && (
-        <p
-          role="alert"
-          class="text-red-600"
-        >
-          {problem.value}
-        </p>
-      )}
+      <Notice tone="error">
+        {remove.problem.value}
+      </Notice>
     </div>
   )
 }
 
-/** Homebase Live: what is streaming ahead, from the calendars the admin added. */
+/** Homebase Live: what is streaming ahead, from the calendars the admin added, in the viewer’s time or any other. */
 export function LiveCard() {
-  const timezones = useSignal<string[]>([])
+  const timezones = useSignal<Zone[]>([])
   const selectedTimezone = useSignal<string>("UTC")
   const loading = useSignal(true)
   const adding = useSignal(false)
 
   useEffect(() => {
-    timezones.value = Intl.supportedValuesOf("timeZone")
-    selectedTimezone.value = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const viewer = viewerZone()
+
+    selectedTimezone.value = viewer
+    // The full list is a few hundred formatters, so it is made when the
+    // browser is idle; until then the viewer’s own zone is the one offered.
+    timezones.value = [
+      {
+        id: viewer,
+        label: zoneLabel(viewer, new Date()),
+      },
+    ]
+
+    const whenIdle = typeof requestIdleCallback === "function"
+      ? requestIdleCallback
+      : (run: () => void) => setTimeout(run, 1)
+
+    whenIdle(() => {
+      timezones.value = zoneList(viewer)
+    })
 
     loadLive().then(() => {
       loading.value = false
@@ -294,10 +228,6 @@ export function LiveCard() {
     ]
       .sort()
       .map((date) => ({
-        title: new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", {
-          weekday: "long",
-          timeZone: "UTC",
-        }),
         date,
         events: (byDay.get(date) ?? []).sort((a, b) =>
           a.start.localeCompare(b.start)
@@ -306,49 +236,52 @@ export function LiveCard() {
   })
 
   return (
-    <section
+    <Panel
       id="live"
-      class="relative scroll-mt-8 bg-white w-full rounded-lg shadow-md border-[1px] border-gray-200"
-      aria-labelledby="live-heading"
+      labelledBy="live-heading"
     >
-      <div
-        class="flex flex-wrap gap-x-4 gap-y-2 items-center justify-between border-b-[1px] border-gray-200 p-3"
-        style="background: linear-gradient(to bottom, rgba(245, 245, 245, 1), rgba(255, 255, 255, 1))"
+      <PanelHeader
+        titleId="live-heading"
+        title="Homebase Live"
+        lead="What is streaming next, in your time."
       >
-        <h2
-          id="live-heading"
-          class="text-3xl max-sm:text-2xl font-bold p-1.5"
-        >
-          Homebase Live
-        </h2>
-
-        <div class="flex flex-wrap items-center gap-3">
-          <LocationPicker
-            selected={selectedTimezone.value}
-            timezones={timezones.value}
-            onChange={(timezone) => {
-              selectedTimezone.value = timezone
+        <label class="flex min-w-0 items-center gap-2 text-sm text-gray-600 whitespace-nowrap">
+          Times in
+          <select
+            value={selectedTimezone.value}
+            class="field w-auto min-w-0 max-w-[16rem] text-sm"
+            onChange={(event) => {
+              selectedTimezone.value = (event.target as HTMLSelectElement).value
             }}
-          />
+          >
+            {timezones.value.map((zone) => (
+              <option
+                key={zone.id}
+                value={zone.id}
+              >
+                {zone.label}
+              </option>
+            ))}
+          </select>
+        </label>
 
-          {/* The way to add a calendar is for a wallet whose calendars count. */}
-          {isAdmin.value && (
-            <button
-              type="button"
-              class="btn-brand"
-              onClick={() => {
-                adding.value = true
-              }}
-            >
-              Add a calendar
-            </button>
-          )}
-        </div>
-      </div>
+        {/* The way to add a calendar is for a wallet whose calendars count. */}
+        {isAdmin.value && (
+          <button
+            type="button"
+            class="btn btn-brand"
+            onClick={() => {
+              adding.value = true
+            }}
+          >
+            Add a calendar
+          </button>
+        )}
+      </PanelHeader>
 
       {isAdmin.value && !loading.value && <CalendarStrip />}
 
-      <div class="flex flex-col gap-6 p-4">
+      <div class="flex flex-col gap-4 px-4 pb-4 pt-2">
         {loading.value
           ? (
             <div class="flex items-center justify-center py-12">
@@ -388,32 +321,6 @@ export function LiveCard() {
           }}
         />
       )}
-    </section>
-  )
-}
-
-function ClockIcon(props: {
-  readonly size: string
-}) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={props.size}
-      height={props.size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-      />
-      <path d="M12 6v6l4 2" />
-    </svg>
+    </Panel>
   )
 }

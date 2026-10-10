@@ -15,7 +15,7 @@ import JesseHappyToFund from "../assets/story/JesseHappyToFund.webp"
 import LetterToJesseCast from "../assets/story/LetterToJesseCast.webp"
 import LetterToJesseV2Cast from "../assets/story/LetterToJesseV2Cast.webp"
 import MumbaiAnnouncement from "../assets/story/MumbaiAnnouncement.webp"
-import { SeedMeUrl } from "./funding.ts"
+import { BasedHouseMumbaiApplyUrl, SeedMeUrl } from "./funding.ts"
 
 export interface StoryLink {
   label: string
@@ -125,9 +125,6 @@ const JesseAtBasedHouseVideoUrl = "/JesseAtBasedHouse.mp4"
  * people here to watch.
  */
 export const OpeningChapterId = "jesse-at-based-house"
-
-/** Where applications for the next house go. */
-const BasedHouseMumbaiApplyUrl = "https://forms.gle/54EtYRDxcVz3ZPQQ6"
 
 /** The announcement of the next house on X, which its cover opens. */
 const BasedHouseMumbaiAnnouncementUrl =

@@ -1,6 +1,7 @@
 /**
- * Events read in the zone they happen in, the way Luma shows them, with the
- * viewer's own time alongside when it differs.
+ * Events read the way Luma shows them: one held somewhere in the zone it
+ * happens in, with the viewer's own time alongside when it differs, and one
+ * held online in the viewer's own zone, since that is where they join from.
  */
 import type { LumaEvent } from "./MapEvent.ts"
 
@@ -55,7 +56,8 @@ function format(
   return formatter(zone, options).format(date)
 }
 
-function zoneName(date: Date, zone: string): string {
+/** The short name of a zone at an instant, as "GMT+1" or "EDT". */
+export function zoneName(date: Date, zone: string): string {
   return formatter(zone, {
     timeZoneName: "short",
   })
@@ -74,31 +76,38 @@ const dayKey = (date: Date, zone: string) =>
 export interface When {
   /** "Sat, Oct 18", with the year once it is not this one. */
   readonly date: string
-  /** "6:00 – 9:00 PM WEST", in the event's zone. */
+  /** "6:00 PM – 9:00 PM GMT+1", in the zone the event reads in. */
   readonly time: string
   /** The start where the viewer is, when that is somewhere else. */
   readonly yours: string | null
 }
 
+/** The time of day of an instant in a zone, as "2:00 PM", in the page's English. */
+export function timeOf(date: Date, zone: string): string {
+  return format(date, zone, {
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
+
 export function describeWhen(
-  event: Pick<LumaEvent, "start" | "end" | "timezone">,
+  event:
+    & Pick<LumaEvent, "start" | "end" | "timezone">
+    & Partial<Pick<LumaEvent, "placement">>,
   viewer: string = viewerZone(),
   now: Date = new Date(),
 ): When {
-  const zone = knownZone(event.timezone) ?? viewer
+  const zone = event.placement === "online"
+    ? viewer
+    : knownZone(event.timezone) ?? viewer
   const start = new Date(event.start)
   const end = event.end ? new Date(event.end) : null
-  const time = (date: Date, where: string) =>
-    format(date, where, {
-      hour: "numeric",
-      minute: "2-digit",
-    })
   const sameDay = end !== null && dayKey(start, zone) === dayKey(end, zone)
   const span = end === null
-    ? `${time(start, zone)} ${zoneName(start, zone)}`
+    ? `${timeOf(start, zone)} ${zoneName(start, zone)}`
     : sameDay
-    ? `${time(start, zone)} – ${time(end, zone)} ${zoneName(start, zone)}`
-    : `${time(start, zone)} ${zoneName(start, zone)} until ${
+    ? `${timeOf(start, zone)} – ${timeOf(end, zone)} ${zoneName(start, zone)}`
+    : `${timeOf(start, zone)} ${zoneName(start, zone)} until ${
       format(end, zone, {
         month: "short",
         day: "numeric",
@@ -121,8 +130,8 @@ export function describeWhen(
         : {}),
     }),
     time: span,
-    yours: zone !== viewer && knownZone(event.timezone)
-      ? `${time(start, viewer)} ${zoneName(start, viewer)} where you are`
+    yours: zone !== viewer
+      ? `${timeOf(start, viewer)} ${zoneName(start, viewer)} where you are`
       : null,
   }
 }

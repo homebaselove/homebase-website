@@ -3,12 +3,14 @@
  * the funding card. Any wallet may connect; what it may do follows from
  * whether it is one of the admins the server names with each list. The
  * wallet code itself is fetched on its own the first time it is needed.
+ * Every transaction goes through transact, which reports its stage.
  */
 import { computed, signal } from "preact/signals"
 import type { Address, EIP1193Provider, Hash } from "viem"
-import type { Wallet } from "./wagmi.ts"
+import type { Progress, Wallet } from "./wagmi.ts"
 
 export type {
+  Progress,
   Wallet,
 }
 
@@ -278,6 +280,44 @@ export async function signOut(): Promise<void> {
   }
 }
 
+/** Where a transaction stands: waiting on the wallet, or sent and landing. */
+export type Stage = Parameters<Progress>[0]
+
+/**
+ * What a button that sent a transaction reads while it is under way: the
+ * same words for a donation, a pin, a calendar and a removal.
+ */
+export const stageLabel = (stage: Stage | null) =>
+  stage === "land" ? "Waiting for Base…" : "Confirm in your wallet…"
+
+/**
+ * Runs one wallet action, a pin, a calendar, a removal or a donation,
+ * telling progress where it stands and turning any refusal into a sentence.
+ * Each button passes its own progress, so two transactions at once never
+ * read each other's stage.
+ */
+export async function transact<A>(
+  what: string,
+  run: (lib: WalletModule, progress: Progress) => Promise<A>,
+  progress: Progress = () => {},
+): Promise<A | Failure> {
+  let lib: WalletModule
+
+  try {
+    lib = await walletModule()
+  } catch {
+    return NotLoaded
+  }
+
+  progress("sign")
+
+  try {
+    return await run(lib, progress)
+  } catch (error) {
+    return sendFailure(error, what)
+  }
+}
+
 /**
  * Sends ether from the connected wallet, and waits for it to land. The
  * amount is text, as typed, so nothing is rounded before the wallet sees it.
@@ -286,6 +326,7 @@ export async function sendEther(
   rpc: string,
   to: string,
   amountEth: string,
+  progress?: Progress,
 ): Promise<Hash | Failure> {
   if (!account.value) {
     return {
@@ -294,9 +335,9 @@ export async function sendEther(
     }
   }
 
-  try {
-    return await (await walletModule()).sendEth(rpc, to as Address, amountEth)
-  } catch (error) {
-    return sendFailure(error, "donation")
-  }
+  return await transact(
+    "donation",
+    (lib, told) => lib.sendEth(rpc, to as Address, amountEth, told),
+    progress,
+  )
 }

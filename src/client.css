@@ -1,76 +1,306 @@
 @import "tailwindcss";
 
-@plugin "daisyui" {
-  themes: light --default;
-  logs: false;
-}
-
-@plugin "daisyui/theme" {
-  name: "pastel";
-  default: false;
-  prefersdark: false;
-  color-scheme: "light";
-  --color-base-100: oklch(100% 0 0);
-  --color-base-200: oklch(98.462% 0.001 247.838);
-  --color-base-300: oklch(92.462% 0.001 247.838);
-  --color-base-content: oklch(20% 0 0);
-  --color-primary: oklch(90% 0.063 306.703);
-  --color-primary-content: oklch(49% 0.265 301.924);
-  --color-secondary: oklch(89% 0.058 10.001);
-  --color-secondary-content: oklch(51% 0.222 16.935);
-  --color-accent: oklch(90% 0.093 164.15);
-  --color-accent-content: oklch(50% 0.118 165.612);
-  --color-neutral: oklch(55% 0.046 257.417);
-  --color-neutral-content: oklch(92% 0.013 255.508);
-  --color-info: oklch(86% 0.127 207.078);
-  --color-info-content: oklch(52% 0.105 223.128);
-  --color-success: oklch(87% 0.15 154.449);
-  --color-success-content: oklch(52% 0.154 150.069);
-  --color-warning: oklch(83% 0.128 66.29);
-  --color-warning-content: oklch(55% 0.195 38.402);
-  --color-error: oklch(80% 0.114 19.571);
-  --color-error-content: oklch(50% 0.213 27.518);
-  --radius-selector: 1rem;
-  --radius-field: 2rem;
-  --radius-box: 1rem;
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-  --border: 2px;
-  --depth: 0;
-  --noise: 0;
-}
-
 @theme {
   --font-sans: "Lato", ui-sans-serif, system-ui, sans-serif;
   --color-brand: #0000ff;
   --color-brand-dark: #0000cc;
+  /* The page's ink: a near-black, not black. */
+  --color-ink: oklch(21% 0.006 285.885);
 }
 
 @layer base {
-  /* A blueprint carried past a side of the screen must not widen the page. */
+  /* The ink, the paper and the quiet scrollbars the page has always had,
+     which daisyUI used to set before it was removed. */
+  :root {
+    color-scheme: light;
+    background-color: #fff;
+    color: var(--color-ink);
+    scrollbar-color: color-mix(in oklch, currentColor 35%, transparent)
+      transparent;
+  }
+
+  /* A blueprint carried past a side of the screen must not widen the page.
+     The gutter stays when an open dialog stops the page scrolling, so the
+     page does not shift under it. */
   html,
   body {
     overflow-x: clip;
   }
+
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  html:has(dialog:modal) {
+    overflow: hidden;
+  }
 }
 
+/* The page's few building blocks. Each control states its kind once here, so
+   a button, a chip or a field looks and behaves the same in every section,
+   and in the markup the map and its controls build outside Preact. */
 @layer components {
-  .btn-brand {
+  /* Buttons: brand is the one primary action of a card or dialog, quiet is
+     every other action, and text sits inline with copy. A full button is 44
+     pixels tall, a fingertip, a small one 36, and none is under the 24 that
+     WCAG 2.2 allows. */
+  .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.7rem 1.5rem;
+    min-height: 2.75rem;
+    padding: 0.625rem 1.5rem;
+    border: 1px solid transparent;
     border-radius: 9999px;
-    background: var(--color-brand);
-    color: #fff;
     font-weight: 700;
-    line-height: 1;
-    transition: background-color 150ms ease;
+    line-height: 1.15;
+    text-align: center;
+    cursor: pointer;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
   }
 
-  .btn-brand:hover {
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-brand {
+    background: var(--color-brand);
+    color: #fff;
+  }
+
+  .btn-brand:hover:not(:disabled) {
     background: var(--color-brand-dark);
+  }
+
+  .btn-quiet {
+    border-color: var(--color-gray-300);
+    background: #fff;
+    color: var(--color-gray-800);
+  }
+
+  .btn-quiet:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--color-brand) 40%, transparent);
+    background: color-mix(in srgb, var(--color-brand) 6%, #fff);
+    color: var(--color-brand);
+  }
+
+  .btn-small {
+    min-height: 2.25rem;
+    padding: 0.375rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  /* At least 24 pixels tall, the smallest target WCAG 2.2 allows. */
+  .btn-text {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+    padding: 0;
+    color: var(--color-brand);
+    font-weight: 600;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .btn-text:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+
+  .btn-text:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-danger {
+    color: var(--color-red-600);
+  }
+
+  .btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    color: var(--color-gray-500);
+    cursor: pointer;
+    transition:
+      background-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .btn-icon:hover {
+    background: var(--color-gray-100);
+    color: var(--color-gray-800);
+  }
+
+  /* Chips: one of a few options, a native radio inside a label, so arrow
+     keys move between them and a screen reader counts them. A link can wear
+     the shape too. */
+  .chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    min-height: 2.5rem;
+    padding: 0.375rem 0.875rem;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 9999px;
+    background: var(--color-gray-50);
+    color: var(--color-gray-700);
+    font-size: 0.875rem;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .chip:hover {
+    border-color: color-mix(in srgb, var(--color-brand) 40%, transparent);
+    background: color-mix(in srgb, var(--color-brand) 6%, #fff);
+    color: var(--color-brand);
+  }
+
+  .chip:has(:checked),
+  .chip[data-checked] {
+    border-color: color-mix(in srgb, var(--color-brand) 40%, transparent);
+    background: color-mix(in srgb, var(--color-brand) 10%, #fff);
+    color: var(--color-brand);
+  }
+
+  /* The radio covers the whole chip, unseen, so a press or a screen
+     reader's touch anywhere on it reaches the radio. */
+  .chip input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    appearance: none;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  /* A text field, as round as the chips beside it. */
+  .field {
+    min-height: 2.5rem;
+    width: 100%;
+    min-width: 0;
+    padding: 0.375rem 1rem;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 9999px;
+    background: var(--color-gray-50);
+    font-size: 1rem;
+  }
+
+  .field::placeholder {
+    color: var(--color-gray-400);
+  }
+
+  .field:focus {
+    border-color: color-mix(in srgb, var(--color-brand) 40%, transparent);
+    background: #fff;
+  }
+
+  /* One focus ring for every control the page draws. */
+  .btn:focus-visible,
+  .btn-icon:focus-visible,
+  .chip:focus-visible,
+  .chip:has(:focus-visible),
+  .field:focus-visible,
+  .hb-focus:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-brand) 35%, transparent);
+    outline-offset: 2px;
+  }
+
+  /* Without :has(), a chip shows focus whenever its radio has it. */
+  @supports not selector(:has(*)) {
+    .chip:focus-within {
+      outline: 3px solid color-mix(in srgb, var(--color-brand) 35%, transparent);
+      outline-offset: 2px;
+    }
+  }
+
+  .btn-text:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-brand) 40%, transparent);
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+  }
+
+  /* Dialogs: the native modal dialog, which keeps focus inside it, makes the
+     page behind it inert, closes on Escape and lies over every section from
+     the top layer, wherever it sits in the markup. A sheet from the bottom on
+     a phone, a centered card from the sm breakpoint up. */
+  .hb-dialog {
+    width: min(100% - 2rem, var(--dialog-width, 32rem));
+    max-width: none;
+    max-height: min(100% - 2rem, 48rem);
+    margin: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.3);
+    overflow: hidden;
+    /* It sits in the markup where it opens, as in the white header bar,
+       so it sets the text it would otherwise inherit from there. */
+    color: var(--color-ink);
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: normal;
+    text-align: start;
+    text-transform: none;
+    white-space: normal;
+  }
+
+  /* Open, the heading stays put and the body under it scrolls. */
+  .hb-dialog[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hb-dialog:focus {
+    outline: none;
+  }
+
+  .hb-dialog-body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .hb-dialog::backdrop {
+    background: rgb(0 0 0 / 0.5);
+  }
+
+  @media (width < 40rem) {
+    .hb-dialog {
+      width: 100%;
+      max-height: 92dvh;
+      margin: auto 0 0;
+      border-radius: 1rem 1rem 0 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hb-dialog[open] {
+      animation: hb-rise 200ms ease-out;
+    }
+
+    .hb-dialog[open]::backdrop {
+      animation: hb-fade 200ms ease-out;
+    }
   }
 
   /* The story reel: cards share one width that leaves the neighbors peeking
@@ -87,6 +317,10 @@
     .story-reel {
       --story-gap: 1rem;
     }
+  }
+
+  .story-reel::-webkit-scrollbar {
+    display: none;
   }
 
   /* The cover of a card: on phones as tall as its photos; from the sm
@@ -130,15 +364,6 @@
     .story-pair-stack > a {
       flex: none;
     }
-  }
-
-  .story-reel::-webkit-scrollbar {
-    display: none;
-  }
-
-  .btn-brand:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 
   /* Map markers. MapLibre moves .hb-marker; the button inside carries the states. */
@@ -322,12 +547,24 @@
     color: #6b7280;
   }
 
-  .hb-preview-next {
+  /* "Next up", on a list row and in a map preview alike. */
+  .hb-preview-next,
+  .hb-next {
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--color-brand);
+  }
+
+  .hb-next {
+    display: inline-block;
+    margin-right: 0.375rem;
+    padding: 0 0.375rem;
+    border: 1px solid color-mix(in srgb, var(--color-brand) 40%, transparent);
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--color-brand) 10%, #fff);
+    vertical-align: middle;
   }
 
   /* The soonest upcoming event wears a ring, so the map carries the order
@@ -396,12 +633,15 @@
   }
 }
 
-@keyframes fade-in {
+@keyframes hb-rise {
   from {
     opacity: 0;
+    transform: translateY(1rem);
   }
+}
 
-  to {
-    opacity: 1;
+@keyframes hb-fade {
+  from {
+    opacity: 0;
   }
 }

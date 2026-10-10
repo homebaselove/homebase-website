@@ -18,10 +18,29 @@ The Homebase website serves as a hub for the Base community, featuring:
 
 ## 🚀 Tech Stack
 
-- **Framework**: [SolidJS](https://www.solidjs.com/) with [SolidStart](https://start.solidjs.com/)
-- **Styling**: [TailwindCSS](https://tailwindcss.com/)
-- **Build Tool**: [Vinxi](https://github.com/nksaraf/vinxi)
+- **UI**: [Preact](https://preactjs.com/) with signals, served by
+  [effect-start](https://github.com/nounder/effect-start)
+- **Styling**: [TailwindCSS](https://tailwindcss.com/) v4
 - **Runtime**: [Bun](https://bun.sh/)
+
+## 🧱 UI building blocks
+
+Every section is built from the same few pieces, so a control looks and
+behaves the same wherever it appears:
+
+- `src/client.css`: the button kinds (`btn-brand` for the one primary action
+  of a card or dialog, `btn-quiet` for the rest, `btn-text` inline), `chip`,
+  `field`, and the dialog sheet, with one focus ring for all of them.
+- `Dialog`: the native modal dialog behind every dialog on the page.
+- `LinkDialog`: paste a link, look it up, confirm it in the wallet; the map's
+  Add an event and Live's Add a calendar are both one.
+- `Panel`, `PanelHeader`, `Band`, `SectionHeading`: the cards and the page's
+  rhythm.
+- `Choices` (native radios as chips), `Disclosure` (`details`), `Notice`
+  (live region), `AddToCalendar` (Google Calendar or an .ics file).
+- `useAction`: the pending and error state of anything a button starts, and
+  the stage of its transaction, which `transact` in `src/wallet/client.ts`
+  reports for every wallet transaction.
 
 ## 🛠️ Development
 

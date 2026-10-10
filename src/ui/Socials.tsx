@@ -1,4 +1,6 @@
 /** @jsxImportSource preact */
+import { HomeTokenUrl } from "../funding.ts"
+
 export function Socials() {
   return (
     <nav
@@ -9,8 +11,8 @@ export function Socials() {
         <a
           href="https://x.com/homebasedotlove"
           target="_blank"
-          aria-label="Twitter"
-          class="flex items-center hover:opacity-80"
+          aria-label="X"
+          class="flex items-center rounded-md hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -28,10 +30,10 @@ export function Socials() {
           </svg>
         </a>
         <a
-          href="http://warpcast.com/homebase"
+          href="https://farcaster.xyz/homebase"
           target="_blank"
           aria-label="Farcaster"
-          class="flex items-center hover:opacity-80"
+          class="flex items-center rounded-md hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"
         >
           <svg
             width="28"
@@ -61,9 +63,9 @@ export function Socials() {
           href="https://docs.fileverse.io/document/3xrdwjabrTJDy8AxgKdCuG#k=PMLaADggql3fdhpShUOZLCAAXfffpbE0gTo9iZzIh_8"
           target="_blank"
           aria-label="Fileverse"
-          class="flex items-center hover:opacity-80"
+          class="flex items-center rounded-md hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"
         >
-          {/* Fileverse's stacked-pages smiley, cut to three pages so the face still reads at 28px. */}
+          {/* Fileverse’s stacked-pages smiley, cut to three pages so the face still reads at 28px. */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="28"
@@ -103,10 +105,10 @@ export function Socials() {
           </svg>
         </a>
         <a
-          href="https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24"
+          href={HomeTokenUrl}
           target="_blank"
           aria-label="Dexscreener"
-          class="flex items-center hover:opacity-80"
+          class="flex items-center rounded-md hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

@@ -1,13 +1,15 @@
 /** @jsxImportSource preact */
 import { useEffect } from "preact"
-import { useSignal } from "preact/signals"
-import { createCalendarLinks } from "../../calendar.ts"
 import { unpin } from "../../map/client.ts"
-import { endOf, hasPin } from "../../map/event.ts"
+import { endOf, hasPin, placeOf } from "../../map/event.ts"
 import type { MapEvent } from "../../map/MapEvent.ts"
 import { describeWhen } from "../../map/time.ts"
-import { account, isAdmin } from "../../wallet/client.ts"
+import { account, isAdmin, stageLabel } from "../../wallet/client.ts"
+import { AddToCalendar } from "../AddToCalendar.tsx"
 import { CloseIcon } from "../Icons.tsx"
+import { Notice } from "../Notice.tsx"
+import { Failed, useAction } from "../useAction.ts"
+import { EventWhen } from "./EventWhen.tsx"
 
 interface Props {
   readonly event: MapEvent
@@ -23,19 +25,16 @@ interface Props {
 export function EventDetails(props: Props) {
   const { event } = props
   const when = describeWhen(event)
-  const removing = useSignal(false)
-  const problem = useSignal<string | null>(null)
+  const remove = useAction(() => unpin(event.slug, remove.progress))
   const actor = account.value
   const mayRemove = actor !== null
     && (isAdmin.value
       || actor.address.toLowerCase() === event.addedBy.toLowerCase())
 
   useEffect(() => {
+    // Escape inside an open dialog closes the dialog, not the card under it.
     const onKey = (key: KeyboardEvent) => {
-      if (
-        key.key === "Escape"
-        && !document.querySelector("[role=dialog][aria-modal=true]")
-      ) {
+      if (key.key === "Escape" && !document.querySelector("dialog[open]")) {
         props.onClose()
       }
     }
@@ -44,13 +43,6 @@ export function EventDetails(props: Props) {
 
     return () => removeEventListener("keydown", onKey)
   }, [])
-
-  const calendar = createCalendarLinks({
-    title: event.title,
-    location: event.address ?? event.city ?? undefined,
-    start: new Date(event.start),
-    end: new Date(endOf(event)),
-  })
 
   return (
     <article
@@ -73,20 +65,14 @@ export function EventDetails(props: Props) {
         type="button"
         onClick={props.onClose}
         aria-label="Close"
-        class="absolute top-2 right-2 rounded-full bg-white/90 text-gray-600 p-1.5 shadow hover:bg-white"
+        class="btn-icon absolute top-2 right-2 bg-white/90 shadow hover:bg-white"
       >
         <CloseIcon size={18} />
       </button>
 
       <div class="flex flex-col gap-3 p-4">
-        <div>
-          <p class="text-sm text-brand font-semibold pr-8">
-            {when.date}
-            <span class="text-gray-500 font-normal">
-              {" · "}
-              {when.time}
-            </span>
-          </p>
+        <div class="pr-8">
+          <EventWhen event={event} />
 
           {when.yours && (
             <p class="text-sm text-gray-500">
@@ -100,18 +86,7 @@ export function EventDetails(props: Props) {
         </div>
 
         <p class="text-sm text-gray-700">
-          {event.placement === "online"
-            ? "Online event"
-            : event.placement === "hidden"
-            ? `${
-              event.city ?? "Somewhere near here"
-            }. The exact address is shared with guests on Luma.`
-            : [
-              event.venue,
-              event.address ?? event.city,
-            ]
-              .filter(Boolean)
-              .join(", ") || "Location to be announced"}
+          {placeOf(event, "full")}
         </p>
 
         <div class="flex flex-wrap gap-2">
@@ -119,18 +94,9 @@ export function EventDetails(props: Props) {
             href={event.url}
             target="_blank"
             rel="noopener noreferrer"
-            class="btn-brand"
+            class="btn btn-brand btn-small"
           >
             Open on Luma
-          </a>
-
-          <a
-            href={calendar.google}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="rounded-full border-[1px] border-gray-200 px-4 py-2 text-sm hover:bg-gray-50"
-          >
-            Add to calendar
           </a>
 
           {hasPin(event) && event.placement === "venue" && (
@@ -140,11 +106,24 @@ export function EventDetails(props: Props) {
               href={`https://www.google.com/maps/dir/?api=1&destination=${event.lat},${event.lng}`}
               target="_blank"
               rel="noopener noreferrer"
-              class="rounded-full border-[1px] border-gray-200 px-4 py-2 text-sm hover:bg-gray-50"
+              class="btn btn-quiet btn-small"
             >
               Directions
             </a>
           )}
+
+          <AddToCalendar
+            event={{
+              title: event.title,
+              start: new Date(event.start),
+              end: new Date(endOf(event)),
+              description: event.description,
+              url: event.url,
+              location: event.placement === "online"
+                ? null
+                : event.address ?? event.city,
+            }}
+          />
         </div>
 
         {event.description && (
@@ -171,7 +150,7 @@ export function EventDetails(props: Props) {
                 <li key={other.slug}>
                   <button
                     type="button"
-                    class="text-left text-brand hover:underline"
+                    class="btn-text"
                     onClick={() =>
                       props.onSelect(other.slug)}
                   >
@@ -188,34 +167,25 @@ export function EventDetails(props: Props) {
         )}
 
         {mayRemove && (
-          <div class="flex items-center gap-3 border-t-[1px] border-gray-100 pt-3 text-sm">
+          <div class="flex flex-col gap-1 border-t-[1px] border-gray-100 pt-3 text-sm">
             <button
               type="button"
-              disabled={removing.value}
-              class="text-red-600 hover:underline disabled:opacity-50"
+              disabled={remove.busy.value}
+              class="btn-text btn-danger self-start"
               onClick={async () => {
-                removing.value = true
-                problem.value = null
-
-                const failure = await unpin(event.slug)
-
-                removing.value = false
-
-                if (failure) {
-                  problem.value = failure.error
-                } else {
+                if (await remove.run() !== Failed) {
                   props.onClose()
                 }
               }}
             >
-              {removing.value ? "Removing…" : "Remove from map"}
+              {remove.busy.value
+                ? stageLabel(remove.stage.value)
+                : "Remove from map"}
             </button>
 
-            {problem.value && (
-              <span class="text-red-600">
-                {problem.value}
-              </span>
-            )}
+            <Notice tone="error">
+              {remove.problem.value}
+            </Notice>
           </div>
         )}
       </div>

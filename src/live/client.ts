@@ -5,16 +5,14 @@
  * one a revocation; the server reads the feeds.
  */
 import { signal } from "preact/signals"
-import { call } from "../map/client.ts"
+import { call, freshPath, markChanged } from "../call.ts"
 import {
   account,
   admins,
   type Failure,
   isFailure,
-  sendFailure,
-  store,
-  stored,
-  walletModule,
+  type Progress,
+  transact,
 } from "../wallet/client.ts"
 import type { Eas } from "../wallet/wagmi.ts"
 import type { Calendar, ListedEvent } from "./api.ts"
@@ -41,17 +39,12 @@ export const liveFailed = signal(false)
 export const liveEas = signal<Eas | null>(null)
 
 export async function loadLive(): Promise<void> {
-  const changed = Number(stored(ChangedKey) ?? 0)
   const answer = await call<{
     calendars: Calendar[]
     events: ListedEvent[]
     eas: Eas
     admins: string[]
-  }>(
-    Date.now() - changed < FreshForMs
-      ? `/live.json?fresh=${changed}`
-      : "/live.json",
-  )
+  }>(freshPath("/live.json", ChangedKey, FreshForMs))
 
   if (isFailure(answer)) {
     liveFailed.value = true
@@ -87,9 +80,13 @@ export async function previewCalendar(
   return isFailure(answer) ? answer : answer.calendar
 }
 
+/** The calendars being added now, so the same one is not sent twice at once. */
+const adding = new Set<string>()
+
 /** Adds a calendar the preview showed: an attestation from the connected wallet. */
 export async function addCalendar(
   found: CalendarPreview,
+  progress?: Progress,
 ): Promise<Calendar | Failure> {
   const me = account.value
   const where = liveEas.value
@@ -108,12 +105,24 @@ export async function addCalendar(
     }
   }
 
-  let uid: string
+  if (adding.has(found.url)) {
+    return {
+      error: "That calendar is already being added.",
+      status: 409,
+    }
+  }
 
-  try {
-    uid = await (await walletModule()).attestString(where, found.url)
-  } catch (error) {
-    return sendFailure(error, "calendar")
+  adding.add(found.url)
+
+  const uid = await transact(
+    "calendar",
+    (lib, told) => lib.attestString(where, found.url, told),
+    progress,
+  )
+    .finally(() => adding.delete(found.url))
+
+  if (isFailure(uid)) {
+    return uid
   }
 
   const added: Calendar = {
@@ -138,12 +147,15 @@ export async function addCalendar(
     })),
   ]
     .sort((a, b) => a.start.localeCompare(b.start))
-  store(ChangedKey, String(Date.now()))
+  markChanged(ChangedKey)
 
   return added
 }
 
-export async function removeCalendar(uid: string): Promise<Failure | null> {
+export async function removeCalendar(
+  uid: string,
+  progress?: Progress,
+): Promise<Failure | null> {
   const where = liveEas.value
 
   if (!account.value || !where) {
@@ -153,15 +165,19 @@ export async function removeCalendar(uid: string): Promise<Failure | null> {
     }
   }
 
-  try {
-    await (await walletModule()).revokeAttestation(where, uid)
-  } catch (error) {
-    return sendFailure(error, "removal")
+  const revoked = await transact(
+    "removal",
+    (lib, told) => lib.revokeAttestation(where, uid, told),
+    progress,
+  )
+
+  if (isFailure(revoked)) {
+    return revoked
   }
 
   calendars.value = (calendars.value ?? []).filter((known) => known.uid !== uid)
   liveEvents.value = liveEvents.value.filter((event) => event.calendar !== uid)
-  store(ChangedKey, String(Date.now()))
+  markChanged(ChangedKey)
 
   return null
 }

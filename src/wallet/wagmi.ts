@@ -44,6 +44,9 @@ import {
 } from "viem"
 import { sendTransaction, writeContract } from "viem/actions"
 
+/** Where a transaction stands, told to the page as it moves on. */
+export type Progress = (stage: "sign" | "land") => void
+
 export interface Wallet {
   readonly id: string
   readonly name: string
@@ -336,6 +339,20 @@ async function landed(chain: Reader, hash: Hash) {
   return receipt
 }
 
+/** Asks the wallet to sign and send, then tells the page it is on its way. */
+async function sent(
+  hash: Promise<Hash>,
+  progress?: Progress,
+): Promise<Hash> {
+  progress?.("sign")
+
+  const done = await hash
+
+  progress?.("land")
+
+  return done
+}
+
 /**
  * Attests one string under a schema from the connected wallet: a slug for
  * the map, a calendar link for Homebase Live. The first attestation under a
@@ -343,7 +360,11 @@ async function landed(chain: Reader, hash: Hash) {
  * on the public RPC, so a refusal shows, with EAS's own name for it, before
  * the wallet opens.
  */
-export async function attestString(eas: Eas, value: string): Promise<Hex> {
+export async function attestString(
+  eas: Eas,
+  value: string,
+  progress?: Progress,
+): Promise<Hex> {
   const chain = reader(eas.rpc)
   const wallet = await signer()
   const registry = eas.schemaRegistry as Address
@@ -369,7 +390,7 @@ export async function attestString(eas: Eas, value: string): Promise<Hex> {
       account: wallet.account,
     })
 
-    await landed(chain, await writeContract(wallet, request))
+    await landed(chain, await sent(writeContract(wallet, request), progress))
   }
 
   const { request } = await chain.simulateContract({
@@ -400,7 +421,10 @@ export async function attestString(eas: Eas, value: string): Promise<Hex> {
     ],
     account: wallet.account,
   })
-  const receipt = await landed(chain, await writeContract(wallet, request))
+  const receipt = await landed(
+    chain,
+    await sent(writeContract(wallet, request), progress),
+  )
   const [attested] = parseEventLogs({
     abi: EasAbi,
     eventName: "Attested",
@@ -415,7 +439,11 @@ export async function attestString(eas: Eas, value: string): Promise<Hex> {
 }
 
 /** Takes an attestation back, which only its attester can. */
-export async function revokeAttestation(eas: Eas, uid: string): Promise<Hash> {
+export async function revokeAttestation(
+  eas: Eas,
+  uid: string,
+  progress?: Progress,
+): Promise<Hash> {
   const chain = reader(eas.rpc)
   const wallet = await signer()
   const { request } = await chain.simulateContract({
@@ -433,7 +461,7 @@ export async function revokeAttestation(eas: Eas, uid: string): Promise<Hash> {
     ],
     account: wallet.account,
   })
-  const hash = await writeContract(wallet, request)
+  const hash = await sent(writeContract(wallet, request), progress)
 
   await landed(chain, hash)
 
@@ -448,15 +476,19 @@ export async function sendEth(
   rpc: string,
   to: Address,
   amountEth: string,
+  progress?: Progress,
 ): Promise<Hash> {
   const chain = reader(rpc)
   const wallet = await signer()
-  const hash = await sendTransaction(wallet, {
-    account: wallet.account,
-    chain: wallet.chain,
-    to,
-    value: parseEther(amountEth),
-  })
+  const hash = await sent(
+    sendTransaction(wallet, {
+      account: wallet.account,
+      chain: wallet.chain,
+      to,
+      value: parseEther(amountEth),
+    }),
+    progress,
+  )
 
   await landed(chain, hash)
 

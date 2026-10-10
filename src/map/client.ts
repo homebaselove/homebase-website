@@ -5,15 +5,14 @@
  * one a revocation. The wallet itself is the page's, in src/wallet/client.ts.
  */
 import { signal } from "preact/signals"
+import { call, freshPath, markChanged } from "../call.ts"
 import {
   account,
   admins,
   type Failure,
   isFailure,
-  sendFailure,
-  store,
-  stored,
-  walletModule,
+  type Progress,
+  transact,
 } from "../wallet/client.ts"
 import type { Eas } from "../wallet/wagmi.ts"
 import type { Source } from "./luma.ts"
@@ -40,52 +39,12 @@ export const loadFailed = signal(false)
 /** Where pins are attested, as the server told the page; null until the list has loaded. */
 export const eas = signal<Eas | null>(null)
 
-export async function call<A>(
-  path: string,
-  init: RequestInit = {},
-): Promise<A | Failure> {
-  try {
-    const response = await fetch(path, {
-      ...init,
-      headers: init.body
-        ? {
-          "content-type": "application/json",
-        }
-        : {},
-      // Past the server's own worst case: a slow page and slow endpoints.
-      signal: AbortSignal.timeout?.(30_000),
-    })
-    const body = await response.json().catch(() => ({}))
-
-    if (!response.ok) {
-      return {
-        error: typeof body.error === "string"
-          ? body.error
-          : "Something went wrong. Try again.",
-        status: response.status,
-      }
-    }
-
-    return body as A
-  } catch {
-    return {
-      error: "The site didn't answer. Check your connection and try again.",
-      status: 0,
-    }
-  }
-}
-
 export async function loadEvents(): Promise<void> {
-  const changed = Number(stored(ChangedKey) ?? 0)
   const answer = await call<{
     events: MapEvent[]
     eas: Eas
     admins: string[]
-  }>(
-    Date.now() - changed < FreshForMs
-      ? `/map.json?fresh=${changed}`
-      : "/map.json",
-  )
+  }>(freshPath("/map.json", ChangedKey, FreshForMs))
 
   if (isFailure(answer)) {
     loadFailed.value = true
@@ -112,8 +71,14 @@ export function preview(url: string): Promise<Preview | Failure> {
   })
 }
 
+/** The events being pinned now, so the same one is not sent twice at once. */
+const pinning = new Set<string>()
+
 /** Pins an event the preview showed: an attestation from the connected wallet. */
-export async function pin(event: LumaEvent): Promise<MapEvent | Failure> {
+export async function pin(
+  event: LumaEvent,
+  progress?: Progress,
+): Promise<MapEvent | Failure> {
   const me = account.value
   const where = eas.value
 
@@ -131,12 +96,24 @@ export async function pin(event: LumaEvent): Promise<MapEvent | Failure> {
     }
   }
 
-  let uid: string
+  if (pinning.has(event.slug)) {
+    return {
+      error: "That event is already being pinned.",
+      status: 409,
+    }
+  }
 
-  try {
-    uid = await (await walletModule()).attestString(where, event.slug)
-  } catch (error) {
-    return sendFailure(error, "pin")
+  pinning.add(event.slug)
+
+  const uid = await transact(
+    "pin",
+    (lib, told) => lib.attestString(where, event.slug, told),
+    progress,
+  )
+    .finally(() => pinning.delete(event.slug))
+
+  if (isFailure(uid)) {
+    return uid
   }
 
   const pinned: MapEvent = {
@@ -150,12 +127,15 @@ export async function pin(event: LumaEvent): Promise<MapEvent | Failure> {
     ...(events.value ?? []).filter((other) => other.slug !== event.slug),
     pinned,
   ]
-  store(ChangedKey, String(Date.now()))
+  markChanged(ChangedKey)
 
   return pinned
 }
 
-export async function unpin(slug: string): Promise<Failure | null> {
+export async function unpin(
+  slug: string,
+  progress?: Progress,
+): Promise<Failure | null> {
   const where = eas.value
   const pinned = (events.value ?? []).find((event) => event.slug === slug)
 
@@ -166,14 +146,18 @@ export async function unpin(slug: string): Promise<Failure | null> {
     }
   }
 
-  try {
-    await (await walletModule()).revokeAttestation(where, pinned.uid)
-  } catch (error) {
-    return sendFailure(error, "removal")
+  const revoked = await transact(
+    "removal",
+    (lib, told) => lib.revokeAttestation(where, pinned.uid, told),
+    progress,
+  )
+
+  if (isFailure(revoked)) {
+    return revoked
   }
 
   events.value = (events.value ?? []).filter((event) => event.slug !== slug)
-  store(ChangedKey, String(Date.now()))
+  markChanged(ChangedKey)
 
   return null
 }

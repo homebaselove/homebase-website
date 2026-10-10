@@ -8,6 +8,9 @@ import {
   OpeningChapterId,
   type StoryVideo,
 } from "../story.ts"
+import { Disclosure } from "./Disclosure.tsx"
+import { OutIcon, PlayIcon } from "./Icons.tsx"
+import { SectionHeading } from "./Layout.tsx"
 
 const Opening = Math.max(
   0,
@@ -230,15 +233,10 @@ export function BasedHouseStory() {
         }
       }}
     >
-      <div class="max-w-[640px] mx-auto text-center">
-        <h2 class="text-4xl max-sm:text-3xl font-bold">
-          Our Story
-        </h2>
-
-        <p class="mt-3 text-gray-600">
-          From a letter to Jesse to Based House Mumbai.
-        </p>
-      </div>
+      <SectionHeading
+        title="Our Story"
+        lead="From a letter to Jesse to Based House Mumbai."
+      />
 
       <div class="w-full max-w-[760px] mx-auto">
         <Rail
@@ -422,61 +420,63 @@ function ChapterCard(props: {
               {chapter.title}
             </h3>
 
-            <details
-              class="group -my-2"
+            <Disclosure
+              summary="What happened"
               open={chapter.open}
             >
-              <summary class="list-none [&::-webkit-details-marker]:hidden inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-gray-600 cursor-pointer select-none rounded-full -mx-2 px-2 transition-colors hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
-                What happened
-                <ChevronIcon />
-              </summary>
+              <p class="text-gray-700 leading-relaxed">
+                {chapter.summary}
+              </p>
 
-              <div class="flex flex-col gap-4 pt-2 pb-2">
-                <p class="text-gray-700 leading-relaxed">
-                  {chapter.summary}
-                </p>
-
-                {chapter.stats && (
-                  <dl class="grid grid-cols-2 sm:flex gap-3">
-                    {chapter.stats.map((stat) => (
-                      <div
-                        key={stat.label}
-                        class="sm:flex-1 sm:basis-0 max-sm:odd:last:col-span-2 max-[359px]:col-span-2 min-w-0 rounded-lg bg-gray-50 px-3 py-2.5"
-                      >
-                        <dd class="text-2xl max-sm:text-xl font-bold leading-none text-brand">
-                          {stat.value}
-                        </dd>
-                        <dt class="text-sm text-gray-500 mt-1 break-words">
-                          {stat.label}
-                        </dt>
-                      </div>
-                    ))}
-                  </dl>
-                )}
-              </div>
-            </details>
+              {chapter.stats && (
+                <dl class="grid grid-cols-2 sm:flex gap-3">
+                  {chapter.stats.map((stat) => (
+                    <div
+                      key={stat.label}
+                      class="sm:flex-1 sm:basis-0 max-sm:odd:last:col-span-2 max-[359px]:col-span-2 min-w-0 rounded-lg bg-gray-50 px-3 py-2.5"
+                    >
+                      <dd class="text-2xl max-sm:text-xl font-bold leading-none text-brand">
+                        {stat.value}
+                      </dd>
+                      <dt class="text-sm text-gray-500 mt-1 break-words">
+                        {stat.label}
+                      </dt>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </Disclosure>
 
             {chapter.links.length > 0 && (
               <div class="flex flex-wrap gap-2 mt-auto pt-1">
-                {chapter.links.map((link) => (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    target={link.href.startsWith("#") ? undefined : "_blank"}
-                    rel={link.href.startsWith("#") ? undefined : "noopener"}
-                    onClick={link.href.startsWith("#")
-                      ? (click) => {
-                        click.preventDefault()
-                        scrollTo(link.href)
-                      }
-                      : undefined}
-                    class={today
-                      ? "btn-brand text-sm min-h-11"
-                      : "inline-flex items-center min-h-11 rounded-full border-[1px] border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand"}
-                  >
-                    {link.label}
-                  </a>
-                ))}
+                {chapter.links.map((link, place) => {
+                  const here = link.href.startsWith("#")
+
+                  return (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      target={here ? undefined : "_blank"}
+                      rel={here ? undefined : "noopener"}
+                      onClick={here
+                        ? (click) => {
+                          click.preventDefault()
+                          scrollTo(link.href)
+                        }
+                        : undefined}
+                      // A fingertip tall, and a long label wraps rather than
+                      // running past the card.
+                      class={today && place === 0
+                        ? "btn btn-brand btn-small min-h-11"
+                        : today
+                        ? "btn btn-quiet btn-small min-h-11"
+                        : "chip min-h-11 whitespace-normal"}
+                    >
+                      {link.label}
+                      {!here && <OutIcon size={14} />}
+                    </a>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -554,7 +554,7 @@ function Film(props: { video: StoryVideo; focused: boolean }) {
           onClick={start}
         >
           <span class="absolute left-1/2 top-[78%] -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-white min-h-11 px-5 text-base font-bold text-brand shadow-md transition-transform duration-150 group-hover:scale-105 group-focus-visible:ring-4 group-focus-visible:ring-white/60 motion-reduce:transition-none">
-            <PlayIcon />
+            <PlayIcon size={16} />
             Watch · {Math.round(video.seconds / 60)} min
           </span>
         </button>
@@ -642,38 +642,5 @@ function Cover(props: { photos: CoverPhoto[] }) {
         )
       })}
     </div>
-  )
-}
-
-function PlayIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-    >
-      <path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11.04-6.86a1 1 0 0 0 0-1.72L9.5 4.28A1 1 0 0 0 8 5.14Z" />
-    </svg>
-  )
-}
-
-function ChevronIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2.5"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      class="transition-transform duration-200 motion-reduce:transition-none group-open:rotate-180"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
   )
 }

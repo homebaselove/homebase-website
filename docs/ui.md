@@ -1,0 +1,312 @@
+# The page's UI
+
+How every part of the homepage works, what the review of it found, what
+current practice says about each pattern, and what the page does now. The
+code is the source of truth; this is the map to it.
+
+## How the page is put together
+
+`src/index.html` loads `src/client.tsx`, which renders `App`
+(`src/app.tsx`): preact-iso's router over the routes effect-start writes into
+`src/routes/_manifest.ts`, inside an error boundary. There is one page,
+`src/routes/_page.tsx`; on Vercel, which serves the page for every path, any
+other path shows it too. The page is a
+column of bands, each a `Band` at the width its content reads best at:
+
+| Band | Component | What it does |
+| --- | --- | --- |
+| Header | `Header`, `Socials`, `ConnectButton`, `HouseLogo`, `Wordmark` | The dot-matrix house and wordmark (`DotMatrix` over the dot maps in `dots.ts`), the social links and the one wallet button. |
+| Our Story | `BasedHouseStory` (`Story.tsx`, data in `story.ts`) | A scroll-snap reel of chapters with a dot rail. It opens on the interview and holds it while the page settles; off-centre cards are `inert`; the arrow keys, dots and swipes move it. A chapter can lead with a `Film` (no download until Watch) or a `Cover` of one or two photos. |
+| Based House Mumbai | `BasedHouseCard`, `FundingCard`, `BasedHouseBlueprint` | The raise and how to give; the BasedPaint blueprint the reader can pick up and drop, with reduced motion honoured. |
+| Homebase Map | `MapCard`, `MapView`, `EventList`, `EventDetails`, `AddEventDialog` | Luma events pinned on Base, on a MapLibre map and in a list that point at each other. `docs/map.md` covers it in full. |
+| Homebase Live | `LiveCard`, `AddCalendarDialog` | Streams ahead from the calendars the admin added, by day, in any zone. `docs/live.md` covers it in full. |
+| Videos | `VideoGallery` (data in `videos.ts`) | Talks and build sessions; YouTube plays in a dialog, anything else opens where it was posted. |
+| Footer | `Footer` | The house and the social links again. |
+
+Underneath, the browser talks to three endpoints through `call` in
+`src/call.ts`, and to the wallet through `src/wallet/client.ts`, which loads
+the wallet bundle (`src/wallet/wagmi.ts`) only when it is first needed and
+runs every transaction through `transact`.
+
+## The building blocks
+
+Every section is now made of the same few pieces:
+
+| Piece | Where | Replaces |
+| --- | --- | --- |
+| `btn` with `btn-brand`, `btn-quiet`, `btn-small`, `btn-text`, `btn-danger`; `btn-icon`; `chip`; `field` | `client.css` | `btn-brand` plus the pill, chip, close-button, text-link and field styles each component wrote for itself |
+| `Dialog` | `ui/Dialog.tsx` | four hand-built modals |
+| `LinkDialog` | `ui/LinkDialog.tsx` | `SubmitDialog` and the old `AddCalendarDialog`, 631 lines that were nearly identical |
+| `useAction` | `ui/useAction.ts` | nine copies of busy, error and try/catch state |
+| `transact` and `stageLabel` | `wallet/client.ts` | five copies of the wallet try/catch, and one label shown for the whole wait; each button now hears its own transaction’s stage |
+| `Notice` | `ui/Notice.tsx` | seven error and success paragraphs, some without a live role |
+| `Panel`, `PanelHeader` | `ui/Panel.tsx` | three card shells and two copies of the header bar |
+| `Band`, `SectionHeading` | `ui/Layout.tsx` | five page wrappers with different spacing, three section headings |
+| `Choices` | `ui/Choices.tsx` | the amount buttons and the Upcoming/Past buttons |
+| `Disclosure` | `ui/Disclosure.tsx` | the story's What happened and the funding card's info button |
+| `AddToCalendar`, `calendar.ts` | `ui/AddToCalendar.tsx` | Google-only on the map, a data link and Google on Live |
+| `EventWhen`, `placeOf` | `ui/map/EventWhen.tsx`, `map/event.ts` | three copies each of the date line and the place line |
+| `Icons.tsx` | `ui/Icons.tsx` | the play and chevron icons `Story.tsx` drew for itself |
+
+## What the review found
+
+Every component, stylesheet rule and client module was read. Each finding
+below names where it was, what it did to a visitor and what changed.
+
+### Dialogs
+
+- Four modals (the wallet, Add an event, Add a calendar, the video) each drew
+  its own backdrop, listened for Escape on the window and portalled itself to
+  the body. None kept Tab inside it, none handed focus back on close, and the
+  page scrolled behind all of them. The video modal had no dialog role, no
+  name and no Escape.
+- Now: one `Dialog`, the native modal `<dialog>`. The browser keeps focus
+  inside, makes the page inert, closes on Escape, lifts it into the top layer
+  over every section and returns focus to the opener. A press that starts
+  and ends on the backdrop closes it, and the page stops scrolling behind
+  it. The heading and the close button stay in view while the body scrolls.
+  On a phone it is a sheet on the bottom edge. Focus starts on the first
+  control, or on Close where the first would be wrong: Disconnect in Your
+  wallet, and the player in the video dialog, which would keep Escape to
+  itself. A control that disappears while focused, as a wallet button does
+  on connecting, hands focus back to the dialog rather than to the page.
+
+### Funding card
+
+- Buy $home, Lock $home and Donate were three equal blue buttons. The amount
+  chips above them applied only to Donate. On a desktop, Lock $home wrapped
+  to two lines.
+- Donate with no wallet opened the wallet dialog, and after connecting the
+  visitor had to find Donate and press it again.
+- The button read Confirm in wallet… for the whole wait, up to two minutes,
+  after the wallet had already confirmed.
+- How the money is used sat behind an unlabeled (i) icon.
+- The thank-you was a `role="status"` paragraph inserted along with its text,
+  which screen readers do not reliably announce.
+- Now: Donate is the card's one primary action and names the amount (Donate
+  0.01 ETH). It sits under the amount radios it uses. Buy and Lock $home are
+  quiet buttons marked as leaving the page. Donate with no wallet says what
+  is waiting and goes ahead once a wallet connects, through the card or the
+  header; the wallet still asks first. The button says Confirm in your
+  wallet… until the wallet signs, then Waiting for Base…. The bullets are
+  behind a labeled How funding works. Messages go into live regions that are
+  on the page before they are needed.
+- The amount reaches the wallet as exact decimal text. Through a float, the
+  0.1 ETH preset had been 0.100000000000000006 ETH, six wei over, and an
+  amount typed with an exponent, such as 1e-1, the same. Text the number
+  field cannot read counts as no amount rather than falling back to a
+  preset.
+
+### Choosing one of a few
+
+- The amounts and Upcoming/Past were buttons with `aria-pressed`, a pattern
+  for on/off toggles, used here for picking one of several.
+- Now: `Choices`, native radios drawn as chips. Tab reaches the group once,
+  the arrow keys move the choice, and a screen reader says 2 of 3.
+
+### Homebase Live
+
+- The Location select had no label tied to it. For a viewer in UTC it was
+  blank, because `Intl.supportedValuesOf("timeZone")` does not list UTC.
+  Options showed only the city, and times had no zone.
+- The iCalendar link was a `data:` URL, which WebKit will not open as a page;
+  a field report found such a link does nothing on an iPhone.
+  The file had no DTSTAMP, which RFC 5545 requires, no escaping of commas
+  and semicolons, and no line folding. An all-day event was written as
+  midnight UTC.
+- Each day showed the date three times: a calendar tile, the weekday and the
+  full date.
+- Now: a labeled Times in select, opening on the viewer's zone, with UTC
+  always present. Options read as city, region and offset, sorted by city so
+  typing a city's first letters finds it. Days read as Today ·, Tomorrow · or
+  the full date once; Tomorrow is the next date on the calendar, so a clock
+  change cannot skip it. Each event shows its time and zone, its own link,
+  and Add to calendar. Times read as the rest of the page does, in English
+  12-hour form; the old Live wrote them in the browser's own locale while
+  its dates were English. While one calendar is being removed, the other
+  Remove buttons wait.
+
+### Map
+
+- Add to calendar on the map offered Google only.
+- Online events read in the host's zone, though a viewer joins from their
+  own.
+- The date line and the place line were written out separately in the row,
+  the card and the add dialog's preview.
+- Now: the shared `AddToCalendar`, the shared `EventWhen` and `placeOf`, and
+  online events in the viewer's zone, as Luma shows them. The card has one
+  primary action (Open on Luma), and its remove error is announced.
+- A list row was a `role="button"` with the Luma link inside it, which a
+  screen reader cannot reach as a link. The row's button and the link now
+  sit side by side, and hovering either still lights the row and its pin.
+- The same event or calendar can no longer be sent twice while the first is
+  still landing, as reopening the dialog allowed.
+
+### Videos
+
+- The video cards were `div`s with a click handler, so the keyboard could
+  not open them.
+- The grid was clipped to 1000 pixels under a fade, and the sticky See all
+  videos button sat on top of a title.
+- The two videos not on YouTube opened a dialog saying the content could not
+  be embedded, with a button to open it elsewhere.
+- Embeds used youtube.com, which sets cookies before anything plays.
+- Now: six videos, then See all 16 videos, which shows the rest and moves
+  focus to the first new one; nothing hidden can take focus. Each title is a
+  heading holding a button, or a link straight out for the two posted
+  elsewhere, stretched over the whole card. YouTube plays in the shared
+  dialog, through the privacy-enhanced player, starting at once.
+
+### The rest
+
+- A placeholder `/about` page reading About meowus was live, and on Vercel
+  any other path rendered an empty page. On Vercel both now show the
+  homepage.
+- daisyUI and a pastel theme were configured, but no daisyUI class was used
+  anywhere. Both are gone, along with an unused animation and a commented-out
+  layout. The three things daisyUI did set for the whole page, its near-black
+  ink, white paper and quiet scrollbars, are now set in `client.css`.
+- The Farcaster link was `http://warpcast.com`; it is now
+  `https://farcaster.xyz/homebase`. The Dexscreener link is the one
+  `HomeTokenUrl` the funding card uses.
+- The wallet list replaced a button that had just been disabled under the
+  reader's focus, dropping focus to the page. The list now loads under a
+  plain Finding wallets… line and takes focus when it arrives.
+- Buttons, chips and fields share one focus ring. Every button is at least
+  24 pixels each way, the smallest target WCAG 2.2 allows; a full button is
+  44 pixels tall and a small one 36. The story's links stay 44 pixels tall,
+  as they were.
+
+## What practice says, and what the page does about it
+
+**Dialogs.** A modal opened with `showModal()` sits in the top layer, makes
+everything else inert and closes on Escape; focus starts on an `autofocus`
+element or the first control
+([MDN](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/dialog),
+[web.dev](https://web.dev/articles/baseline-in-action-dialog-popover)).
+`closedby="any"` gives light dismiss in Chrome 134 and Firefox 141 but not
+Safari ([Chrome 134](https://developer.chrome.com/release-notes/134),
+[caniuse](https://caniuse.com/mdn-html_elements_dialog_closedby),
+[WebKit bug](https://bugs.webkit.org/show_bug.cgi?id=284592)), so the
+backdrop press is handled in script. The page behind keeps scrolling unless
+the root is locked, which `html:has(dialog:modal)` does
+([web.dev](https://web.dev/articles/building/a-dialog-component)). Sheets need
+a visible close button ([NN/g](https://www.nngroup.com/articles/bottom-sheet/)).
+
+**One primary action per area.** Carbon allows one primary button per page
+([Carbon](https://carbondesignsystem.com/components/button/usage/)), Material
+one prominent button per screen
+([Material](https://m3.material.io/components/all-buttons)), and Atlassian one
+per area ([Atlassian](https://atlassian.design/components/button/examples)).
+NN/g keeps the colour for the primary action, since buttons that share a
+colour read as equally important
+([NN/g](https://www.nngroup.com/articles/gestalt-similarity/)). So each card and
+dialog has one `btn-brand`, and everything else is `btn-quiet` or `btn-text`.
+
+**Reusing styles with Tailwind.** Tailwind's advice is to reuse markup through
+components. Small, widely repeated pieces may be classes, and class names
+must be written out whole so the scanner finds them
+([reusing styles](https://tailwindcss.com/docs/reusing-styles),
+[detecting classes](https://tailwindcss.com/docs/detecting-classes-in-source-files)).
+That is why buttons, chips and fields are classes in `client.css`, they are
+also drawn by the map's own markup outside Preact, and everything bigger is a
+component.
+
+**One of a few.** Single-choice toggle groups are radio groups in both Radix
+([releases](https://www.radix-ui.com/primitives/docs/overview/releases)) and
+React Aria ([ToggleButtonGroup](https://react-spectrum.adobe.com/react-aria/useToggleButtonGroup.html)).
+The APG radio pattern brings the arrow keys
+([APG](https://www.w3.org/WAI/ARIA/apg/patterns/radio/)), and native radios
+give them for free. GOV.UK's radios separate a different option with "or"
+([GOV.UK](https://design-system.service.gov.uk/components/radios/)), which is
+how Custom sits beside the presets.
+
+**Wallets.** RainbowKit says to act on the account's state rather than on the
+connect modal, since a wallet can connect from anywhere
+([RainbowKit](https://rainbowkit.com/docs/modal-hooks)). That is what the
+waiting donation does. Wagmi tells awaiting a signature apart from waiting on
+a receipt ([wagmi](https://2.x.wagmi.sh/react/guides/send-transaction)), and
+each button's own `stage` carries the same two states. A refusal is code 4001
+([EIP-1193](https://eips.ethereum.org/EIPS/eip-1193)) and reads as You
+didn't approve the transaction. Wallets are found through EIP-6963
+([EIP-6963](https://eips.ethereum.org/EIPS/eip-6963)), as before.
+
+**Calendars.** RFC 5545 requires UID and DTSTAMP on every event. It escapes
+backslash, semicolon, comma and newline in text, folds lines at 75 octets,
+and writes all-day events as dates
+([RFC 5545](https://datatracker.ietf.org/doc/html/rfc5545)). WebKit will not
+open a `data:` URL as a page, so the file is a download instead.
+`calendar.test.ts` checks each rule, an event that ends where it starts
+included.
+
+**Time zones.** Luma shows an event held somewhere in its own zone, an online
+event in the viewer's, and both in lists when they differ
+([Luma](https://help.luma.com/p/understanding-timezones)). NN/g's guidance on
+zone pickers is to default to the detected zone, find a zone by city, show
+the region and the offset, and sort by city
+([NN/g](https://www.nngroup.com/articles/time-zone-selectors/)).
+
+**Disclosure.** Icons need text labels
+([NN/g](https://www.nngroup.com/articles/icon-usability/)), and GOV.UK's
+details component suits secondary information, under a short label that says
+what is inside
+([GOV.UK](https://design-system.service.gov.uk/components/details/)).
+
+**Video.** Privacy-enhanced mode is youtube-nocookie.com
+([YouTube Help](https://support.google.com/youtube/answer/171780?hl=en)). A
+player that loads only on a press is the facade pattern
+([Lighthouse](https://developer.chrome.com/docs/lighthouse/performance/third-party-facades)).
+A press is the user activation that lets the delegated player start
+([Chrome](https://developer.chrome.com/blog/autoplay)). After Load more,
+focus moves to the first new item
+([A11Y Project](https://www.a11yproject.com/posts/a-guide-to-troublesome-ui-components/)).
+A control that takes focus must not be hidden, as one clipped by `overflow`
+is (Focus Not Obscured, [WCAG 2.2](https://www.w3.org/TR/WCAG22/)).
+
+**Pending and errors.** React 19 puts the pending state and the last result
+of an action together
+([useActionState](https://react.dev/reference/react/useActionState)), which
+is what `useAction` does. Errors go in `role="alert"`, confirmations in
+`role="status"`
+([MDN alert](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/alert_role),
+[MDN status](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/status_role)),
+and the region is on the page before its message is.
+
+**Loading.** Skeletons suit a page or a list loading, and a spinner a single
+module ([NN/g](https://www.nngroup.com/articles/skeleton-screens/)). The map
+list and the raise keep their skeletons, and Live its spinner.
+
+## Where the page goes past the usual
+
+- No dialog library: the browser's own modal supplies focus, inertness and
+  the top layer, so there is nothing to keep in step with it.
+- Donations resume after connecting, from any way in, and each transaction
+  button says which of the two waits it is in. Both come from one place.
+- The calendar file is tested against the RFC rather than copied from an
+  example.
+- Every choice of one is a native radio, every disclosure a native
+  `details` and every dialog a native `dialog`.
+
+## Not verified here
+
+The session this was built in could not install the two dependencies the
+page builds from GitHub, nor Foundry, so these were not run:
+
+- `bun run build` and `bun run e2e`. The components were instead rendered in
+  Chromium with npm's Preact and a stand-in for signals, against stubbed
+  endpoints and a stand-in wallet, and every flow above was driven there.
+- An iPhone: whether Safari hands the downloaded .ics to Calendar or saves
+  it to Files, and whether a Farcaster in-app browser downloads it at all.
+- The Bun server's answer for a path it does not know, now that `/about` is
+  gone.
+
+## Decisions
+
+- Donate is the funding card's one primary action and comes first, since the
+  amount choice belongs to it and Buy and Lock $home leave for SeedMe.
+- The funding card and the story's Apply button open the same application,
+  `BasedHouseMumbaiApplyUrl` in `src/funding.ts`. The Mumbai announcement's
+  description still names the form its image shows, since it describes the
+  image.
+- Raised for Based House counts the $home fee share only; direct donations
+  are not added to it.

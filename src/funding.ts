@@ -29,8 +29,11 @@ export const transactionUrl = (hash: string) =>
 export const HomeTokenUrl =
   "https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24"
 
-/** The Based House Mumbai form, where the raise is headed. */
-export const BasedHouseMumbaiUrl = "https://forms.gle/ZKkD9fCnBCx5pitv9"
+/**
+ * The application to Based House Mumbai, where the raise is headed: the
+ * funding card and the story's Apply button both open it.
+ */
+export const BasedHouseMumbaiApplyUrl = "https://forms.gle/Jc6an9SCdYaP95us9"
 
 /** What the raise is for, as it reads on the card. */
 export const Campaign = "Based House"
@@ -74,6 +77,48 @@ export function segmentFills(
     },
     (_, index) => clamp((raised - index * step) / step, 0, 1),
   )
+}
+
+/** Ether has 18 decimal places; anything finer is not an amount. */
+const EtherDecimals = 18
+
+/** How far an exponent may move the point, which bounds the text it makes. */
+const MaxShift = 60
+
+/**
+ * An amount of ether as the plain decimal text the wallet is given and the
+ * Donate button names, or null when it is not an amount above zero. It works
+ * on the digits as text, never through a float: 0.1 as a float written to 18
+ * places is 0.100000000000000006, which would send six wei too many. A number
+ * field may also hold an exponent, such as 1e-3, which moves the point.
+ */
+export function etherAmount(typed: string): string | null {
+  const parts = /^(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/.exec(typed.trim())
+
+  if (!parts || !(parts[1] || parts[2])) {
+    return null
+  }
+
+  const [, whole = "", fraction = "", exponent = "0"] = parts
+  const shift = Number(exponent)
+
+  if (Math.abs(shift) > MaxShift) {
+    return null
+  }
+
+  const digits = whole + fraction
+  const point = whole.length + shift
+  const before = point <= 0
+    ? "0"
+    : digits.slice(0, point).padEnd(point, "0")
+  const after = point <= 0
+    ? "0".repeat(-point) + digits
+    : digits.slice(point)
+  const units = before.replace(/^0+(?=\d)/, "")
+  const places = after.slice(0, EtherDecimals).replace(/0+$/, "")
+  const amount = places ? `${units}.${places}` : units
+
+  return /[1-9]/.test(amount) ? amount : null
 }
 
 /** Trims to the shortest reading that still carries the amount. */

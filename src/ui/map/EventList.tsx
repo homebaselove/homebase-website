@@ -1,14 +1,14 @@
 /** @jsxImportSource preact */
-import { useMemo } from "preact"
 import {
   type ReadonlySignal,
   type Signal,
   useComputed,
   useSignalEffect,
 } from "preact/signals"
-import { hasPin } from "../../map/event.ts"
+import { hasPin, placeOf } from "../../map/event.ts"
 import type { MapEvent } from "../../map/MapEvent.ts"
-import { describeWhen } from "../../map/time.ts"
+import { OutIcon } from "../Icons.tsx"
+import { EventWhen } from "./EventWhen.tsx"
 
 interface Props {
   readonly events: ReadonlySignal<MapEvent[]>
@@ -103,31 +103,27 @@ function EventRow(props: {
   const selected = useComputed(() => props.selected.value === event.slug)
   const hovered = useComputed(() => props.hovered.value === event.slug)
   const next = useComputed(() => props.next.value === event.slug)
-  const when = useMemo(() => describeWhen(event), [
-    event.start,
-    event.end,
-    event.timezone,
-  ])
-  const where = event.placement === "online"
-    ? "Online"
-    : [
-      event.venue,
-      event.city,
-    ]
-      .filter(Boolean)
-      .join(" · ") || "Location to be announced"
 
+  // The row selects the event and its Luma link leaves for Luma; the two sit
+  // side by side, since a link inside a button is neither for a screen
+  // reader. Hovering either lights the row and its pin.
   return (
     <li
       id={`event-${event.slug}`}
       class={selected.value
-        ? "bg-brand/5"
+        ? "flex items-center bg-brand/5"
         : hovered.value
-        ? "bg-gray-50"
-        : "bg-white"}
+        ? "flex items-center bg-gray-50"
+        : "flex items-center bg-white"}
+      onMouseEnter={() => {
+        props.hovered.value = event.slug
+      }}
+      onMouseLeave={() => {
+        props.hovered.value = null
+      }}
     >
       <div
-        class="flex gap-3 p-4 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+        class="flex min-w-0 flex-1 gap-3 py-4 pl-4 pr-2 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/40"
         role="button"
         tabIndex={0}
         aria-pressed={selected.value}
@@ -137,12 +133,6 @@ function EventRow(props: {
             key.preventDefault()
             props.onSelect()
           }
-        }}
-        onMouseEnter={() => {
-          props.hovered.value = event.slug
-        }}
-        onMouseLeave={() => {
-          props.hovered.value = null
         }}
         onFocus={() => {
           props.hovered.value = event.slug
@@ -165,25 +155,17 @@ function EventRow(props: {
           : <div class="w-20 h-14 shrink-0 rounded-md bg-brand/10" />}
 
         <div class="min-w-0 flex-1">
-          <p class="text-sm text-brand font-semibold">
-            {next.value && (
-              <span class="mr-1.5 rounded-full border-[1px] border-brand/40 bg-brand/10 px-1.5 text-[11px] font-bold uppercase tracking-wide align-middle">
-                Next up
-              </span>
-            )}
-            {when.date}
-            <span class="text-gray-500 font-normal">
-              {" · "}
-              {when.time}
-            </span>
-          </p>
+          <EventWhen
+            event={event}
+            next={next.value}
+          />
 
           <h3 class="font-bold leading-tight line-clamp-2">
             {event.title}
           </h3>
 
           <p class="text-sm text-gray-600 line-clamp-1">
-            {where}
+            {placeOf(event, "short")}
             {!hasPin(event) && event.placement !== "online" && (
               <span class="text-gray-400">
                 {" · "}
@@ -192,17 +174,18 @@ function EventRow(props: {
             )}
           </p>
         </div>
-
-        <a
-          href={event.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="self-center shrink-0 py-2 px-1 -mr-1 text-sm text-brand hover:underline"
-          onClick={(click) => click.stopPropagation()}
-        >
-          Luma ↗
-        </a>
       </div>
+
+      <a
+        href={event.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`${event.title} on Luma`}
+        class="hb-focus shrink-0 inline-flex items-center gap-0.5 min-h-11 px-2 mr-2 rounded-full text-sm font-semibold text-brand hover:underline"
+      >
+        Luma
+        <OutIcon size={14} />
+      </a>
     </li>
   )
 }

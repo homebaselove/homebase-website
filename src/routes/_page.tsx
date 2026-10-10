@@ -3,6 +3,7 @@ import { useEffect } from "preact"
 import { BasedHouseCard } from "../ui/BasedHouse.tsx"
 import { Footer } from "../ui/Footer.tsx"
 import { Header } from "../ui/Header.tsx"
+import { Band } from "../ui/Layout.tsx"
 import { LiveCard } from "../ui/live/LiveCard.tsx"
 import { MapCard } from "../ui/map/MapCard.tsx"
 import { BasedHouseStory } from "../ui/Story.tsx"
@@ -17,36 +18,27 @@ export default function() {
     <main id="top">
       <Header />
 
-      <div
-        class={`flex flex-col mt-16 w-full max-w-[1140px] mx-auto px-4 z-10 relative gap-8`}
-      >
+      <Band width="wide">
         <BasedHouseStory />
-      </div>
+      </Band>
 
-      <div
-        class={`flex flex-col pt-14 w-full max-w-[960px] mx-auto px-4 z-20 relative gap-8`}
-      >
+      <Band width="raised">
         <BasedHouseCard />
-      </div>
+      </Band>
 
-      <div
-        class={`flex flex-col pt-14 w-full max-w-[1140px] mx-auto px-4 z-10 relative gap-8`}
-      >
+      <Band width="wide">
         <MapCard />
-      </div>
+      </Band>
 
-      <div
-        class={`flex flex-col pt-10 w-full max-w-[840px] mx-auto px-4 z-10 relative gap-8`}
-      >
+      <Band width="narrow">
         <LiveCard />
-      </div>
+      </Band>
 
-      <div
-        class={`flex flex-col pt-6 w-full max-w-[1140px] mx-auto px-4 z-10 relative gap-8`}
-      >
+      <Band width="wide">
         <VideoGallery />
-      </div>
-      <div class={`flex flex-col pt-6 w-full max-w-full relative gap-8`}>
+      </Band>
+
+      <div class="pt-16 max-sm:pt-12">
         <Footer />
       </div>
     </main>
