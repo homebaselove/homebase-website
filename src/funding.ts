@@ -29,11 +29,14 @@ export const transactionUrl = (hash: string) =>
 export const HomeTokenUrl =
   "https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24"
 
-/**
- * The application to Based House Mumbai, where the raise is headed: the
- * funding card and the story's Apply button both open it.
- */
+/** The application to Based House Mumbai, where the raise is headed, which the story's Apply button opens. */
 export const BasedHouseMumbaiApplyUrl = "https://forms.gle/Jc6an9SCdYaP95us9"
+
+/**
+ * The deck on how $home, SeedMe and Based House fund one another, served
+ * from public: the funding card's info button and the interview open it.
+ */
+export const SustainableEcosystemUrl = "/BuildingASustainableEcosystem.pdf"
 
 /** What the raise is for, as it reads on the card. */
 export const Campaign = "Based House"

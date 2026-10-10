@@ -25,7 +25,7 @@ import {
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { foundry } from "viem/chains"
-import { DonationAddress } from "../src/funding.ts"
+import { DonationAddress, SustainableEcosystemUrl } from "../src/funding.ts"
 import eas from "./contracts/eas.json" with { type: "json" }
 
 /** The calendar feed the Luma stub serves, with two streams ahead. */
@@ -1295,8 +1295,8 @@ try {
       && (await again.getByRole("status").innerText()).includes("Thank you"),
   )
 
-  // One card: Donate from the wallet as its one primary action, then Buy
-  // $home and Lock $home on SeedMe.
+  // One row: Buy $home and Lock $home on SeedMe beside Donate from the
+  // wallet, and the deck on how the funding works behind the info button.
   const fundButtons = await again.evaluate(() =>
     [
       ...document.querySelectorAll<HTMLElement>("#fund .btn"),
@@ -1307,14 +1307,30 @@ try {
         }`
       )
   )
+  const fundRows = await again.evaluate(() =>
+    new Set(
+      [
+        ...document.querySelectorAll<HTMLElement>("#fund .btn"),
+      ]
+        .map((item) => Math.round(item.getBoundingClientRect().top)),
+    )
+      .size
+  )
 
   check(
-    "the funding card offers Donate from the wallet, then Buy $home and Lock $home on SeedMe",
+    "the funding card offers Buy $home, Lock $home and Donate side by side, and the deck behind its info button",
     fundButtons.join(" | ")
-        === "Donate 0.01 ETH -> wallet | Buy $home -> https://seedme.xyz | Lock $home -> https://seedme.xyz/lock"
+        === "Buy $home -> https://seedme.xyz | Lock $home -> https://seedme.xyz/lock | Donate -> wallet"
+      && fundRows === 1
       && (await again
           .locator("#fund .btn-brand")
-          .count()) === 1
+          .count()) === 3
+      && (await again
+          .locator("#fund")
+          .getByRole("link", {
+            name: "How funding works: Building a sustainable ecosystem (PDF)",
+          })
+          .getAttribute("href")) === SustainableEcosystemUrl
       && (await again
           .getByRole("heading", {
             name: "Lock $home",

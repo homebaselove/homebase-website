@@ -43,7 +43,7 @@ Every section is now made of the same few pieces:
 | `Panel`, `PanelHeader` | `ui/Panel.tsx` | three card shells and two copies of the header bar |
 | `Band`, `SectionHeading` | `ui/Layout.tsx` | five page wrappers with different spacing, three section headings |
 | `Choices` | `ui/Choices.tsx` | the amount buttons and the Upcoming/Past buttons |
-| `Disclosure` | `ui/Disclosure.tsx` | the story's What happened and the funding card's info button |
+| `Disclosure` | `ui/Disclosure.tsx` | the story's What happened |
 | `AddToCalendar`, `calendar.ts` | `ui/AddToCalendar.tsx` | Google-only on the map, a data link and Google on Live |
 | `EventWhen`, `placeOf` | `ui/map/EventWhen.tsx`, `map/event.ts` | three copies each of the date line and the place line |
 | `Icons.tsx` | `ui/Icons.tsx` | the play and chevron icons `Story.tsx` drew for itself |
@@ -83,14 +83,22 @@ below names where it was, what it did to a visitor and what changed.
 - How the money is used sat behind an unlabeled (i) icon.
 - The thank-you was a `role="status"` paragraph inserted along with its text,
   which screen readers do not reliably announce.
-- Now: Donate is the card's one primary action and names the amount (Donate
-  0.01 ETH). It sits under the amount radios it uses. Buy and Lock $home are
-  quiet buttons marked as leaving the page. Donate with no wallet says what
-  is waiting and goes ahead once a wallet connects, through the card or the
-  header; the wallet still asks first. The button says Confirm in your
-  wallet… until the wallet signs, then Waiting for Base…. The bullets are
-  behind a labeled How funding works. Messages go into live regions that are
-  on the page before they are needed.
+- Now: Buy $home, Lock $home and Donate are three blue buttons side by side
+  under the amount radios, as they were before the rebuild; on a phone
+  Donate takes its own row under the other two. Each reads on one line. A
+  rebuild that made Donate the one primary button, with Buy and Lock as quiet
+  buttons below, was reverted at the owner's request. Donate with no wallet
+  says what is waiting and goes ahead once a wallet connects, through the
+  card or the header; the wallet still asks first. The button says Confirm
+  in your wallet… until the wallet signs, then Waiting for Base….
+- The (i) in the corner is back, now a link that opens the deck Building a
+  sustainable ecosystem (`public/BuildingASustainableEcosystem.pdf`) in a new
+  tab, in place of the bullets behind How funding works. Its accessible name
+  is How funding works: Building a sustainable ecosystem (PDF), and hovering
+  shows the deck's title. The interview in the story links the same deck
+  as its last button.
+- Messages go into live regions that are on the page before they are
+  needed.
 - The amount reaches the wallet as exact decimal text. Through a float, the
   0.1 ETH preset had been 0.100000000000000006 ETH, six wei over, and an
   amount typed with an exponent, such as 1e-1, the same. Text the number
@@ -167,8 +175,8 @@ below names where it was, what it did to a visitor and what changed.
   layout. The three things daisyUI did set for the whole page, its near-black
   ink, white paper and quiet scrollbars, are now set in `client.css`.
 - The Farcaster link was `http://warpcast.com`; it is now
-  `https://farcaster.xyz/homebase`. The Dexscreener link is the one
-  `HomeTokenUrl` the funding card uses.
+  `https://farcaster.xyz/homebase`. The Dexscreener link is `HomeTokenUrl`,
+  the pool whose fees the funding card counts.
 - The wallet list replaced a button that had just been disabled under the
   reader's focus, dropping focus to the page. The list now loads under a
   plain Finding wallets… line and takes focus when it arrives.
@@ -202,6 +210,8 @@ NN/g keeps the colour for the primary action, since buttons that share a
 colour read as equally important
 ([NN/g](https://www.nngroup.com/articles/gestalt-similarity/)). So each card and
 dialog has one `btn-brand`, and everything else is `btn-quiet` or `btn-text`.
+The funding card is the exception the owner chose: Buy $home, Lock $home and
+Donate are three equal `btn-brand` buttons in a row.
 
 **Reusing styles with Tailwind.** Tailwind's advice is to reuse markup through
 components. Small, widely repeated pieces may be classes, and class names

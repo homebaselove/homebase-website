@@ -19,15 +19,25 @@ test("each chapter has its own id", () => {
     .toBe(Chapters.length)
 })
 
-test("every link is either on the web or on this page", () => {
+test("every link is on the web, on this page or a file in public", async () => {
+  const hrefs = Chapters
+    .flatMap((chapter) => [
+      ...chapter.links,
+      ...(chapter.cover ?? []),
+    ])
+    .map((link) => link.href)
+  const served = await Promise.all(
+    hrefs.map((href) =>
+      /^(https:\/\/|#)/.test(href)
+      || (href.startsWith("/")
+        && Bun
+          .file(NPath.join(import.meta.dir, "..", "public", href))
+          .exists())
+    ),
+  )
+
   expect(
-    Chapters
-      .flatMap((chapter) => [
-        ...chapter.links,
-        ...(chapter.cover ?? []),
-      ])
-      .map((link) => link.href)
-      .filter((href) => !/^(https:\/\/|#)/.test(href)),
+    hrefs.filter((_, index) => !served[index]),
   )
     .toEqual([])
 })
