@@ -82,7 +82,7 @@ export interface When {
   readonly yours: string | null
 }
 
-/** The time of day of an instant in a zone, as "2:00 PM" or "14:00" reads there. */
+/** The time of day of an instant in a zone, as "2:00 PM", in the page's English. */
 export function timeOf(date: Date, zone: string): string {
   return format(date, zone, {
     hour: "numeric",

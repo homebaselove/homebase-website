@@ -23,6 +23,8 @@ export function ConnectDialog(props: {
         : props.reason
           ?? "Donate to Based House from your wallet. The Homebase wallet also adds events to the map and calendars to Homebase Live; $home lockers will be able to soon."}
       onClose={props.onClose}
+      // Connected, the first control would be Disconnect.
+      initialFocus={me ? "close" : "first"}
     >
       {me
         ? (

@@ -1,5 +1,5 @@
 /** @jsxImportSource preact */
-import { useEffect, useRef } from "preact"
+import { type ComponentChildren, useEffect, useRef } from "preact"
 import { useSignal } from "preact/signals"
 import {
   account,
@@ -134,12 +134,14 @@ export function WalletPicker(props: {
 
 /**
  * The connected wallet, by its short address and, for an admin, its role,
- * with the way to disconnect it.
+ * with the way to disconnect it. Given children, they say what the wallet
+ * may not do in place of that line.
  */
 export function WalletIdentity(props: {
   /** How the line opens: Connected as, or Adding as. */
   readonly lead: string
   readonly onDisconnect?: () => void
+  readonly children?: ComponentChildren
 }) {
   const me = account.value
 
@@ -149,13 +151,15 @@ export function WalletIdentity(props: {
 
   return (
     <div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border-[1px] border-gray-200 bg-gray-50 p-3 text-sm">
-      <span>
-        {props.lead}{" "}
-        <strong title={me.address}>
-          {shortAddress(me.address)}
-        </strong>
-        {isAdmin.value ? " (admin)" : String()}
-      </span>
+      {props.children ?? (
+        <span>
+          {props.lead}{" "}
+          <strong title={me.address}>
+            {shortAddress(me.address)}
+          </strong>
+          {isAdmin.value ? " (admin)" : String()}
+        </span>
+      )}
 
       <button
         type="button"

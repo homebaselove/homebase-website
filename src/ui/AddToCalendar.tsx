@@ -1,5 +1,5 @@
 /** @jsxImportSource preact */
-import { useMemo } from "preact"
+import { useMemo, useRef } from "preact"
 import { useSignal } from "preact/signals"
 import {
   type CalendarEvent,
@@ -44,10 +44,19 @@ export function AddToCalendar(props: {
 }) {
   const open = useSignal(false)
   const id = useMemo(() => `calendar-${++made}`, [])
+  const toggle = useRef<HTMLButtonElement>(null)
+
+  // A choice closes the row it sits in, so focus goes back to the button
+  // rather than to the page.
+  const chosen = () => {
+    open.value = false
+    toggle.current?.focus()
+  }
 
   return (
     <div class="contents">
       <button
+        ref={toggle}
         type="button"
         class="btn btn-quiet btn-small"
         aria-expanded={open.value}
@@ -74,9 +83,7 @@ export function AddToCalendar(props: {
             target="_blank"
             rel="noopener noreferrer"
             class="chip"
-            onClick={() => {
-              open.value = false
-            }}
+            onClick={chosen}
           >
             Google Calendar
           </a>
@@ -86,7 +93,7 @@ export function AddToCalendar(props: {
             class="chip"
             onClick={() => {
               download(props.event)
-              open.value = false
+              chosen()
             }}
           >
             Apple, Outlook and others (.ics)

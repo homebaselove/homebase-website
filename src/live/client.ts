@@ -11,6 +11,7 @@ import {
   admins,
   type Failure,
   isFailure,
+  type Progress,
   transact,
 } from "../wallet/client.ts"
 import type { Eas } from "../wallet/wagmi.ts"
@@ -79,9 +80,13 @@ export async function previewCalendar(
   return isFailure(answer) ? answer : answer.calendar
 }
 
+/** The calendars being added now, so the same one is not sent twice at once. */
+const adding = new Set<string>()
+
 /** Adds a calendar the preview showed: an attestation from the connected wallet. */
 export async function addCalendar(
   found: CalendarPreview,
+  progress?: Progress,
 ): Promise<Calendar | Failure> {
   const me = account.value
   const where = liveEas.value
@@ -100,10 +105,21 @@ export async function addCalendar(
     }
   }
 
+  if (adding.has(found.url)) {
+    return {
+      error: "That calendar is already being added.",
+      status: 409,
+    }
+  }
+
+  adding.add(found.url)
+
   const uid = await transact(
     "calendar",
-    (lib, progress) => lib.attestString(where, found.url, progress),
+    (lib, told) => lib.attestString(where, found.url, told),
+    progress,
   )
+    .finally(() => adding.delete(found.url))
 
   if (isFailure(uid)) {
     return uid
@@ -136,7 +152,10 @@ export async function addCalendar(
   return added
 }
 
-export async function removeCalendar(uid: string): Promise<Failure | null> {
+export async function removeCalendar(
+  uid: string,
+  progress?: Progress,
+): Promise<Failure | null> {
   const where = liveEas.value
 
   if (!account.value || !where) {
@@ -148,7 +167,8 @@ export async function removeCalendar(uid: string): Promise<Failure | null> {
 
   const revoked = await transact(
     "removal",
-    (lib, progress) => lib.revokeAttestation(where, uid, progress),
+    (lib, told) => lib.revokeAttestation(where, uid, told),
+    progress,
   )
 
   if (isFailure(revoked)) {

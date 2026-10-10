@@ -39,8 +39,8 @@ behaves the same wherever it appears:
 - `Choices` (native radios as chips), `Disclosure` (`details`), `Notice`
   (live region), `AddToCalendar` (Google Calendar or an .ics file).
 - `useAction`: the pending and error state of anything a button starts, and
-  `transact` in `src/wallet/client.ts`: every wallet transaction, whose
-  stage every such button reads.
+  the stage of its transaction, which `transact` in `src/wallet/client.ts`
+  reports for every wallet transaction.
 
 ## 🛠️ Development
 

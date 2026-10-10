@@ -225,7 +225,7 @@ test("an amount reaches the wallet exactly as the person means it", () => {
       "00.500",
       ".25",
       "2.",
-      "1e-3",
+      " 3 ",
       "0.1234567890123456789",
     ]
       .map(etherAmount),
@@ -238,8 +238,30 @@ test("an amount reaches the wallet exactly as the person means it", () => {
       "0.5",
       "0.25",
       "2",
-      "0.001",
+      "3",
       "0.123456789012345678",
+    ])
+})
+
+test("an exponent moves the point in the text, never through a float", () => {
+  expect(
+    [
+      "1e-3",
+      "1e-1",
+      "1.1e0",
+      "2.5E+2",
+      "12e-4",
+      "1e21",
+    ]
+      .map(etherAmount),
+  )
+    .toEqual([
+      "0.001",
+      "0.1",
+      "1.1",
+      "250",
+      "0.0012",
+      "1000000000000000000000",
     ])
 })
 
@@ -247,17 +269,23 @@ test("anything that is not an amount above zero is refused", () => {
   expect(
     [
       "",
+      ".",
       "0",
       "0.000",
       "-1",
       "-1e-3",
       "abc",
-      "1e21",
+      "1e",
       "0.0000000000000000001",
+      "5e-19",
+      "1e999",
     ]
       .map(etherAmount),
   )
     .toEqual([
+      null,
+      null,
+      null,
       null,
       null,
       null,

@@ -9,6 +9,14 @@ import {
   loadLive,
   removeCalendar,
 } from "../../live/client.ts"
+import {
+  dayOf,
+  dayTitle,
+  viewerZone,
+  type Zone,
+  zoneLabel,
+  zoneList,
+} from "../../live/days.ts"
 import { timeOf, zoneName } from "../../map/time.ts"
 import { isAdmin, stageLabel } from "../../wallet/client.ts"
 import { AddToCalendar } from "../AddToCalendar.tsx"
@@ -21,115 +29,6 @@ import { AddCalendarDialog } from "./AddCalendarDialog.tsx"
 interface DayData {
   readonly date: string
   readonly events: ListedEvent[]
-}
-
-interface Zone {
-  readonly id: string
-  readonly label: string
-}
-
-/** The day an event falls on in the chosen zone; an all-day event keeps its own date in every zone. */
-const dayOf = (event: Pick<ListedEvent, "allDay" | "start">, timeZone: string) =>
-  event.allDay
-    ? event.start.slice(0, 10)
-    : new Date(event.start).toLocaleDateString("en-CA", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
-
-function viewerZone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
-  } catch {
-    return "UTC"
-  }
-}
-
-/** Kiritimati, Pacific · GMT+14: the city, its region and its offset now. */
-function zoneLabel(id: string, now: Date): string {
-  if (id === "UTC") {
-    return "UTC"
-  }
-
-  const parts = id.split("/")
-  const city = parts.at(-1)!.replaceAll("_", " ")
-  let offset: string | undefined
-
-  try {
-    offset = new Intl.DateTimeFormat("en-US", {
-      timeZone: id,
-      timeZoneName: "shortOffset",
-    })
-      .formatToParts(now)
-      .find((part) => part.type === "timeZoneName")
-      ?.value
-  } catch {
-    // An older browser without offsets names the zone alone.
-  }
-
-  return [
-    parts.length > 1 ? `${city}, ${parts[0].replaceAll("_", " ")}` : city,
-    offset,
-  ]
-    .filter(Boolean)
-    .join(" · ")
-}
-
-/**
- * Every zone the browser knows, the viewer's own always among them, by city
- * in alphabetical order, so typing the first letters of a city in the open
- * list lands on it.
- */
-function zoneList(viewer: string): Zone[] {
-  let known: string[] = []
-
-  try {
-    known = Intl.supportedValuesOf("timeZone")
-  } catch {
-    // Without the list, the viewer's zone and UTC are still offered.
-  }
-
-  const now = new Date()
-
-  return [
-    ...new Set([
-      viewer,
-      "UTC",
-      ...known,
-    ]),
-  ]
-    .map((id) => ({
-      id,
-      label: zoneLabel(id, now),
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label))
-}
-
-/** Saturday, October 10, with Today or Tomorrow ahead of it when it is. */
-function dayTitle(date: string, zone: string): string {
-  const now = Date.now()
-  const today = dayOf({
-    allDay: false,
-    start: new Date(now).toISOString(),
-  }, zone)
-  const tomorrow = dayOf({
-    allDay: false,
-    start: new Date(now + 24 * 60 * 60_000).toISOString(),
-  }, zone)
-  const name = new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  })
-
-  return date === today
-    ? `Today · ${name}`
-    : date === tomorrow
-    ? `Tomorrow · ${name}`
-    : name
 }
 
 function DayElement(props: {
@@ -212,7 +111,9 @@ function DayElement(props: {
 /** The calendars behind the list, for the admin: each with the way to take it off. */
 function CalendarStrip() {
   const removing = useSignal<string | null>(null)
-  const remove = useAction(removeCalendar)
+  const remove = useAction((uid: string) =>
+    removeCalendar(uid, remove.progress)
+  )
   const list = calendars.value ?? []
 
   return (
@@ -256,7 +157,9 @@ function CalendarStrip() {
                 removing.value = null
               }}
             >
-              {removing.value === calendar.uid ? stageLabel() : "Remove"}
+              {removing.value === calendar.uid
+                ? stageLabel(remove.stage.value)
+                : "Remove"}
             </button>
           </span>
         ))}
@@ -280,7 +183,22 @@ export function LiveCard() {
     const viewer = viewerZone()
 
     selectedTimezone.value = viewer
-    timezones.value = zoneList(viewer)
+    // The full list is a few hundred formatters, so it is made when the
+    // browser is idle; until then the viewer’s own zone is the one offered.
+    timezones.value = [
+      {
+        id: viewer,
+        label: zoneLabel(viewer, new Date()),
+      },
+    ]
+
+    const whenIdle = typeof requestIdleCallback === "function"
+      ? requestIdleCallback
+      : (run: () => void) => setTimeout(run, 1)
+
+    whenIdle(() => {
+      timezones.value = zoneList(viewer)
+    })
 
     loadLive().then(() => {
       loading.value = false

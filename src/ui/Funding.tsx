@@ -1,5 +1,5 @@
 /** @jsxImportSource preact */
-import { useEffect } from "preact"
+import { useEffect, useRef } from "preact"
 import { useSignal, useSignalEffect } from "preact/signals"
 import { call } from "../call.ts"
 import {
@@ -63,6 +63,10 @@ export function FundingCard() {
   // String() is an empty string without an empty literal, which the class
   // scanner misreads, dropping classes from this file.
   const custom = useSignal(String())
+  // A number field reads as empty while it holds what it cannot take, such
+  // as letters; that is not the same as no amount typed.
+  const unreadable = useSignal(false)
+  const customField = useRef<HTMLInputElement>(null)
   const connecting = useSignal(false)
   // A press of Donate that is waiting on a wallet to connect.
   const waiting = useSignal(false)
@@ -73,7 +77,10 @@ export function FundingCard() {
   const problem = useSignal<string | null>(null)
 
   /** The amount to give, as typed or as chosen, the way the wallet gets it. */
-  const amount = () => etherAmount(custom.value.trim() || String(preset.value))
+  const amount = () =>
+    unreadable.value
+      ? null
+      : etherAmount(custom.value.trim() || String(preset.value))
 
   const send = useAction((ether: string) =>
     sendEther(
@@ -81,11 +88,13 @@ export function FundingCard() {
       eas.value?.rpc ?? BaseRpcUrl,
       DonationAddress,
       ether,
+      send.progress,
     )
   )
 
   const donate = async () => {
     problem.value = null
+    send.problem.value = null
     sent.value = null
 
     const ether = amount()
@@ -177,7 +186,9 @@ export function FundingCard() {
             <Choices
               label="Amount to donate"
               class="grid grid-cols-3 gap-2"
-              value={custom.value.trim() ? null : preset.value}
+              value={custom.value.trim() || unreadable.value
+                ? null
+                : preset.value}
               options={PresetsEth.map((option) => ({
                 value: option,
                 label: `${formatEth(option)} ETH`,
@@ -185,10 +196,18 @@ export function FundingCard() {
               onChange={(option) => {
                 preset.value = option
                 custom.value = String()
+                unreadable.value = false
+
+                // The field already reads as empty while it holds what it
+                // cannot take, so only clearing it here takes that away.
+                if (customField.current) {
+                  customField.current.value = String()
+                }
               }}
             />
 
             <input
+              ref={customField}
               type="number"
               min="0"
               step="any"
@@ -198,7 +217,10 @@ export function FundingCard() {
               value={custom.value}
               class="field text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               onInput={(input) => {
-                custom.value = (input.target as HTMLInputElement).value
+                const field = input.target as HTMLInputElement
+
+                custom.value = field.value
+                unreadable.value = field.validity.badInput
               }}
             />
           </div>
@@ -210,7 +232,7 @@ export function FundingCard() {
             disabled={send.busy.value}
           >
             {send.busy.value
-              ? stageLabel()
+              ? stageLabel(send.stage.value)
               : ether
               ? `Donate ${ether} ETH`
               : "Donate"}

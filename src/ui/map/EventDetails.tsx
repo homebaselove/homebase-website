@@ -25,7 +25,7 @@ interface Props {
 export function EventDetails(props: Props) {
   const { event } = props
   const when = describeWhen(event)
-  const remove = useAction(() => unpin(event.slug))
+  const remove = useAction(() => unpin(event.slug, remove.progress))
   const actor = account.value
   const mayRemove = actor !== null
     && (isAdmin.value
@@ -178,7 +178,9 @@ export function EventDetails(props: Props) {
                 }
               }}
             >
-              {remove.busy.value ? stageLabel() : "Remove from map"}
+              {remove.busy.value
+                ? stageLabel(remove.stage.value)
+                : "Remove from map"}
             </button>
 
             <Notice tone="error">

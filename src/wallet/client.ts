@@ -3,13 +3,14 @@
  * the funding card. Any wallet may connect; what it may do follows from
  * whether it is one of the admins the server names with each list. The
  * wallet code itself is fetched on its own the first time it is needed.
- * Every transaction goes through transact, which keeps its stage.
+ * Every transaction goes through transact, which reports its stage.
  */
 import { computed, signal } from "preact/signals"
 import type { Address, EIP1193Provider, Hash } from "viem"
 import type { Progress, Wallet } from "./wagmi.ts"
 
 export type {
+  Progress,
   Wallet,
 }
 
@@ -279,24 +280,26 @@ export async function signOut(): Promise<void> {
   }
 }
 
+/** Where a transaction stands: waiting on the wallet, or sent and landing. */
+export type Stage = Parameters<Progress>[0]
+
 /**
- * Where the transaction under way stands: waiting for the person to approve
- * it in their wallet, or sent and waiting to land on the chain. Every button
- * that sends one reads its label from here, so each says the same thing.
+ * What a button that sent a transaction reads while it is under way: the
+ * same words for a donation, a pin, a calendar and a removal.
  */
-export const stage = signal<"sign" | "land" | null>(null)
-
-/** What a button that sent a transaction reads while it is under way. */
-export const stageLabel = () =>
-  stage.value === "land" ? "Waiting for Base…" : "Confirm in your wallet…"
+export const stageLabel = (stage: Stage | null) =>
+  stage === "land" ? "Waiting for Base…" : "Confirm in your wallet…"
 
 /**
- * Runs one wallet action, a pin, a calendar, a removal or a donation, with
- * the stage kept up to date and any refusal turned into a sentence.
+ * Runs one wallet action, a pin, a calendar, a removal or a donation,
+ * telling progress where it stands and turning any refusal into a sentence.
+ * Each button passes its own progress, so two transactions at once never
+ * read each other's stage.
  */
 export async function transact<A>(
   what: string,
   run: (lib: WalletModule, progress: Progress) => Promise<A>,
+  progress: Progress = () => {},
 ): Promise<A | Failure> {
   let lib: WalletModule
 
@@ -306,16 +309,12 @@ export async function transact<A>(
     return NotLoaded
   }
 
-  stage.value = "sign"
+  progress("sign")
 
   try {
-    return await run(lib, (next) => {
-      stage.value = next
-    })
+    return await run(lib, progress)
   } catch (error) {
     return sendFailure(error, what)
-  } finally {
-    stage.value = null
   }
 }
 
@@ -327,6 +326,7 @@ export async function sendEther(
   rpc: string,
   to: string,
   amountEth: string,
+  progress?: Progress,
 ): Promise<Hash | Failure> {
   if (!account.value) {
     return {
@@ -337,6 +337,7 @@ export async function sendEther(
 
   return await transact(
     "donation",
-    (lib, progress) => lib.sendEth(rpc, to as Address, amountEth, progress),
+    (lib, told) => lib.sendEth(rpc, to as Address, amountEth, told),
+    progress,
   )
 }

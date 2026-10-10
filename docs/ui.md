@@ -38,7 +38,7 @@ Every section is now made of the same few pieces:
 | `Dialog` | `ui/Dialog.tsx` | four hand-built modals |
 | `LinkDialog` | `ui/LinkDialog.tsx` | `SubmitDialog` and the old `AddCalendarDialog`, 631 lines that were nearly identical |
 | `useAction` | `ui/useAction.ts` | nine copies of busy, error and try/catch state |
-| `transact` and `stageLabel` | `wallet/client.ts` | five copies of the wallet try/catch, and one label shown for the whole wait |
+| `transact` and `stageLabel` | `wallet/client.ts` | five copies of the wallet try/catch, and one label shown for the whole wait; each button now hears its own transaction’s stage |
 | `Notice` | `ui/Notice.tsx` | seven error and success paragraphs, some without a live role |
 | `Panel`, `PanelHeader` | `ui/Panel.tsx` | three card shells and two copies of the header bar |
 | `Band`, `SectionHeading` | `ui/Layout.tsx` | five page wrappers with different spacing, three section headings |
@@ -62,9 +62,14 @@ below names where it was, what it did to a visitor and what changed.
   name and no Escape.
 - Now: one `Dialog`, the native modal `<dialog>`. The browser keeps focus
   inside, makes the page inert, closes on Escape, lifts it into the top layer
-  over every section and returns focus to the opener. A press on the backdrop
-  closes it, and the page stops scrolling behind it. On a phone it is a sheet
-  on the bottom edge with a visible close button.
+  over every section and returns focus to the opener. A press that starts
+  and ends on the backdrop closes it, and the page stops scrolling behind
+  it. The heading and the close button stay in view while the body scrolls.
+  On a phone it is a sheet on the bottom edge. Focus starts on the first
+  control, or on Close where the first would be wrong: Disconnect in Your
+  wallet, and the player in the video dialog, which would keep Escape to
+  itself. A control that disappears while focused, as a wallet button does
+  on connecting, hands focus back to the dialog rather than to the page.
 
 ### Funding card
 
@@ -86,6 +91,11 @@ below names where it was, what it did to a visitor and what changed.
   wallet… until the wallet signs, then Waiting for Base…. The bullets are
   behind a labeled How funding works. Messages go into live regions that are
   on the page before they are needed.
+- The amount reaches the wallet as exact decimal text. Through a float, the
+  0.1 ETH preset had been 0.100000000000000006 ETH, six wei over, and an
+  amount typed with an exponent, such as 1e-1, the same. Text the number
+  field cannot read counts as no amount rather than falling back to a
+  preset.
 
 ### Choosing one of a few
 
@@ -99,7 +109,8 @@ below names where it was, what it did to a visitor and what changed.
 - The Location select had no label tied to it. For a viewer in UTC it was
   blank, because `Intl.supportedValuesOf("timeZone")` does not list UTC.
   Options showed only the city, and times had no zone.
-- The iCalendar link was a `data:` URL, which Safari on iPhone will not open.
+- The iCalendar link was a `data:` URL, which WebKit will not open as a page;
+  a field report found such a link does nothing on an iPhone.
   The file had no DTSTAMP, which RFC 5545 requires, no escaping of commas
   and semicolons, and no line folding. An all-day event was written as
   midnight UTC.
@@ -108,8 +119,12 @@ below names where it was, what it did to a visitor and what changed.
 - Now: a labeled Times in select, opening on the viewer's zone, with UTC
   always present. Options read as city, region and offset, sorted by city so
   typing a city's first letters finds it. Days read as Today ·, Tomorrow · or
-  the full date once. Each event shows its time and zone, its own link, and
-  Add to calendar.
+  the full date once; Tomorrow is the next date on the calendar, so a clock
+  change cannot skip it. Each event shows its time and zone, its own link,
+  and Add to calendar. Times read as the rest of the page does, in English
+  12-hour form; the old Live wrote them in the browser's own locale while
+  its dates were English. While one calendar is being removed, the other
+  Remove buttons wait.
 
 ### Map
 
@@ -121,6 +136,11 @@ below names where it was, what it did to a visitor and what changed.
 - Now: the shared `AddToCalendar`, the shared `EventWhen` and `placeOf`, and
   online events in the viewer's zone, as Luma shows them. The card has one
   primary action (Open on Luma), and its remove error is announced.
+- A list row was a `role="button"` with the Luma link inside it, which a
+  screen reader cannot reach as a link. The row's button and the link now
+  sit side by side, and hovering either still lights the row and its pin.
+- The same event or calendar can no longer be sent twice while the first is
+  still landing, as reopening the dialog allowed.
 
 ### Videos
 
@@ -132,10 +152,10 @@ below names where it was, what it did to a visitor and what changed.
   be embedded, with a button to open it elsewhere.
 - Embeds used youtube.com, which sets cookies before anything plays.
 - Now: six videos, then See all 16 videos, which shows the rest and moves
-  focus to the first new one; nothing hidden can take focus. Each video is a
-  button, or a link straight out for the two posted elsewhere. YouTube plays
-  in the shared dialog, through the privacy-enhanced player, starting at
-  once.
+  focus to the first new one; nothing hidden can take focus. Each title is a
+  heading holding a button, or a link straight out for the two posted
+  elsewhere, stretched over the whole card. YouTube plays in the shared
+  dialog, through the privacy-enhanced player, starting at once.
 
 ### The rest
 
@@ -144,7 +164,8 @@ below names where it was, what it did to a visitor and what changed.
   homepage.
 - daisyUI and a pastel theme were configured, but no daisyUI class was used
   anywhere. Both are gone, along with an unused animation and a commented-out
-  layout.
+  layout. The three things daisyUI did set for the whole page, its near-black
+  ink, white paper and quiet scrollbars, are now set in `client.css`.
 - The Farcaster link was `http://warpcast.com`; it is now
   `https://farcaster.xyz/homebase`. The Dexscreener link is the one
   `HomeTokenUrl` the funding card uses.
@@ -152,8 +173,9 @@ below names where it was, what it did to a visitor and what changed.
   reader's focus, dropping focus to the page. The list now loads under a
   plain Finding wallets… line and takes focus when it arrives.
 - Buttons, chips and fields share one focus ring. Every button is at least
-  24 pixels each way, the smallest target WCAG 2.2 allows, and a full-size
-  button is 44 pixels tall.
+  24 pixels each way, the smallest target WCAG 2.2 allows; a full button is
+  44 pixels tall and a small one 36. The story's links stay 44 pixels tall,
+  as they were.
 
 ## What practice says, and what the page does about it
 
@@ -204,7 +226,7 @@ connect modal, since a wallet can connect from anywhere
 ([RainbowKit](https://rainbowkit.com/docs/modal-hooks)). That is what the
 waiting donation does. Wagmi tells awaiting a signature apart from waiting on
 a receipt ([wagmi](https://2.x.wagmi.sh/react/guides/send-transaction)), and
-`stage` carries the same two states to every button. A refusal is code 4001
+each button's own `stage` carries the same two states. A refusal is code 4001
 ([EIP-1193](https://eips.ethereum.org/EIPS/eip-1193)) and reads as You
 didn't approve the transaction. Wallets are found through EIP-6963
 ([EIP-6963](https://eips.ethereum.org/EIPS/eip-6963)), as before.
@@ -212,9 +234,10 @@ didn't approve the transaction. Wallets are found through EIP-6963
 **Calendars.** RFC 5545 requires UID and DTSTAMP on every event. It escapes
 backslash, semicolon, comma and newline in text, folds lines at 75 octets,
 and writes all-day events as dates
-([RFC 5545](https://datatracker.ietf.org/doc/html/rfc5545)). Safari on iPhone
-refuses to open `data:` URLs, so the file is a download.
-`calendar.test.ts` checks each rule.
+([RFC 5545](https://datatracker.ietf.org/doc/html/rfc5545)). WebKit will not
+open a `data:` URL as a page, so the file is a download instead.
+`calendar.test.ts` checks each rule, an event that ends where it starts
+included.
 
 **Time zones.** Luma shows an event held somewhere in its own zone, an online
 event in the viewer's, and both in lists when they differ
@@ -263,6 +286,19 @@ list and the raise keep their skeletons, and Live its spinner.
   example.
 - Every choice of one is a native radio, every disclosure a native
   `details` and every dialog a native `dialog`.
+
+## Not verified here
+
+The session this was built in could not install the two dependencies the
+page builds from GitHub, nor Foundry, so these were not run:
+
+- `bun run build` and `bun run e2e`. The components were instead rendered in
+  Chromium with npm's Preact and a stand-in for signals, against stubbed
+  endpoints and a stand-in wallet, and every flow above was driven there.
+- An iPhone: whether Safari hands the downloaded .ics to Calendar or saves
+  it to Files, and whether a Farcaster in-app browser downloads it at all.
+- The Bun server's answer for a path it does not know, now that `/about` is
+  gone.
 
 ## Decisions
 

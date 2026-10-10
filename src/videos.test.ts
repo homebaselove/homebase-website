@@ -26,6 +26,8 @@ test("a video anywhere else has no YouTube id, and opens where it lives", () => 
     [
       "https://x.com/lucianodeangeIo/status/1899183264759439586",
       "https://warpcast.com/nickcryptopro/0xa5f7208b",
+      "https://www.youtube.com/watch?v=",
+      "https://www.youtube.com/",
       "not a link",
     ]
       .map(youtubeId),
@@ -34,16 +36,22 @@ test("a video anywhere else has no YouTube id, and opens where it lives", () => 
       null,
       null,
       null,
+      null,
+      null,
     ])
 })
 
-test("every listed video either plays here or links out", () => {
+test("the list holds the videos the gallery shows: fourteen to play, two to open", () => {
   expect(
-    Videos.every((video) =>
-      youtubeId(video.url) !== null || video.url.startsWith("https://")
+    Videos.map((video) =>
+      youtubeId(video.url) ? "plays" : new URL(video.url).hostname
     ),
   )
-    .toBe(true)
+    .toEqual([
+      ...Array(14).fill("plays"),
+      "x.com",
+      "warpcast.com",
+    ])
 })
 
 test("the player is the privacy-enhanced one, and starts when opened", () => {

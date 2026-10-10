@@ -23,6 +23,7 @@ export function AddCalendarDialog(props: {
       title="Add a calendar"
       description="Paste the iCal link of a Luma calendar, a Google Calendar or an Outlook calendar. Its events are listed here and stay in step with it. On Luma, the link is under Add iCal Subscription on the calendar page."
       things="calendars"
+      where="to Homebase Live"
       field={{
         id: "calendar-link",
         label: "Calendar feed link",

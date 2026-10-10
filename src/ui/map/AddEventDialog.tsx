@@ -24,6 +24,7 @@ export function AddEventDialog(props: {
       title="Add a Luma event"
       description="Paste the event’s Luma link. Its time, place and cover come from Luma, and stay in step with it."
       things="events"
+      where="to the map"
       field={{
         id: "luma-link",
         label: "Luma link",
@@ -62,7 +63,7 @@ export function AddEventDialog(props: {
         </>
       )}
       confirmLabel="Pin it to the map"
-      confirm={({ event }) => pin(event)}
+      confirm={({ event }, progress) => pin(event, progress)}
       onDone={props.onPinned}
       onClose={props.onClose}
     />

@@ -5,6 +5,7 @@ import {
   account,
   type Failure,
   isAdmin,
+  type Progress,
   shortAddress,
   stageLabel,
 } from "../wallet/client.ts"
@@ -24,8 +25,9 @@ import { WalletIdentity, WalletPicker } from "./wallet/WalletPicker.tsx"
 export function LinkDialog<P, R>(props: {
   readonly title: string
   readonly description: string
-  /** What the form adds, for the wallet that may not: events, calendars. */
+  /** What the form adds, and where, for the wallet that may not. */
   readonly things: string
+  readonly where: string
   readonly field: {
     readonly id: string
     readonly label: string
@@ -34,7 +36,7 @@ export function LinkDialog<P, R>(props: {
   readonly lookUp: (link: string) => Promise<P | Failure>
   readonly preview: (found: P) => ComponentChildren
   readonly confirmLabel: string
-  readonly confirm: (found: P) => Promise<R | Failure>
+  readonly confirm: (found: P, progress: Progress) => Promise<R | Failure>
   readonly onDone: (result: R) => void
   readonly onClose: () => void
 }) {
@@ -43,7 +45,7 @@ export function LinkDialog<P, R>(props: {
   const link = useSignal(String())
   const found = useSignal<P | null>(null)
   const look = useAction(props.lookUp)
-  const add = useAction(props.confirm)
+  const add = useAction((chosen: P) => props.confirm(chosen, add.progress))
   const input = useRef<HTMLInputElement>(null)
   const me = account.value
   const allowed = me !== null && isAdmin.value
@@ -68,27 +70,25 @@ export function LinkDialog<P, R>(props: {
       title={allowed ? props.title : "Connect a wallet"}
       description={allowed
         ? props.description
-        : `The Homebase wallet adds ${props.things} here. Once $home locking is wired in, anyone who has locked $home will be able to as well.`}
+        : `The Homebase wallet adds ${props.things} ${props.where}. Once $home locking is wired in, anyone who has locked $home will be able to as well.`}
       onClose={props.onClose}
     >
       {!me
         ? <WalletPicker />
         : !allowed
         ? (
-          <div class="flex flex-col gap-3">
-            <p class="text-sm">
+          <WalletIdentity
+            lead="Connected as"
+            onDisconnect={reset}
+          >
+            <span role="alert">
               <strong title={me.address}>
                 {shortAddress(me.address)}
               </strong>{" "}
               can’t add {props.things} yet. The Homebase wallet can now, and
               $home lockers will be able to soon.
-            </p>
-
-            <WalletIdentity
-              lead="Connected as"
-              onDisconnect={reset}
-            />
-          </div>
+            </span>
+          </WalletIdentity>
         )
         : (
           <>
@@ -109,9 +109,11 @@ export function LinkDialog<P, R>(props: {
                 add.problem.value = null
                 found.value = null
 
-                const answer = await look.run(link.value)
+                const asked = link.value
+                const answer = await look.run(asked)
 
-                if (answer !== Failed) {
+                // A link edited while it was looked up gets its own look-up.
+                if (answer !== Failed && link.value === asked) {
                   found.value = answer
                 }
               }}
@@ -147,21 +149,27 @@ export function LinkDialog<P, R>(props: {
                 >
                   {look.busy.value
                     ? (
-                      <SpinnerIcon
-                        size={18}
-                        class="animate-spin"
-                      />
+                      <>
+                        <SpinnerIcon
+                          size={18}
+                          class="animate-spin"
+                        />
+                        <span class="sr-only">
+                          Looking up
+                        </span>
+                      </>
                     )
                     : "Look up"}
                 </button>
               </div>
             </form>
+
+            {/* The form’s own messages; the wallet picker has its own. */}
+            <Notice tone="error">
+              {add.problem.value ?? look.problem.value}
+            </Notice>
           </>
         )}
-
-      <Notice tone="error">
-        {add.problem.value ?? look.problem.value}
-      </Notice>
 
       {allowed && found.value !== null && (
         <div class="flex flex-col gap-3 rounded-xl border-[1px] border-gray-200 p-4">
@@ -179,7 +187,7 @@ export function LinkDialog<P, R>(props: {
               }
             }}
           >
-            {add.busy.value ? stageLabel() : props.confirmLabel}
+            {add.busy.value ? stageLabel(add.stage.value) : props.confirmLabel}
           </button>
         </div>
       )}

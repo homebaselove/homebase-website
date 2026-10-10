@@ -65,7 +65,7 @@ export function Socials() {
           aria-label="Fileverse"
           class="flex items-center rounded-md hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"
         >
-          {/* Fileverse's stacked-pages smiley, cut to three pages so the face still reads at 28px. */}
+          {/* Fileverse’s stacked-pages smiley, cut to three pages so the face still reads at 28px. */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="28"

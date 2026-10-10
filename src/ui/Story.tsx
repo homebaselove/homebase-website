@@ -464,11 +464,13 @@ function ChapterCard(props: {
                           scrollTo(link.href)
                         }
                         : undefined}
+                      // A fingertip tall, and a long label wraps rather than
+                      // running past the card.
                       class={today && place === 0
-                        ? "btn btn-brand btn-small"
+                        ? "btn btn-brand btn-small min-h-11"
                         : today
-                        ? "btn btn-quiet btn-small"
-                        : "chip"}
+                        ? "btn btn-quiet btn-small min-h-11"
+                        : "chip min-h-11 whitespace-normal"}
                     >
                       {link.label}
                       {!here && <OutIcon size={14} />}

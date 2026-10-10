@@ -163,3 +163,23 @@ test("the file is named after the event", () => {
   )
     .toBe("event.ics")
 })
+
+test("an event that ends where it starts is written as an instant", () => {
+  const instant = {
+    title: "Office hours",
+    start: new Date("2026-10-15T18:00:00Z"),
+    end: new Date("2026-10-15T18:00:00Z"),
+  }
+
+  expect(
+    lines(icsFile(instant, Stamp)).filter((line) => line.startsWith("DT")),
+  )
+    .toEqual([
+      "DTSTAMP:20261009T120000Z",
+      "DTSTART:20261015T180000Z",
+    ])
+  expect(
+    new URL(googleCalendarUrl(instant)).searchParams.get("dates"),
+  )
+    .toBe("20261015T180000Z/20261015T180000Z")
+})

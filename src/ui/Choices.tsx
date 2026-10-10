@@ -1,6 +1,5 @@
 /** @jsxImportSource preact */
-import type { ComponentChildren } from "preact"
-import { useMemo } from "preact"
+import { type ComponentChildren, useMemo } from "preact"
 
 let made = 0
 
@@ -33,6 +32,8 @@ export function Choices<T extends string | number>(props: {
         <label
           key={option.value}
           class="chip"
+          // The chosen look, set here too for browsers without :has().
+          data-checked={option.value === props.value || undefined}
         >
           <input
             type="radio"

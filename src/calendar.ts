@@ -37,6 +37,10 @@ const lastDay = (event: CalendarEvent) =>
     ? event.end
     : new Date(event.start.getTime() + Day)
 
+/** A timed event with no end after its start is an instant, as a feed may give. */
+const instantOnly = (event: CalendarEvent) =>
+  event.end.getTime() <= event.start.getTime()
+
 /** What the entry says beyond its title: the description, then the link. */
 const details = (event: CalendarEvent) =>
   [
@@ -52,7 +56,9 @@ export function googleCalendarUrl(event: CalendarEvent): string {
     text: event.title,
     dates: event.allDay
       ? `${dateOnly(event.start)}/${dateOnly(lastDay(event))}`
-      : `${instant(event.start)}/${instant(event.end)}`,
+      : `${instant(event.start)}/${
+        instant(instantOnly(event) ? event.start : event.end)
+      }`,
   })
   const about = details(event)
 
@@ -137,7 +143,9 @@ export function icsFile(event: CalendarEvent, now: Date = new Date()): string {
       ]
       : [
         `DTSTART:${instant(event.start)}`,
-        `DTEND:${instant(event.end)}`,
+        // RFC 5545 wants DTEND after DTSTART; without one the event is the
+        // instant it starts.
+        ...(instantOnly(event) ? [] : [`DTEND:${instant(event.end)}`]),
       ]),
     `SUMMARY:${escapeText(event.title)}`,
     ...(about ? [`DESCRIPTION:${escapeText(about)}`] : []),

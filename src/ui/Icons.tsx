@@ -1,4 +1,5 @@
 /** @jsxImportSource preact */
+import type { ComponentChildren } from "preact"
 
 /**
  * Inlined rather than taken from lucide-preact. The bundler emits the module
@@ -13,7 +14,7 @@ interface IconProps {
 }
 
 function Icon(props: IconProps & {
-  readonly children: preact.ComponentChildren
+  readonly children: ComponentChildren
   readonly filled?: boolean
 }) {
   return (

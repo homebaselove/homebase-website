@@ -11,6 +11,7 @@ import {
   admins,
   type Failure,
   isFailure,
+  type Progress,
   transact,
 } from "../wallet/client.ts"
 import type { Eas } from "../wallet/wagmi.ts"
@@ -70,8 +71,14 @@ export function preview(url: string): Promise<Preview | Failure> {
   })
 }
 
+/** The events being pinned now, so the same one is not sent twice at once. */
+const pinning = new Set<string>()
+
 /** Pins an event the preview showed: an attestation from the connected wallet. */
-export async function pin(event: LumaEvent): Promise<MapEvent | Failure> {
+export async function pin(
+  event: LumaEvent,
+  progress?: Progress,
+): Promise<MapEvent | Failure> {
   const me = account.value
   const where = eas.value
 
@@ -89,10 +96,21 @@ export async function pin(event: LumaEvent): Promise<MapEvent | Failure> {
     }
   }
 
+  if (pinning.has(event.slug)) {
+    return {
+      error: "That event is already being pinned.",
+      status: 409,
+    }
+  }
+
+  pinning.add(event.slug)
+
   const uid = await transact(
     "pin",
-    (lib, progress) => lib.attestString(where, event.slug, progress),
+    (lib, told) => lib.attestString(where, event.slug, told),
+    progress,
   )
+    .finally(() => pinning.delete(event.slug))
 
   if (isFailure(uid)) {
     return uid
@@ -114,7 +132,10 @@ export async function pin(event: LumaEvent): Promise<MapEvent | Failure> {
   return pinned
 }
 
-export async function unpin(slug: string): Promise<Failure | null> {
+export async function unpin(
+  slug: string,
+  progress?: Progress,
+): Promise<Failure | null> {
   const where = eas.value
   const pinned = (events.value ?? []).find((event) => event.slug === slug)
 
@@ -127,7 +148,8 @@ export async function unpin(slug: string): Promise<Failure | null> {
 
   const revoked = await transact(
     "removal",
-    (lib, progress) => lib.revokeAttestation(where, pinned.uid, progress),
+    (lib, told) => lib.revokeAttestation(where, pinned.uid, told),
+    progress,
   )
 
   if (isFailure(revoked)) {

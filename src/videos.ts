@@ -29,9 +29,10 @@ export function youtubeId(url: string): string | null {
     return null
   }
 
+  // An empty id, as in watch?v=, is no video.
   return link.searchParams.get("v")
-    ?? link.pathname.match(/^\/(?:embed|shorts|live)\/([\w-]+)/)?.[1]
-    ?? null
+    || link.pathname.match(/^\/(?:embed|shorts|live)\/([\w-]+)/)?.[1]
+    || null
 }
 
 /**

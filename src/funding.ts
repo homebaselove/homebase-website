@@ -82,30 +82,40 @@ export function segmentFills(
 /** Ether has 18 decimal places; anything finer is not an amount. */
 const EtherDecimals = 18
 
+/** How far an exponent may move the point, which bounds the text it makes. */
+const MaxShift = 60
+
 /**
  * An amount of ether as the plain decimal text the wallet is given and the
  * Donate button names, or null when it is not an amount above zero. It works
- * on the text itself, never through a float: 0.1 as a float written to 18
- * places is 0.100000000000000006, which would send six wei too many.
+ * on the digits as text, never through a float: 0.1 as a float written to 18
+ * places is 0.100000000000000006, which would send six wei too many. A number
+ * field may also hold an exponent, such as 1e-3, which moves the point.
  */
 export function etherAmount(typed: string): string | null {
-  let text = typed.trim()
+  const parts = /^(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/.exec(typed.trim())
 
-  // A number field may hold an exponent, such as 1e-3; only then is a float
-  // the way in, and it is read to the places ether has.
-  if (!/^\d*\.?\d*$/.test(text)) {
-    const value = Number(text)
-
-    if (!(value > 0) || value >= 1e21) {
-      return null
-    }
-
-    text = value.toFixed(EtherDecimals)
+  if (!parts || !(parts[1] || parts[2])) {
+    return null
   }
 
-  const [whole = "", fraction = ""] = text.split(".")
-  const units = whole.replace(/^0+(?=\d)/, "") || "0"
-  const places = fraction.slice(0, EtherDecimals).replace(/0+$/, "")
+  const [, whole = "", fraction = "", exponent = "0"] = parts
+  const shift = Number(exponent)
+
+  if (Math.abs(shift) > MaxShift) {
+    return null
+  }
+
+  const digits = whole + fraction
+  const point = whole.length + shift
+  const before = point <= 0
+    ? "0"
+    : digits.slice(0, point).padEnd(point, "0")
+  const after = point <= 0
+    ? "0".repeat(-point) + digits
+    : digits.slice(point)
+  const units = before.replace(/^0+(?=\d)/, "")
+  const places = after.slice(0, EtherDecimals).replace(/0+$/, "")
   const amount = places ? `${units}.${places}` : units
 
   return /[1-9]/.test(amount) ? amount : null
