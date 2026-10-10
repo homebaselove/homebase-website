@@ -15,7 +15,11 @@ import JesseHappyToFund from "../assets/story/JesseHappyToFund.webp"
 import LetterToJesseCast from "../assets/story/LetterToJesseCast.webp"
 import LetterToJesseV2Cast from "../assets/story/LetterToJesseV2Cast.webp"
 import MumbaiAnnouncement from "../assets/story/MumbaiAnnouncement.webp"
-import { BasedHouseMumbaiApplyUrl, SeedMeUrl } from "./funding.ts"
+import {
+  BasedHouseMumbaiApplyUrl,
+  SeedMeUrl,
+  SustainableEcosystemUrl,
+} from "./funding.ts"
 
 export interface StoryLink {
   label: string
@@ -414,6 +418,10 @@ export const Chapters: Chapter[] = [
       {
         label: "Decentralizing contribution to Base",
         href: DecentralizingContributionUrl,
+      },
+      {
+        label: "Building a sustainable ecosystem",
+        href: SustainableEcosystemUrl,
       },
     ],
   },

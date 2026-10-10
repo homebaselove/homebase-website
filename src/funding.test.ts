@@ -18,9 +18,10 @@ import {
   PresetsEth,
   SeedMeLockUrl,
   segmentFills,
+  SustainableEcosystemUrl,
   transactionUrl,
 } from "./funding.ts"
-import { Chapters } from "./story.ts"
+import { Chapters, OpeningChapterId } from "./story.ts"
 
 test("next milestone steps past the amount already raised", () => {
   expect(
@@ -190,7 +191,7 @@ test("the pool is $home's, and WETH is its 0 side", () => {
     ])
 })
 
-test("the card links the pool whose fees it counts", () => {
+test("$home links the pool whose fees the card counts", () => {
   expect(
     HomeTokenUrl,
   )
@@ -304,7 +305,7 @@ test("every preset amount is offered exactly as it is sent", () => {
     .toEqual(PresetsEth.map((preset) => formatEth(preset)))
 })
 
-test("the funding card and the story apply through the same form", () => {
+test("the story applies through the Based House Mumbai form", () => {
   const today = Chapters.find((chapter) => chapter.id === "today")
 
   expect(
@@ -315,4 +316,17 @@ test("the funding card and the story apply through the same form", () => {
     BasedHouseMumbaiApplyUrl,
   )
     .toBe("https://forms.gle/Jc6an9SCdYaP95us9")
+})
+
+// The info button on the funding card opens the same deck.
+test("the interview ends on the deck on how the funding works", () => {
+  const interview = Chapters.find((chapter) => chapter.id === OpeningChapterId)
+
+  expect(
+    interview?.links.at(-1),
+  )
+    .toEqual({
+      label: "Building a sustainable ecosystem",
+      href: SustainableEcosystemUrl,
+    })
 })

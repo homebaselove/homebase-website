@@ -3,18 +3,17 @@ import { useEffect, useRef } from "preact"
 import { useSignal, useSignalEffect } from "preact/signals"
 import { call } from "../call.ts"
 import {
-  BasedHouseMumbaiApplyUrl,
   BaseRpcUrl,
   Campaign,
   DonationAddress,
   etherAmount,
   formatEth,
-  HomeTokenUrl,
   nextMilestone,
   PresetsEth,
   SeedMeLockUrl,
   SeedMeUrl,
   segmentFills,
+  SustainableEcosystemUrl,
   TargetEth,
   transactionUrl,
 } from "../funding.ts"
@@ -26,8 +25,7 @@ import {
   stageLabel,
 } from "../wallet/client.ts"
 import { Choices } from "./Choices.tsx"
-import { Disclosure } from "./Disclosure.tsx"
-import { OutIcon } from "./Icons.tsx"
+import { InfoIcon } from "./Icons.tsx"
 import { Notice } from "./Notice.tsx"
 import { Panel } from "./Panel.tsx"
 import { Failed, useAction } from "./useAction.ts"
@@ -37,23 +35,11 @@ interface Funding {
   raisedEth: number
 }
 
-/** $home reads as a link wherever it appears in the bullets. */
-function HomeToken() {
-  return (
-    <a
-      href={HomeTokenUrl}
-      target="_blank"
-      class="underline hover:text-brand"
-    >
-      $home
-    </a>
-  )
-}
-
 /**
- * The funding card: what the raise stands at, a donation from the
- * connected wallet as its one primary action, and $home on SeedMe as the
- * other way to back it. Donate with no wallet opens the way in, and the
+ * The funding card: what the raise stands at, the deck on how the funding
+ * works behind the info button in its corner, and three ways to back the
+ * house side by side: Buy and Lock $home on SeedMe, and Donate from the
+ * connected wallet. Donate with no wallet opens the way in, and the
  * donation goes ahead once a wallet connects, with the wallet asking first.
  */
 export function FundingCard() {
@@ -151,26 +137,38 @@ export function FundingCard() {
   return (
     <Panel>
       <div class="flex flex-col gap-5 p-5 max-sm:p-4">
-        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          {loading.value
-            ? <div class="h-11 w-44 rounded-lg bg-gray-100 animate-pulse" />
-            : raised.value === null
-            ? (
-              <h3 class="text-4xl max-sm:text-3xl font-bold leading-none">
-                Fund {Campaign}
-              </h3>
-            )
-            : (
-              <>
-                <span class="text-5xl max-sm:text-4xl font-bold leading-none">
-                  {formatEth(raised.value)} ETH
-                </span>
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            {loading.value
+              ? <div class="h-11 w-44 rounded-lg bg-gray-100 animate-pulse" />
+              : raised.value === null
+              ? (
+                <h3 class="text-4xl max-sm:text-3xl font-bold leading-none">
+                  Fund {Campaign}
+                </h3>
+              )
+              : (
+                <>
+                  <span class="text-5xl max-sm:text-4xl font-bold leading-none">
+                    {formatEth(raised.value)} ETH
+                  </span>
 
-                <span class="text-gray-500">
-                  raised for {Campaign}
-                </span>
-              </>
-            )}
+                  <span class="text-gray-500">
+                    raised for {Campaign}
+                  </span>
+                </>
+              )}
+          </div>
+
+          <a
+            href={SustainableEcosystemUrl}
+            target="_blank"
+            aria-label="How funding works: Building a sustainable ecosystem (PDF)"
+            title="Building a sustainable ecosystem"
+            class="shrink-0 rounded-full border-[1px] border-gray-200 p-1.5 text-gray-400 transition-colors hover:border-gray-300 hover:text-gray-600 hb-focus"
+          >
+            <InfoIcon size={20} />
+          </a>
         </div>
 
         {raised.value !== null && <MilestoneBar raised={raised.value} />}
@@ -225,18 +223,32 @@ export function FundingCard() {
             />
           </div>
 
-          {/* A donation is ether from the connected wallet to the Based House wallet. */}
-          <button
-            type="submit"
-            class="btn btn-brand w-full"
-            disabled={send.busy.value}
-          >
-            {send.busy.value
-              ? stageLabel(send.stage.value)
-              : ether
-              ? `Donate ${ether} ETH`
-              : "Donate"}
-          </button>
+          <div class="grid grid-cols-3 max-sm:grid-cols-2 gap-3">
+            <a
+              href={SeedMeUrl}
+              target="_blank"
+              class="btn btn-brand whitespace-nowrap px-4 max-sm:px-3"
+            >
+              Buy $home
+            </a>
+
+            <a
+              href={SeedMeLockUrl}
+              target="_blank"
+              class="btn btn-brand whitespace-nowrap px-4 max-sm:px-3"
+            >
+              Lock $home
+            </a>
+
+            {/* A donation is ether from the connected wallet to the Based House wallet. */}
+            <button
+              type="submit"
+              class="btn btn-brand px-4 max-sm:col-span-2 max-sm:px-3"
+              disabled={send.busy.value}
+            >
+              {send.busy.value ? stageLabel(send.stage.value) : "Donate"}
+            </button>
+          </div>
 
           <Notice tone="done">
             {sent.value && (
@@ -259,66 +271,6 @@ export function FundingCard() {
             {problem.value ?? send.problem.value}
           </Notice>
         </form>
-
-        <div class="flex flex-col gap-2">
-          <p class="text-sm text-gray-500">
-            Or back the house with <HomeToken /> on SeedMe
-          </p>
-
-          <div class="grid grid-cols-2 gap-3">
-            <a
-              href={SeedMeUrl}
-              target="_blank"
-              class="btn btn-quiet whitespace-nowrap max-sm:gap-1.5 max-sm:px-3"
-            >
-              Buy $home
-              <OutIcon size={14} />
-            </a>
-
-            <a
-              href={SeedMeLockUrl}
-              target="_blank"
-              class="btn btn-quiet whitespace-nowrap max-sm:gap-1.5 max-sm:px-3"
-            >
-              Lock $home
-              <OutIcon size={14} />
-            </a>
-          </div>
-        </div>
-
-        <Disclosure summary="How funding works">
-          <ul class="flex flex-col gap-2 list-disc pl-5 text-gray-600">
-            <li>
-              100% of <HomeToken /> creator fees are allocated to{" "}
-              <a
-                href={BasedHouseMumbaiApplyUrl}
-                target="_blank"
-                class="underline hover:text-brand"
-              >
-                Based House
-              </a>
-            </li>
-            <li>
-              Homebase has been incubating{" "}
-              <a
-                href={SeedMeUrl}
-                target="_blank"
-                class="underline hover:text-brand"
-              >
-                SeedMe
-              </a>{" "}
-              since Based House ETHDenver to support the founders in residence
-            </li>
-            <li>
-              Lock <HomeToken /> to access SeedMe claims
-            </li>
-            <li>
-              The more tokens locked over a longer period of time shows
-              commitment, potentially earning you more privileges from founders
-              launching on SeedMe
-            </li>
-          </ul>
-        </Disclosure>
       </div>
 
       {connecting.value && (
