@@ -2,7 +2,22 @@
 import { HouseLogo } from "./HouseLogo.tsx"
 import { Socials } from "./Socials.tsx"
 
-export function Footer() {
+/**
+ * The foot of every page: the house in the middle, with the social links in
+ * the bottom left and one text link in the bottom right, Learn more unless a
+ * page names another, as the header pairs the links with the wallet.
+ */
+export function Footer(props: {
+  readonly link?: {
+    readonly href: string
+    readonly label: string
+  }
+}) {
+  const link = props.link ?? {
+    href: "/learn",
+    label: "Learn more",
+  }
+
   return (
     <div class="bg-brand w-full p-5 overflow-hidden relative">
       <div class="relative">
@@ -23,15 +38,20 @@ export function Footer() {
         </div>
 
         {/* Content section with proper spacing */}
-        <div class="relative pt-40 md:pt-40 pb-4 md:pb-4">
-          <div class="w-full max-w-4xl mx-auto flex flex-col items-center text-center space-y-6">
-            <div class="w-24 text-white">
-              <HouseLogo />
-            </div>
+        <div class="relative pt-40 pb-1 flex flex-col gap-10 max-sm:gap-8">
+          <div class="w-24 mx-auto text-white">
+            <HouseLogo />
+          </div>
 
-            <div class="text-white">
-              <Socials />
-            </div>
+          <div class="flex items-center justify-between gap-4 text-white">
+            <Socials />
+
+            <a
+              href={link.href}
+              class="text-lg max-sm:text-base font-bold whitespace-nowrap rounded-md underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"
+            >
+              {link.label}
+            </a>
           </div>
         </div>
       </div>

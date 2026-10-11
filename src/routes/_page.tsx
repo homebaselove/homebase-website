@@ -1,5 +1,4 @@
 /** @jsxImportSource preact */
-import { useEffect } from "preact"
 import { BasedHouseCard } from "../ui/BasedHouse.tsx"
 import { Footer } from "../ui/Footer.tsx"
 import { Header } from "../ui/Header.tsx"
@@ -10,10 +9,6 @@ import { BasedHouseStory } from "../ui/Story.tsx"
 import { VideoGallery } from "../ui/VideoGallery.tsx"
 
 export default function() {
-  useEffect(() => {
-    import("@farcaster/frame-sdk").then((mod) => mod.sdk.actions.ready())
-  }, [])
-
   return (
     <main id="top">
       <Header />

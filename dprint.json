@@ -24,7 +24,8 @@
     "**/node_modules",
     "**/*-lock.json",
     "**/package.json",
-    "vscode/*.json"
+    "vscode/*.json",
+    "public/flywheel.html"
   ],
   "plugins": [
     "https://plugins.dprint.dev/typescript-0.94.0.wasm",

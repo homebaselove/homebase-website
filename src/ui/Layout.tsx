@@ -26,12 +26,15 @@ export function Band(props: {
   )
 }
 
-/** The centered heading a section of the story opens with. */
+/** The centered heading a section of the story opens with, or a page with level 1. */
 export function SectionHeading(props: {
   readonly kicker?: string
   readonly title: string
   readonly lead?: string
+  readonly level?: 1 | 2
 }) {
+  const Heading = props.level === 1 ? "h1" : "h2"
+
   return (
     <div class="max-w-[640px] mx-auto text-center">
       {props.kicker && (
@@ -40,9 +43,9 @@ export function SectionHeading(props: {
         </div>
       )}
 
-      <h2 class="text-4xl max-sm:text-3xl font-bold mt-1">
+      <Heading class="text-4xl max-sm:text-3xl font-bold mt-1">
         {props.title}
-      </h2>
+      </Heading>
 
       {props.lead && (
         <p class="mt-3 text-gray-600">

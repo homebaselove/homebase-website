@@ -20,7 +20,11 @@ export function Header() {
           <ConnectButton />
         </div>
 
-        <div class="w-full max-w-[960px] mx-auto px-6 text-center flex flex-col items-center">
+        {/* The house and the wordmark lead home from any page; the wordmark names the link. */}
+        <a
+          href="/"
+          class="w-full max-w-[960px] mx-auto px-6 text-center flex flex-col items-center rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+        >
           <div class="mt-12 w-24 max-sm:w-20 text-white">
             <HouseLogo />
           </div>
@@ -28,7 +32,7 @@ export function Header() {
           <div class="mt-7 mb-6 w-[64%] max-sm:w-[90%] text-white">
             <Wordmark />
           </div>
-        </div>
+        </a>
 
         <div style="height: 100px">
           <div style="

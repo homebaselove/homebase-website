@@ -20,6 +20,12 @@ const server__funding_json = {
   load: () => import("./funding.json/_server.ts"),
 } as const
 
+const page__learn = {
+  path: "/learn",
+  parent: layout__,
+  load: () => import("./learn/_page.tsx"),
+} as const
+
 const server__live_json = {
   path: "/live.json",
   load: () => import("./live.json/_server.ts"),
@@ -45,7 +51,8 @@ export const Layouts: Router.LayoutRoutes = [
 ] as const
 
 export const Pages: Router.PageRoutes = [
-  page__
+  page__,
+  page__learn
 ] as const
 
 export const Servers: Router.ServerRoutes = [
