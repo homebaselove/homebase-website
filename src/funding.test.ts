@@ -11,6 +11,7 @@ import {
   BasedHouseMumbaiApplyUrl,
   BaseRpcUrl,
   DonationAddress,
+  DonationName,
   etherAmount,
   formatEth,
   HomeTokenUrl,
@@ -198,11 +199,24 @@ test("$home links the pool whose fees the card counts", () => {
     .toBe(`https://dexscreener.com/base/${HomePoolId}`)
 })
 
-test("a donation goes to the same address whose fees the card counts", () => {
+// Donations go to the Mumbai fund, never to the creator-fee address the
+// card reads its total from.
+test("a donation goes to basedhouse.eth, not the creator-fee address", () => {
   expect(
-    DonationAddress,
+    [
+      DonationName,
+      DonationAddress,
+      DonationAddress === FundingAddress,
+    ],
   )
-    .toBe(FundingAddress)
+    .toEqual([
+      "basedhouse.eth",
+      "0x85158c82c5c1274081b8994152270ED5395Dca88",
+      false,
+    ])
+})
+
+test("the page waits on a donation through the RPC the server reads", () => {
   expect(
     BaseRpcUrl,
   )

@@ -1,6 +1,10 @@
 import { expect, test } from "bun:test"
 import * as NPath from "node:path"
-import { BasedHouseMumbaiApplyUrl } from "./funding.ts"
+import {
+  BasedHouseMumbaiApplyUrl,
+  DonationAddress,
+  DonationName,
+} from "./funding.ts"
 import { FlywheelUrl } from "./ui/Flywheel.tsx"
 
 const document = () =>
@@ -45,6 +49,22 @@ test("the flywheel shows its light theme in the site blue", async () => {
     .toEqual([
       true,
       true,
+      true,
+    ])
+})
+
+// The flywheel names the address to donate to; the Donate button sends there.
+test("the flywheel asks for donations where Donate sends them", async () => {
+  const html = await document()
+
+  expect(
+    [
+      html.match(/<code id="addr">(0x[0-9a-fA-F]{40})<\/code>/)?.[1],
+      html.includes(`<b>${DonationName}</b>`),
+    ],
+  )
+    .toEqual([
+      DonationAddress,
       true,
     ])
 })

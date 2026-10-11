@@ -327,5 +327,5 @@ page builds from GitHub, nor Foundry, so these were not run:
   `BasedHouseMumbaiApplyUrl` in `src/funding.ts`. The Mumbai announcement's
   description still names the form its image shows, since it describes the
   image.
-- Raised for Based House counts the $home fee share only; direct donations
-  are not added to it.
+- Raised for Based House counts the $home fee share only; donations, which
+  go to basedhouse.eth, are not added to it.

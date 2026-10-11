@@ -10,13 +10,17 @@ export const SeedMeUrl = "https://seedme.xyz"
 /** Where the lock card sends people, matching SeedMe's own nav. */
 export const SeedMeLockUrl = `${SeedMeUrl}/lock`
 
+/** The name a donor sees for where their donation goes. */
+export const DonationName = "basedhouse.eth"
+
 /**
- * Where a donation from a connected wallet goes: the Based House wallet,
- * the same address whose $home fees the card counts, written out here so
- * the page carries no chain code. api/funding.ts holds the same address, and
- * a test keeps the two together.
+ * Where a donation from a connected wallet goes: basedhouse.eth, the Based
+ * House Mumbai fund, the address SeedMe takes donations to as well. It is
+ * not the creator-fee address the card counts (FundingAddress in
+ * api/funding.ts). Written out rather than resolved, so the page carries no
+ * ENS lookup; a test keeps it to the address SeedMe records for the name.
  */
-export const DonationAddress = "0x23cEBf0E3529a3Af4756eFAe22E56B9797f008E3"
+export const DonationAddress = "0x85158c82c5c1274081b8994152270ED5395Dca88"
 
 /** Base's public RPC, for the page to wait on a donation it sent. */
 export const BaseRpcUrl = "https://mainnet.base.org"

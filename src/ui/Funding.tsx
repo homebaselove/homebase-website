@@ -6,6 +6,7 @@ import {
   BaseRpcUrl,
   Campaign,
   DonationAddress,
+  DonationName,
   etherAmount,
   formatEth,
   nextMilestone,
@@ -240,7 +241,7 @@ export function FundingCard() {
               Lock $home
             </a>
 
-            {/* A donation is ether from the connected wallet to the Based House wallet. */}
+            {/* A donation is ether from the connected wallet to basedhouse.eth, the Mumbai fund. */}
             <button
               type="submit"
               class="btn btn-brand px-4 max-sm:col-span-2 max-sm:px-3"
@@ -253,8 +254,8 @@ export function FundingCard() {
           <Notice tone="done">
             {sent.value && (
               <>
-                Thank you! Your {sent.value.amount} ETH donation is on
-                Base.{" "}
+                Thank you! Your {sent.value.amount} ETH donation to{" "}
+                {DonationName} is on Base.{" "}
                 <a
                   href={transactionUrl(sent.value.hash)}
                   target="_blank"
@@ -276,7 +277,7 @@ export function FundingCard() {
       {connecting.value && (
         <ConnectDialog
           reason={ether
-            ? `Connect a wallet to donate ${ether} ETH to Based House. Your wallet asks you to confirm before anything is sent.`
+            ? `Connect a wallet to donate ${ether} ETH to Based House at ${DonationName}. Your wallet asks you to confirm before anything is sent.`
             : undefined}
           onClose={() => {
             connecting.value = false
