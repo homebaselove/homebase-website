@@ -201,7 +201,7 @@ test("$home links the pool whose fees the card counts", () => {
 
 // Donations go to the Mumbai fund, never to the creator-fee address the
 // card reads its total from.
-test("a donation goes to basedhouse.eth, not the creator-fee address", () => {
+test("a donation goes to basedhouse.base.eth, not the creator-fee address", () => {
   expect(
     [
       DonationName,
@@ -210,7 +210,7 @@ test("a donation goes to basedhouse.eth, not the creator-fee address", () => {
     ],
   )
     .toEqual([
-      "basedhouse.eth",
+      "basedhouse.base.eth",
       "0x85158c82c5c1274081b8994152270ED5395Dca88",
       false,
     ])

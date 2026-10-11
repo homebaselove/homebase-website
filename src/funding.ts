@@ -11,14 +11,14 @@ export const SeedMeUrl = "https://seedme.xyz"
 export const SeedMeLockUrl = `${SeedMeUrl}/lock`
 
 /** The name a donor sees for where their donation goes. */
-export const DonationName = "basedhouse.eth"
+export const DonationName = "basedhouse.base.eth"
 
 /**
- * Where a donation from a connected wallet goes: basedhouse.eth, the Based
- * House Mumbai fund, the address SeedMe takes donations to as well. It is
- * not the creator-fee address the card counts (FundingAddress in
+ * Where a donation from a connected wallet goes: basedhouse.base.eth, the
+ * Based House Mumbai fund, the address SeedMe takes donations to as well. It
+ * is not the creator-fee address the card counts (FundingAddress in
  * api/funding.ts). Written out rather than resolved, so the page carries no
- * ENS lookup; a test keeps it to the address SeedMe records for the name.
+ * name lookup; a test holds it to the address the owners gave for the name.
  */
 export const DonationAddress = "0x85158c82c5c1274081b8994152270ED5395Dca88"
 

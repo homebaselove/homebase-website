@@ -14,9 +14,11 @@ Vercel serves the app for every path, and any path but `/learn` shows the
 home page. Learn is the Based House flywheel, the final build from SeedMe
 (`seedme-xyz/SeedMe`, branch `claude/intelligent-franklin-hyyxtm`), kept as
 the one document `public/flywheel.html` and shown in a frame (`Flywheel`)
-that takes the height of its content. The copy differs from SeedMe's in
-five places, listed at its top: it is always light, on white, in the site's
-blue and Lato, and its Apply buttons open the site's one application form.
+that takes the height of its content. The copy differs from SeedMe's in a
+few places, listed at its top: it is always light, on white, in the site's
+blue and Lato, its Apply buttons open the site's one application form, and it
+names the fund basedhouse.base.eth, the Basename of the address Donate sends
+to.
 The footer's Learn more leads there, and the header's house and wordmark
 lead home. The home page is a
 column of bands, each a `Band` at the width its content reads best at:
@@ -328,4 +330,4 @@ page builds from GitHub, nor Foundry, so these were not run:
   description still names the form its image shows, since it describes the
   image.
 - Raised for Based House counts the $home fee share only; donations, which
-  go to basedhouse.eth, are not added to it.
+  go to basedhouse.base.eth, are not added to it.

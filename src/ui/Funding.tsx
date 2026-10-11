@@ -241,7 +241,7 @@ export function FundingCard() {
               Lock $home
             </a>
 
-            {/* A donation is ether from the connected wallet to basedhouse.eth, the Mumbai fund. */}
+            {/* A donation is ether from the connected wallet to basedhouse.base.eth, the Mumbai fund. */}
             <button
               type="submit"
               class="btn btn-brand px-4 max-sm:col-span-2 max-sm:px-3"

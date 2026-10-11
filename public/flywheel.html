@@ -2,8 +2,9 @@
 <!-- The Based House flywheel, the final build from seedme-xyz/SeedMe
      (claude/intelligent-franklin-hyyxtm, 90734c2), shown at /learn. Changed
      for homebase.love: always light, on white, in the site blue and Lato;
-     Apply opens the site application form; the page pads it, so it keeps no
-     padding of its own or room for the hidden phone bar. -->
+     Apply opens the site application form; the fund is named by its Basename,
+     basedhouse.base.eth; the page pads it, so it keeps no padding of its own
+     or room for the hidden phone bar. -->
 <title>Based House Flywheel</title>
 <meta name="description" content="Building a sustainable ecosystem with $home. Lockers trade $home, fees fund Based House, launches need locks, and attention brings more lockers: one number in, five years out.">
 <style>
@@ -313,7 +314,7 @@
       <a class="btn" href="https://seedme.xyz/profile" target="_blank" rel="noreferrer">Launch on SeedMe <small>approved founders</small></a>
     </div>
     <div class="row">
-      <span class="donate">Donate ETH on Base to <b>basedhouse.eth</b> <code id="addr">0x85158c82c5c1274081b8994152270ED5395Dca88</code> <button class="btn" type="button" id="copy">Copy address</button><span id="copied" class="copied" hidden>Copied</span></span>
+      <span class="donate">Donate ETH on Base to <b>basedhouse.base.eth</b> <code id="addr">0x85158c82c5c1274081b8994152270ED5395Dca88</code> <button class="btn" type="button" id="copy">Copy address</button><span id="copied" class="copied" hidden>Copied</span></span>
     </div>
   </section>
   </main>
@@ -397,7 +398,7 @@
   // ---------- the line under the wheel: a station when pinned, otherwise nothing ----------
   const NODE_TEXT = {
     home: ['$home', 'Launched by Bankr on Doppler. A trader pays 1.75% a swap; 0.665% of volume reaches the creator in WETH, and 100% of it funds the house. The volume is the lockers’: 200 of them trading about $28 of $home a day each is 5 ETH a year. In its first 33 days $home traded 1,580 WETH. Measure: volume and creator fees a year.'],
-    house: () => ['Based House', fmtEthW(P.budget) + ' ETH funds one residency of ' + P.cap + ', and the count follows the fees: ' + fmtEthW(2 * P.budget) + ' ETH a year runs two. The fund at basedhouse.eth counts creator fees plus ETH donations since 1 September 2026, toward a 10 ETH goal for Mumbai. Homebase backs based communities worldwide to run their own. Measure: ETH in, residents housed, reserve, people reached.'],
+    house: () => ['Based House', fmtEthW(P.budget) + ' ETH funds one residency of ' + P.cap + ', and the count follows the fees: ' + fmtEthW(2 * P.budget) + ' ETH a year runs two. The fund at basedhouse.base.eth counts creator fees plus ETH donations since 1 September 2026, toward a 10 ETH goal for Mumbai. Homebase backs based communities worldwide to run their own. Measure: ETH in, residents housed, reserve, people reached.'],
     talent: () => ['Talent', P.cap + ' residents a residency; ' + (P.launchPerRes === 1 ? 'one of them launches' : P.launchPerRes + ' of them launch') + ' on SeedMe each year. Launching is approved-founders only today. Measure: residents who ship.'],
     launches: () => ['SeedMe launches', (P.launchPerRes === 1 ? 'One launch' : P.launchPerRes + ' launches') + ' from each residency and ' + (P.extPerRes === 1 ? 'one' : P.extPerRes) + ' from outside. No creation fee. The founder keeps 2 to 10%, vesting 3 to 24 months. A first phase runs 7 to 28 days, up to 1,000 claimers at $1 to $1,000, and settles only at 100% fill, else everyone is refunded. Every claim needs a $home lock, so a launch’s ' + P.claimersPerLaunch + ' claimers join the pool. Measure: launches a year, phases filled.'],
     eth: ['Based House funding', 'ETH to Based House each year: the one input, as the fund will report it. Every count on the ring follows from it. Tap the number for one more ETH, hold it to type one in, or drag it up or down. Double-click any count to set that instead.'],
