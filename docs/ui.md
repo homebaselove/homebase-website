@@ -8,9 +8,19 @@ code is the source of truth; this is the map to it.
 
 `src/index.html` loads `src/client.tsx`, which renders `App`
 (`src/app.tsx`): preact-iso's router over the routes effect-start writes into
-`src/routes/_manifest.ts`, inside an error boundary. There is one page,
-`src/routes/_page.tsx`; on Vercel, which serves the page for every path, any
-other path shows it too. The page is a
+`src/routes/_manifest.ts`, inside an error boundary. There are two pages:
+the home page, `src/routes/_page.tsx`, and Learn, `src/routes/learn/_page.tsx`.
+Vercel serves the app for every path, and any path but `/learn` shows the
+home page. Learn is the Based House flywheel, the final build from SeedMe
+(`seedme-xyz/SeedMe`, branch `claude/intelligent-franklin-hyyxtm`), kept as
+the one document `public/flywheel.html` and shown in a frame (`Flywheel`)
+that takes the height of its content. The copy differs from SeedMe's in a
+few places, listed at its top: it is always light, on white, in the site's
+blue and Lato, its Apply buttons open the site's one application form, and it
+names the fund basedhouse.base.eth, the Basename of the address Donate sends
+to.
+The footer's Learn more leads there, and the header's house and wordmark
+lead home. The home page is a
 column of bands, each a `Band` at the width its content reads best at:
 
 | Band | Component | What it does |
@@ -21,7 +31,7 @@ column of bands, each a `Band` at the width its content reads best at:
 | Homebase Map | `MapCard`, `MapView`, `EventList`, `EventDetails`, `AddEventDialog` | Luma events pinned on Base, on a MapLibre map and in a list that point at each other. `docs/map.md` covers it in full. |
 | Homebase Live | `LiveCard`, `AddCalendarDialog` | Streams ahead from the calendars the admin added, by day, in any zone. `docs/live.md` covers it in full. |
 | Videos | `VideoGallery` (data in `videos.ts`) | Talks and build sessions; YouTube plays in a dialog, anything else opens where it was posted. |
-| Footer | `Footer` | The house and the social links again. |
+| Footer | `Footer` | The house again, with the social links in the bottom left and Learn more in the bottom right (Back home on Learn). |
 
 Underneath, the browser talks to three endpoints through `call` in
 `src/call.ts`, and to the wallet through `src/wallet/client.ts`, which loads
@@ -308,7 +318,8 @@ page builds from GitHub, nor Foundry, so these were not run:
 - An iPhone: whether Safari hands the downloaded .ics to Calendar or saves
   it to Files, and whether a Farcaster in-app browser downloads it at all.
 - The Bun server's answer for a path it does not know, now that `/about` is
-  gone.
+  gone. It does answer both pages, and the files in `public/` at their own
+  paths, as Vercel does.
 
 ## Decisions
 
@@ -318,5 +329,5 @@ page builds from GitHub, nor Foundry, so these were not run:
   `BasedHouseMumbaiApplyUrl` in `src/funding.ts`. The Mumbai announcement's
   description still names the form its image shows, since it describes the
   image.
-- Raised for Based House counts the $home fee share only; direct donations
-  are not added to it.
+- Raised for Based House counts the $home fee share only; donations, which
+  go to basedhouse.base.eth, are not added to it.

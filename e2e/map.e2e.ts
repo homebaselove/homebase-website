@@ -1236,7 +1236,7 @@ try {
       && (await again.getByText("Demo day stream").count()) === 0,
   )
 
-  // A donation: ether from the connected wallet to the Based House wallet.
+  // A donation: ether from the connected wallet to basedhouse.base.eth.
   const treasuryBefore = await reader.getBalance({
     address: DonationAddress,
   })
@@ -1288,7 +1288,7 @@ try {
   })
   await shot(again, "07-donated")
   check(
-    "Donate sends the chosen amount from the wallet to the Based House wallet",
+    "Donate sends the chosen amount from the wallet to basedhouse.base.eth",
     (await reader.getBalance({
               address: DonationAddress,
             })) - treasuryBefore === 10_000_000_000_000_000n

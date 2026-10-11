@@ -5,6 +5,7 @@ import * as BunUuidPlugin from "./BunUuidPlugin.ts"
 import * as HomeRoute from "./HomeRoute.ts"
 import IndexHtml from "./index.html" with { type: "file" }
 import * as VendorRoute from "./map/vendorRoute.ts"
+import * as PublicRoute from "./PublicRoute.ts"
 import * as Telemetry from "./Telemetry"
 import * as WalletRoute from "./wallet/walletRoute.ts"
 
@@ -23,6 +24,7 @@ export default Layer
     VendorRoute.layer,
     WalletRoute.layer,
     HomeRoute.layer,
+    PublicRoute.layer,
   )
   .pipe(
     Layer.provide([

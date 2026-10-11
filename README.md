@@ -14,6 +14,9 @@ The Homebase website serves as a hub for the Base community, featuring:
 - Homebase Live: what is streaming ahead, from calendars the Homebase wallet
   adds, in any timezone
 - Video gallery of past events and workshops
+- Learn (`/learn`, linked from the footer): the Based House flywheel, how
+  $home volume funds Based House, launches on SeedMe need $home locks, and
+  attention brings more lockers
 - Farcaster Frame integration
 
 ## 🚀 Tech Stack
@@ -156,8 +159,9 @@ bun run build   # writes dist/
 ### Fly.io
 
 `bun start` runs the full Bun server, which is what the Dockerfile and
-`fly.toml` deploy. It reads the same attestations on Base as the Vercel deploy
-and keeps nothing on disk:
+`fly.toml` deploy. It reads the same attestations on Base as the Vercel deploy,
+serves the files in `public/` at their own paths as Vercel does, and keeps
+nothing on disk:
 
 ```bash
 fly deploy

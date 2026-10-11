@@ -49,15 +49,17 @@ admin, and an admin's add dialog, opened before connecting, offers the same
 wallets the header does. A reload picks the last wallet back up without a
 prompt, on every card at once.
 
-Donate sends the chosen amount of ether from the connected wallet to the
-Based House wallet, the address whose $home fees the funding card counts,
-and shows the transaction on BaseScan once it has landed. Without a wallet,
+Donate sends the chosen amount of ether from the connected wallet to
+basedhouse.base.eth (`0x8515…Dca88`), the Based House Mumbai fund SeedMe takes
+donations to as well, and shows the transaction on BaseScan once it has
+landed. From 7 to 11 October 2026 it sent to the creator-fee address the
+card counts instead. Without a wallet,
 Donate opens the way in, saying what amount is waiting, and the donation
 goes ahead once a wallet connects, the wallet asking first as it always
 does. While a transaction is under way, its button says whether it waits on
 the wallet or on Base, the same words for a donation, a pin, a calendar and
 a removal. The amount raised reads the pool's fee ledger only, by design:
-direct donations are not added to it.
+donations to basedhouse.base.eth are not added to it.
 
 Buy $home still goes to SeedMe. $home trades in a Uniswap v4 pool behind a
 Doppler hook, and a swap written here would need the pool's key, a quote
@@ -99,8 +101,8 @@ SeedMe's own page does it today. Lock $home goes to SeedMe by design.
   header, a feed read again only after a while and kept when it goes quiet,
   a feed that never answered, a stranger's calendar left out, a link that is
   not a feed left out, a feed attested twice as one, the indexer down, the
-  preview's refusals and its answer), and the donation address against the
-  funding card's.
+  preview's refusals and its answer), and the donation address: basedhouse.base.eth,
+  not the creator-fee address the funding card counts.
 - `bun run e2e`, against the Bun server and the Vercel layout: the admin
   connects from the header and the map offers Add an event; Homebase Live
   opens empty and offers the admin a calendar; a feed link that is not https
@@ -109,7 +111,7 @@ SeedMe's own page does it today. Lock $home goes to SeedMe by design.
   listed for everyone; the day an event is listed under follows the chosen
   zone across the date line; removing it takes them off; Donate refuses an
   amount of nothing before the wallet is asked, then sends the chosen amount
-  to the Based House wallet; the header dialog names the connected wallet and
+  to basedhouse.base.eth; the header dialog names the connected wallet and
   disconnecting there takes the admin controls away; Donate without a wallet
   opens the way in; a wallet that is nobody connects and sees no way to add
   anything; on a phone the wallet button sits inside the screen and clear of

@@ -1,0 +1,700 @@
+<html lang="en" data-theme="light">
+<!-- The Based House flywheel, the final build from seedme-xyz/SeedMe
+     (claude/intelligent-franklin-hyyxtm, 90734c2), shown at /learn. Changed
+     for homebase.love: always light, on white, in the site blue and Lato;
+     Apply opens the site application form; the fund is named by its Basename,
+     basedhouse.base.eth; the page pads it, so it keeps no padding of its own
+     or room for the hidden phone bar. -->
+<title>Based House Flywheel</title>
+<meta name="description" content="Building a sustainable ecosystem with $home. Lockers trade $home, fees fund Based House, launches need locks, and attention brings more lockers: one number in, five years out.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap');
+  .wrap>header,.sticky{display:none!important} .wrap{padding:0 0 8px!important} body{margin:0;padding-bottom:0!important}
+
+  /* Layout: one column. The wheel is the page: a ring of five stations with the one input in the middle, the year
+     shown underneath, a line that narrates it, and a guided walk. Then how to read it, and the ways to take part.
+     Dark-first in SeedMe's ink and seed blue (BRAND.md); homebase.love shows the light theme in its own blue, in Lato. */
+  :root{
+    color-scheme:dark;
+    --bg:#030712; --fg:#f9fafb; --muted:#9ca3af; --faint:#8b93a3;
+    --line:rgba(255,255,255,.10); --track:rgba(255,255,255,.06);
+    --surface:#0b1220; --surface-2:rgba(255,255,255,.05);
+    --accent:#0052ff; --accent-ink:#7d9eff; --accent-wash:rgba(0,82,255,.16);
+    --series:#5b8cff; --pos:#22c55e;
+    --font:Lato,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      color-scheme:light;
+      --bg:#ffffff; --fg:#030712; --muted:#4b5563; --faint:#6b7280;
+      --line:rgba(3,7,18,.12); --track:rgba(3,7,18,.06);
+      --surface:#ffffff; --surface-2:rgba(3,7,18,.04);
+      --accent:#0000ff; --accent-ink:#0000cc; --accent-wash:rgba(0,0,255,.08);
+      --series:#0000ff; --pos:#15803d;
+    }
+  }
+  :root[data-theme="light"]{
+    color-scheme:light;
+    --bg:#ffffff; --fg:#030712; --muted:#4b5563; --faint:#6b7280;
+    --line:rgba(3,7,18,.12); --track:rgba(3,7,18,.06);
+    --surface:#ffffff; --surface-2:rgba(3,7,18,.04);
+    --accent:#0000ff; --accent-ink:#0000cc; --accent-wash:rgba(0,0,255,.08);
+    --series:#0000ff; --pos:#15803d;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  ::selection{background:var(--accent);color:#fff}
+  :focus-visible{outline:2px solid var(--accent-ink);outline-offset:2px}
+  a{color:var(--accent-ink)}
+  .wrap{max-width:1200px;margin:0 auto;padding-block:36px 64px;padding-inline:20px}
+  header{text-align:center}
+  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+  h1{font-size:clamp(28px,4.2vw,42px);line-height:1.1;letter-spacing:-.02em;font-weight:700;margin:0 0 12px;text-wrap:balance}
+  .thesis{font-size:17px;color:var(--muted);max-width:70ch;margin:0 auto;text-wrap:pretty}
+  h2{font-size:18px;letter-spacing:-.01em;font-weight:650;margin:0}
+  button{font:inherit}
+
+  /* The wheel */
+  .hero{margin-top:22px;position:relative}
+  .scroller{overflow-x:auto;overscroll-behavior-x:contain;position:relative}
+  .swipe{display:none;margin:6px 0 0;text-align:center;font-size:12px;color:var(--muted)}
+  .scroller svg{display:block;width:100%;max-width:1200px;max-height:calc(100vh - 150px);min-width:760px;height:auto;margin:0 auto;font-family:var(--font);shape-rendering:geometricPrecision;text-rendering:optimizeLegibility;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+  .track{fill:none;stroke:var(--track);stroke-width:14}
+  .track.chord{stroke-width:9}
+  .rim{fill:none;stroke:var(--line);stroke-width:1;opacity:.55}
+  .halo{fill:var(--accent);opacity:.06;transition:opacity .2s;pointer-events:none}
+  .station:hover .halo,.station:focus-visible .halo,.station.pinned .halo{opacity:.16}
+  .station circle.disc,.station .glyph{transform-box:fill-box;transform-origin:center;transition:transform .2s,stroke .15s}
+  .station:hover circle.disc,.station:hover .glyph,.station.pinned circle.disc,.station.pinned .glyph{transform:scale(1.06)}
+  #flow{position:absolute;left:0;top:0;pointer-events:none}
+  .hubpad{width:100%;height:100%;touch-action:none;cursor:pointer}
+  .sweep{fill:none;stroke:var(--accent);stroke-width:14;opacity:.22;stroke-dasharray:0 1;pointer-events:none}
+  .edge{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linecap:round;transition:opacity .25s,stroke-width .15s}
+  .edge.chord{stroke:var(--accent-ink);stroke-width:2}
+  .edge.hot{stroke-width:5}
+  .edge.inflow{stroke:var(--accent-ink);stroke-width:2;stroke-dasharray:5 5}
+  .motion{fill:none;stroke:none}
+  .lens{fill:var(--accent-wash);transition:opacity .25s}
+  .station circle.disc{fill:var(--surface);stroke:var(--line);stroke-width:1.25;transition:stroke .15s}
+  .station{cursor:pointer;outline:none;transition:opacity .25s}
+  .station:hover circle.disc,.station:focus-visible circle.disc,.station.pinned circle.disc{stroke:var(--accent-ink);stroke-width:2}
+  .glyph{fill:none;stroke:var(--accent-ink);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+  .glyph.f{fill:var(--accent-ink);stroke:none}
+  .pulse{fill:none;stroke:var(--accent-ink);stroke-width:2;opacity:0;pointer-events:none}
+  .pulse.go{animation:pulse .6s ease-out}
+  @keyframes pulse{0%{opacity:.6;r:28}100%{opacity:0;r:44}}
+  .title{font-size:16px;font-weight:650;fill:var(--fg);pointer-events:none}
+  .step{font-size:12.5px;fill:var(--muted);pointer-events:none}
+  .c{text-anchor:middle} .e{text-anchor:end}
+  .zone{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;fill:var(--accent-ink);text-anchor:middle;pointer-events:none;transition:fill .2s}
+  .hubnum.long{font-size:44px} .hubnum.xlong{font-size:36px}
+  .hubnum{font-size:58px;font-weight:700;letter-spacing:-.035em;fill:var(--fg);text-anchor:middle;font-variant-numeric:tabular-nums}
+  .hubnum tspan.u{font-size:23px;font-weight:600;letter-spacing:0;fill:var(--muted)}
+  .hubsub{font-size:12.5px;fill:var(--muted);text-anchor:middle}
+  .cnt{fill:var(--accent-ink);font-variant-numeric:tabular-nums;pointer-events:auto;cursor:text}
+  .mult{font-size:32px;font-weight:700;letter-spacing:-.02em;fill:var(--accent-ink);text-anchor:middle;pointer-events:none;transition:fill .2s;font-variant-numeric:tabular-nums}
+  .reach{font-size:11.5px;fill:var(--muted);text-anchor:middle;pointer-events:none;font-variant-numeric:tabular-nums;transition:fill .2s}
+  .multbtn{cursor:pointer;outline:none}
+  .multbtn .hit{fill:transparent;stroke:none}
+  .multup{cursor:pointer;outline:none}
+  .multup .hit{fill:transparent;stroke:none}
+  .multup:hover .mult,.multup:focus-visible .mult{fill:var(--fg)}
+  .multup:focus-visible .hit{stroke:var(--accent-ink);stroke-width:2}
+  .mult,.hubnum{transform-box:fill-box;transform-origin:center}
+  .mult.pop{animation:pop .3s ease-out}
+  .multbtn:focus-visible .hit{stroke:var(--accent-ink);stroke-width:2}
+  .pill{fill:var(--track);stroke:var(--line);stroke-width:1;transition:fill .2s,stroke .2s;pointer-events:none}
+  .knob{fill:var(--fg);transition:transform .2s;pointer-events:none}
+  .multbtn[aria-checked="true"] .pill{fill:var(--accent);stroke:var(--accent)}
+  .multbtn[aria-checked="true"] .knob{fill:#fff;transform:translateX(17px)}
+  .hubedit.cnt{border-radius:8px;padding:0 .25em;font-weight:650;letter-spacing:-.01em}
+  .hubedit{position:absolute;z-index:5;font:inherit;font-weight:700;letter-spacing:-.035em;text-align:center;color:var(--accent-ink);background:var(--surface);border:2px solid var(--accent-ink);border-radius:14px;outline:none;padding:0;font-variant-numeric:tabular-nums;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+  svg.attn-off .mult{fill:var(--muted)} svg.attn-off .zone{fill:var(--faint)} svg.attn-off .reach{fill:var(--faint)} svg.attn-off .lens{opacity:.45}
+  .station.hub{cursor:pointer;touch-action:none}
+  .station.hub:focus-visible .hubnum,.station.hub:hover .hubnum,.station.hub.pinned .hubnum{fill:var(--accent-ink)}
+  .hubnum{transition:fill .15s;transform-box:fill-box;transform-origin:center}
+  .hubnum.pop{animation:pop .3s ease-out}
+  @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.06)}100%{transform:scale(1)}}
+  /* phones: the wheel is scaled to about 0.88, so the SVG type steps up; after the base rules so it wins */
+  @media (max-width:700px){.swipe{display:block} .scroller svg{min-width:0} .station .title,.station .step,.labels,#eX{display:none} .hubsub{font-size:16px} .zone{font-size:14px} .reach{font-size:13.5px} .mult{font-size:38px} .hubnum{font-size:64px} .hubnum.long{font-size:48px} .hubnum.xlong{font-size:40px} .hubnum tspan.u{font-size:26px}}
+  /* phones: the stations are listed under the ring instead of labelled around it */
+  .mrows{display:none}
+  @media (max-width:700px){
+    .mrows{display:grid;gap:6px;margin-top:12px}
+    .mrow{display:grid;grid-template-columns:30px 1fr;column-gap:10px;align-items:center;text-align:left;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);cursor:pointer;font:inherit}
+    .mrow svg{width:30px;height:30px;display:block;grid-row:span 2}
+    .mrow .disc{fill:var(--surface);stroke:var(--line);stroke-width:1.25}
+    .mrow .mt{font-size:15px;font-weight:650;line-height:1.25}
+    .mrow .ms{font-size:12.5px;color:var(--muted);line-height:1.3}
+    .mrow b{color:var(--accent-ink);font-weight:650;font-variant-numeric:tabular-nums;cursor:text}
+    .mrow.pinned,.mrow:focus-visible{border-color:var(--accent-ink)}
+    .mrow.ext{opacity:.85;cursor:default}
+  }
+
+  /* Under the wheel: the year shown, the line that narrates it, the walk */
+  .years{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 14px;margin-top:12px}
+  .play{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);display:grid;place-items:center;cursor:pointer;padding:0}
+  .play:hover{background:var(--accent-wash)}
+  .play svg{width:14px;height:14px;fill:currentColor;display:block}
+  .yearnow{font-size:14px;font-weight:650;color:var(--fg);font-variant-numeric:tabular-nums;padding:7px 4px;border-radius:6px}
+  .yearnow.tick{animation:yeartick .5s ease-out}
+  @keyframes yeartick{0%{opacity:.2;transform:translateY(4px)}100%{opacity:1;transform:none}}
+  .years .unit{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+  @media (max-width:700px){.years{gap:8px 10px}}
+  .reader{font-size:14.5px;color:var(--muted);text-align:center;max-width:80ch;margin:12px auto 0;text-wrap:pretty}
+  .reader b{color:var(--fg);font-weight:600}
+  .btn{font-size:13px;font-weight:600;padding:7px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{background:var(--accent-wash)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:#0000cc}
+  .btn.ghost{border-color:transparent;background:transparent;color:var(--accent-ink)}
+  .btn small{font-size:11px;font-weight:500;opacity:.75}
+  .sticky{display:none}
+  @media (max-width:700px){
+    .sticky{display:flex;gap:6px;position:fixed;left:0;right:0;bottom:0;z-index:50;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line)}
+    .sticky a,.sticky button{flex:1;text-align:center;font-size:12.5px;padding:8px 4px}
+    .sticky.hidden{display:none}
+    body{padding-bottom:64px}
+  }
+
+  /* How to read it, and taking part */
+  .read{margin-top:40px;max-width:74ch;margin-inline:auto;text-align:center}
+  .read p{text-wrap:pretty}
+  .cta{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);text-align:center}
+  .cta .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin-top:10px}
+  .donate{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;font-size:13px;color:var(--muted)}
+  .donate code{font:inherit;font-variant-numeric:tabular-nums;color:var(--fg);user-select:all;background:var(--surface-2);padding:2px 6px;border-radius:6px}
+  .donate .copied{color:var(--pos);font-weight:600}
+  @media (prefers-reduced-motion:reduce){.pulse.go{animation:none}.hubnum.pop{animation:none}.mult.pop{animation:none}.yearnow.tick{animation:none}.lens,.station circle.disc,.station .glyph{transition:none}}
+</style>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Based House × SeedMe</p>
+    <h1>The Based House flywheel</h1>
+    <p class="thesis">Lockers trade $home; every trade pays a creator fee, and 100% of it funds Based House. The house cultivates founders, founders launch on SeedMe, every claim needs a $home lock, and attention brings more lockers. Set the ETH number; everything else follows.</p>
+  </header>
+
+  <main>
+  <section class="hero" aria-label="The flywheel">
+    <div class="scroller" id="scroller">
+      <svg id="wheel" viewBox="0 0 860 600" role="group" aria-label="A ring of five stations: $home, whose lockers trade and pay fees that fund Based House, which cultivates talent, which launches on SeedMe, whose claims need a $home lock, which grows the pool of lockers. The inner arc is the small loop: attention from the house and its launches brings more lockers; its switch is under the growth number. The number in the middle is the one input, ETH to Based House each year, with minus and plus beside it. The counts beside each station are for the year shown.">
+        <defs>
+          <marker id="arrow-accent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/></marker>
+          <marker id="arrow-ink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent-ink)"/></marker>
+          <radialGradient id="glowg"><stop offset="0" style="stop-color:var(--accent);stop-opacity:.45"/><stop offset="1" style="stop-color:var(--accent);stop-opacity:0"/></radialGradient>
+        </defs>
+
+        <path class="lens" d="M235,236.7 A205,205 0 0 1 625,236.7 A800,800 0 0 1 235,236.7 Z"/>
+        <circle id="glow" cx="430" cy="345" r="165" fill="url(#glowg)" style="opacity:0"/>
+        <circle class="track" cx="430" cy="300" r="205"/>
+        <circle class="rim" cx="430" cy="300" r="198"/><circle class="rim" cx="430" cy="300" r="212"/>
+        <circle id="sweep" class="sweep" cx="430" cy="300" r="205" pathLength="1" transform="rotate(-90 430 300)"/>
+        <path class="track chord" d="M625,236.7 A800,800 0 0 1 235,236.7"/>
+
+        <g aria-hidden="true">
+          <path id="m1" class="motion" d="M430,95 A205,205 0 0 1 625,236.7"/>
+          <path id="m2" class="motion" d="M625,236.7 A205,205 0 0 1 550.5,465.9"/>
+          <path id="m3" class="motion" d="M550.5,465.9 A205,205 0 0 1 309.5,465.9"/>
+          <path id="m4" class="motion" d="M309.5,465.9 A205,205 0 0 1 235,236.7"/>
+          <path id="m5" class="motion" d="M235,236.7 A205,205 0 0 1 430,95"/>
+          <path id="m0" class="motion" d="M625,236.7 A800,800 0 0 1 235,236.7"/>
+        </g>
+
+        <g id="edges">
+          <path id="e1" class="edge" marker-end="url(#arrow-accent)" d="M462.1,97.5 A205,205 0 0 1 612.7,206.9"/>
+          <path id="e2" class="edge" marker-end="url(#arrow-accent)" d="M632.5,267.9 A205,205 0 0 1 575,445"/>
+          <path id="e3" class="edge" marker-end="url(#arrow-accent)" d="M523.1,482.7 A205,205 0 0 1 336.9,482.7"/>
+          <path id="e4" class="edge" marker-end="url(#arrow-accent)" d="M285,445 A205,205 0 0 1 227.5,267.9"/>
+          <path id="e5" class="edge" marker-end="url(#arrow-accent)" d="M247.3,206.9 A205,205 0 0 1 397.9,97.5"/>
+          <path id="e0" class="edge chord" marker-end="url(#arrow-ink)" d="M593.9,243.8 A800,800 0 0 1 266.1,243.8"/>
+          <path id="eX" class="edge inflow" marker-end="url(#arrow-ink)" d="M398,541 Q350,541 320,494"/>
+        </g>
+
+        <g class="labels" aria-hidden="true">
+          <text class="title c" id="extTitle" x="430" y="556">outside founders <tspan class="cnt" id="k-ext">(1)</tspan></text>
+          <text class="step c" id="extLbl" x="430" y="573">interested in SeedMe’s value proposition</text>
+        </g>
+        <g class="multup" id="multUp" role="button" tabindex="0" aria-label="Attention multiplier 5×. Press to raise it">
+          <rect class="hit" x="380" y="158" width="100" height="40" rx="12"/>
+          <text class="mult" id="k-mult" x="430" y="188">5×</text>
+        </g>
+        <g class="multbtn" id="multBtn" role="switch" aria-checked="true" tabindex="0" aria-label="Attention, on. Press to switch it off">
+          <rect class="hit" x="365" y="198" width="130" height="54" rx="14"/>
+          <text class="reach" id="k-reach" x="430" y="206">2,800 people reached</text>
+          <text class="zone" id="zoneLbl" x="430" y="220">attention</text>
+          <rect class="pill" x="413" y="228" width="34" height="16" rx="8"/><circle class="knob" cx="421.5" cy="236" r="5.5"/>
+        </g>
+
+        <g class="station hub" id="n0" data-node="eth" tabindex="0" role="spinbutton" aria-valuemin="1" aria-valuemax="1000000" aria-valuenow="5" aria-valuetext="5 ETH" aria-label="ETH to Based House each year, the one input. Arrow keys change it; Enter types a number">
+          <text id="hubNum" class="hubnum" x="430" y="318">5<tspan class="u" dx="6">ETH</tspan></text>
+          <text id="hubCap" class="hubsub" x="430" y="346">Based House funding</text>
+          <foreignObject x="320" y="262" width="220" height="96"><div xmlns="http://www.w3.org/1999/xhtml" class="hubpad"></div></foreignObject>
+        </g>
+
+
+        <g class="stations">
+          <g class="station" id="n1" data-node="home" tabindex="0" role="button" aria-pressed="false" aria-label="$home: tap for what it is and what to measure">
+            <circle class="halo" cx="430" cy="95" r="38"/>
+            <circle class="pulse" id="p1" cx="430" cy="95" r="28"/>
+            <circle class="disc" cx="430" cy="95" r="28"/>
+            <circle class="glyph" cx="430" cy="95" r="9"/>
+            <text class="glyph f c" x="430" y="100" style="font-size:13px;font-weight:700">$</text>
+            <text class="title c" x="430" y="42">$home <tspan class="cnt" id="k-vol">(752 ETH)</tspan></text>
+            <text class="step c" x="430" y="59">total volume generated</text>
+          </g>
+          <g class="station" id="n2" data-node="house" tabindex="0" role="button" aria-pressed="false" aria-label="Based House: tap for what it is and what to measure">
+            <circle class="halo" cx="625" cy="236.7" r="38"/>
+            <circle class="pulse" id="p2" cx="625" cy="236.7" r="28"/>
+            <circle class="disc" cx="625" cy="236.7" r="28"/>
+            <path class="glyph" d="M616,237.7 L625,228.7 L634,237.7 M619,235.7 V246.2 H631 V235.7"/>
+            <text class="title" x="661" y="233">Based House <tspan class="cnt" id="k-house">(1)</tspan></text>
+            <text class="step" x="661" y="250">$home fees fund residency</text>
+          </g>
+          <g class="station" id="n3" data-node="talent" tabindex="0" role="button" aria-pressed="false" aria-label="Talent: tap for what it is and what to measure">
+            <circle class="halo" cx="550.5" cy="465.9" r="38"/>
+            <circle class="pulse" id="p3" cx="550.5" cy="465.9" r="28"/>
+            <circle class="disc" cx="550.5" cy="465.9" r="28"/>
+            <circle class="glyph" cx="550.5" cy="460.9" r="3.6"/>
+            <path class="glyph" d="M543,474.4 C543,467.4 558,467.4 558,474.4"/>
+            <text class="title" x="592" y="462">Talent <tspan class="cnt" id="k-res">(15)</tspan></text>
+            <text class="step" x="592" y="479">cultivated at Based House</text>
+          </g>
+          <g class="station" id="n4" data-node="launches" tabindex="0" role="button" aria-pressed="false" aria-label="SeedMe launches: tap for what it is and what to measure">
+            <circle class="halo" cx="309.5" cy="465.9" r="38"/>
+            <circle class="pulse" id="p4" cx="309.5" cy="465.9" r="28"/>
+            <circle class="disc" cx="309.5" cy="465.9" r="28"/>
+            <path class="glyph" d="M309.5,456.9 C314.5,460.9 314.5,467.9 312.5,472.9 H306.5 C304.5,467.9 304.5,460.9 309.5,456.9 Z M306.5,472.9 L304.5,475.9 M312.5,472.9 L314.5,475.9"/>
+            <text class="title e" x="268" y="462">SeedMe launches <tspan class="cnt" id="k-launch">(2)</tspan></text>
+            <text class="step e" x="268" y="479">incubated by Homebase</text>
+          </g>
+          <g class="station" id="n5" data-node="lock" tabindex="0" role="button" aria-pressed="false" aria-label="Lock $home: tap for what it is and what to measure">
+            <circle class="halo" cx="235" cy="236.7" r="38"/>
+            <circle class="pulse" id="p5" cx="235" cy="236.7" r="28"/>
+            <circle class="disc" cx="235" cy="236.7" r="28"/>
+            <rect class="glyph" x="228" y="235.7" width="14" height="10" rx="2"/>
+            <path class="glyph" d="M231,235.7 V232.7 A4,4 0 0 1 239,232.7 V235.7"/>
+            <text class="title e" x="193" y="233">Lock $home <tspan class="cnt" id="k-lock">(200)</tspan></text>
+            <text class="step e" x="193" y="250">more supply locked</text>
+          </g>
+        </g>
+      </svg>
+      <canvas id="flow" aria-hidden="true"></canvas>
+    </div>
+    <p class="swipe" aria-hidden="true">Tap the number for 1 more ETH, hold it to type · tap the × to raise attention · tap a station for what it is · double-tap a count to type</p>
+    <div class="mrows" id="mrows">
+      <button class="mrow" type="button" data-node="home" aria-pressed="false"><svg viewBox="0 0 28 28" aria-hidden="true" focusable="false"><circle class="disc" cx="14" cy="14" r="13.5"/><circle class="glyph" cx="14" cy="14" r="7"/><text class="glyph f" x="14" y="18" style="font-size:10.5px;font-weight:700;text-anchor:middle">$</text></svg><span class="mt">$home <b id="m-vol">(752 ETH)</b></span><span class="ms">total volume generated</span></button>
+      <button class="mrow" type="button" data-node="house" aria-pressed="false"><svg viewBox="0 0 28 28" aria-hidden="true" focusable="false"><circle class="disc" cx="14" cy="14" r="13.5"/><path class="glyph" d="M5,15 L14,6 L23,15 M8,13 V23.5 H20 V13"/></svg><span class="mt">Based House <b id="m-house">(1)</b></span><span class="ms">$home fees fund residency</span></button>
+      <button class="mrow" type="button" data-node="talent" aria-pressed="false"><svg viewBox="0 0 28 28" aria-hidden="true" focusable="false"><circle class="disc" cx="14" cy="14" r="13.5"/><circle class="glyph" cx="14" cy="9.5" r="3.6"/><path class="glyph" d="M6.5,22.5 C6.5,15.5 21.5,15.5 21.5,22.5"/></svg><span class="mt">Talent <b id="m-res">(15)</b></span><span class="ms">cultivated at Based House</span></button>
+      <button class="mrow" type="button" data-node="launches" aria-pressed="false"><svg viewBox="0 0 28 28" aria-hidden="true" focusable="false"><circle class="disc" cx="14" cy="14" r="13.5"/><path class="glyph" d="M14,5 C19,9 19,16 17,21 H11 C9,16 9,9 14,5 Z M11,21 L9,24 M17,21 L19,24"/></svg><span class="mt">SeedMe launches <b id="m-launch">(2)</b></span><span class="ms">incubated by Homebase</span></button>
+      <button class="mrow" type="button" data-node="lock" aria-pressed="false"><svg viewBox="0 0 28 28" aria-hidden="true" focusable="false"><circle class="disc" cx="14" cy="14" r="13.5"/><rect class="glyph" x="7" y="13" width="14" height="10" rx="2"/><path class="glyph" d="M10,13 V10 A4,4 0 0 1 18,10 V13"/></svg><span class="mt">Lock $home <b id="m-lock">(200)</b></span><span class="ms">more supply locked</span></button>
+      <div class="mrow ext"><svg viewBox="0 0 28 28" aria-hidden="true" focusable="false"><circle class="disc" cx="14" cy="14" r="13.5"/><path class="glyph" d="M8,21 Q8,9 21,7" stroke-dasharray="3 3"/><path class="glyph" d="M17,7 L21,7 L21,11"/></svg><span class="mt">outside founders <b id="m-ext">(1)</b></span><span class="ms">interested in SeedMe’s value proposition</span></div>
+    </div>
+    <div class="years" id="yearsRow" role="group" aria-label="Year shown on the ring">
+      <button class="play" type="button" id="play" aria-pressed="true" aria-label="Pause"><svg viewBox="0 0 14 14" aria-hidden="true" focusable="false"><path id="playIcon" d="M2,1 H5 V13 H2 Z M9,1 H12 V13 H9 Z"/></svg></button>
+      <span class="yearnow" id="yearNow" aria-live="polite">Year 1 of 5</span>
+      <span class="unit" id="unitNote">1 dot = 10 ETH of volume · 1 lap = 1 year (6 s)</span>
+    </div>
+    <p class="reader" id="reader"></p>
+  </section>
+
+  <section class="read" aria-labelledby="read-h">
+    <h2 id="read-h">How to read it</h2>
+    <p>Volume is where the loop starts: lockers trade $home, every trade pays a creator fee, and 100% of it funds Based House. The base is today: 200 lockers trading about $28 of $home a day each, which is 5 ETH a year. 5 ETH funds a residency of 15; a residency launches one founder and draws one from outside; every claim needs a lock of 10,000 $home for a year, so each launch’s 50 claimers join the pool. Attention is the multiplier: at 5×, a residency and its two launches reach 2,800 people, and one in four of them lock, which takes the pool from 200 to 1,000 in the first year. Attention begets attention: each year a residency reaches √2 times the people it reached the year before, so the multiplier climbs from 5× to 15.5× by year five and the pool passes a million lockers in it. The number in the small loop is the wheel’s growth for the year on the ring: tap it to raise the attention, each step reaching 800 more people per residency, and the switch under it shows the locks alone. The year under the ring is where today’s plan reaches the numbers shown; past year five it reads 5+. Tap the ETH number for one more, hold it to type, drag it up or down, or double-click any count. The wheel runs five years, one lap each, and ends on the totals; pause to hold a moment, play to run it again. It is the plan at its best: nothing fades and no lock lapses. Every new locker trades, so the loop ends where it began, in volume: in its first 33 days $home traded 1,580 WETH, 10.5 ETH of it to the house, well above this floor.</p>
+  </section>
+
+  <nav class="sticky" id="sticky" aria-label="Take part">
+    <a class="btn" href="https://seedme.xyz/lock" target="_blank" rel="noreferrer">Lock</a><a class="btn" href="https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24" target="_blank" rel="noreferrer">Buy</a><a class="btn" href="https://forms.gle/Jc6an9SCdYaP95us9" target="_blank" rel="noreferrer">Apply</a><a class="btn" href="#addr">Donate</a>
+  </nav>
+  <section class="cta" aria-labelledby="cta-h">
+    <h2 id="cta-h">Take part</h2>
+    <div class="row">
+      <a class="btn primary" href="https://forms.gle/Jc6an9SCdYaP95us9" target="_blank" rel="noreferrer">Apply to Based House</a>
+      <a class="btn" href="https://seedme.xyz/lock" target="_blank" rel="noreferrer">Lock $home</a>
+      <a class="btn" href="https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24" target="_blank" rel="noreferrer">Buy $home</a>
+      <a class="btn" href="https://seedme.xyz/profile" target="_blank" rel="noreferrer">Launch on SeedMe <small>approved founders</small></a>
+    </div>
+    <div class="row">
+      <span class="donate">Donate ETH on Base to <b>basedhouse.base.eth</b> <code id="addr">0x85158c82c5c1274081b8994152270ED5395Dca88</code> <button class="btn" type="button" id="copy">Copy address</button><span id="copied" class="copied" hidden>Copied</span></span>
+    </div>
+  </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+  if (!document.documentElement.lang) document.documentElement.lang = 'en';
+  const SEEDME_CUT = 0.10, SEED_BUYBACK = 0.025;   // FeeRouter: 5% treasury, 2.5% buys $seed, 2.5% buys the token, 90% to the LP beneficiary
+  const T = 6, PHI = 0, UNIT = 10; let MAXP = 1400;   // a year is one lap of the ring and takes six seconds, the run ends on the totals, a dot is ten ETH of volume; this year's activity brings next year's volume, so year 0 is exactly the input
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.appendChild(n); return n; };
+  const fmtN = (n) => Math.round(n).toLocaleString('en-US');
+  const fmtEth = (x) => (x === 0 ? '0' : x < 1 ? x.toFixed(2) : x < 10 ? x.toFixed(1) : fmtN(x));
+  const fmtEthW = (x) => (Number.isInteger(Math.round(x * 1000) / 1000) ? fmtN(x) : fmtEth(x));   // whole ETH stays whole
+  const fmtK = (n) => n >= 1e12 ? (n/1e12).toFixed(1).replace(/\.0$/, '') + 'T' : n >= 1e9 ? (n/1e9).toFixed(1).replace(/\.0$/, '') + 'B' : n >= 1e6 ? (n/1e6).toFixed(1).replace(/\.0$/, '') + 'M' : n >= 1e4 ? Math.round(n/1e3) + 'k' : fmtN(n);
+  const plural = (n, one, many) => (n === 1 ? one : many);
+  const round1 = (x) => Math.round(x * 10) / 10;
+  const fmtHub = (x) => (Math.round(x * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });   // the input: whole, or to the cent of an ETH
+
+  // ---------- the plan: whole-number ratios; the loop starts and ends with the lockers' volume ----------
+  const FEE = 0.00665;                                   // Bankr: a trader pays 1.75% a swap; 0.665% of volume reaches the creator as WETH, and 100% of it funds the house
+  const ETHUSD = 2700;                                   // the first month's average: $4.27M over 1,580 WETH
+  const PLAN = { budget: 5, cap: 15, launchPerRes: 1, extPerRes: 1, claimersPerLaunch: 50, lockersPerEth: 40, reachPerX: 800, attnGain: Math.SQRT2, lockShare: 4, turns: 4, basePool: 200 };
+  const MAXF0 = 1000000;   // the most ETH a year the input takes
+  // 200 lockers trading about $28 of $home a day each is 5 ETH a year to the house, so 40 lockers per ETH; 5 ETH funds one residency of 15; one launch from the house and
+  // one from outside per residency; every claim needs a lock, so a launch's 50 claimers join the pool. Attention has a level, the × of growth at the base: each × is 200
+  // more lockers per residency, and one in four of the people reached lock, so a residency and its two launches reach 800 people per ×, 2,800 at 5×: the pool goes from
+  // 200 to 1,000 in the first year and past 4,000 in the second, the pace the first month set with 200 lockers before any launch. Attention begets attention: each plan
+  // year a residency reaches √2 times the people of the year before, so attention doubles every two years and the multiplier climbs from 5× to 15.5× by year five; past
+  // the plan's last year the reach holds. The plan runs from today's 200 lockers, and the year under the ring is where it reaches the numbers shown: past year five, 5+
+  const P = Object.assign({}, PLAN);
+  let f0 = 5, attnOn = true, level = 5;   // the input, the attention switch, and the attention level (2 to 10)
+  const lockerDay = 1 / (PLAN.lockersPerEth * FEE * 365);   // ETH one locker trades a day
+  function reachAt(yr){ return PLAN.reachPerX * (level - 1.5) * Math.pow(PLAN.attnGain, Math.min(yr, PLAN.turns + 1) - 1); }   // people a residency and its launches reach in plan year yr
+  let planPools = [];   // the pool at the start of each plan year from today's base, for the level and switch in force
+  function makePlan(){ planPools = []; let L = PLAN.basePool; for (let i = 0; i <= PLAN.turns + 1; i++){ planPools.push(L); const houses = Math.floor(L / (PLAN.lockersPerEth * PLAN.budget) + 1e-9), claims = houses * (PLAN.launchPerRes + PLAN.extPerRes) * PLAN.claimersPerLaunch, att = attnOn ? Math.floor(houses * reachAt(i + 1) / PLAN.lockShare) : 0; L += claims + att; } }
+  function yearOf(L){ let y = 0; for (const p of planPools) if (p <= L + 1e-9) y++; return Math.max(1, y); }   // 1 to turns+1 is a plan year; turns+2 is past the plan
+  function simulate(){
+    const rows = []; let L = Math.round(f0 * PLAN.lockersPerEth);
+    for (let i = 0; i <= PLAN.turns; i++){
+      const yr = yearOf(L);
+      const V = L / (PLAN.lockersPerEth * FEE), F = V * FEE;                                  // the pool's volume for the year, and the creator fee on it
+      const houses = Math.floor(F / PLAN.budget + 1e-9), R = PLAN.cap * houses;
+      const startedRes = houses * PLAN.launchPerRes, startedExt = houses * PLAN.extPerRes, launches = startedRes + startedExt;
+      const claimRes = startedRes * PLAN.claimersPerLaunch, claimExt = startedExt * PLAN.claimersPerLaunch;   // every claim needs a lock
+      const A = attnOn ? houses * reachAt(yr) : 0;                                                  // people reached: 800 per × per residency, its two launches included, growing with the plan year
+      const att = Math.floor(A / PLAN.lockShare);                                               // of the people reached, one in four lock
+      const newLockers = claimRes + claimExt + att, poolAfter = L + newLockers;
+      const opened = i === 0 ? 0 : Math.max(0, houses - rows[i - 1].houses);
+      rows.push({ V, F, houses, opened, R, startedRes, startedExt, liveRes: startedRes, liveExt: startedExt, pool: L, year: yr, newLockers, claimers: claimRes + claimExt, att, A, poolAfter, refunded: 0,
+                  mult: poolAfter / L, mechMult: (L + claimRes + claimExt) / L, mKeep: 1, mRes: claimRes / L, mExt: claimExt / L, mInit: att / L, mBase: 0 });
+      L = poolAfter;
+    }
+    return rows;
+  }
+  let M = null;
+  function totalsOf(rows){ const sum = (f) => rows.reduce((a, r) => a + f(r), 0); return { V: sum(r => r.V), F: sum(r => r.F), houses: sum(r => r.houses), R: sum(r => r.R), launches: sum(r => r.startedRes + r.startedExt), ext: sum(r => r.startedExt), newLockers: sum(r => r.newLockers), A: sum(r => r.A), refunded: 0, pool: rows[rows.length - 1].poolAfter }; }
+  function countOf(key, y, rows, tot){ const sum = y === 'sum', r = sum ? tot : rows[y]; return key === 'vol' ? r.V : key === 'house' ? r.houses : key === 'res' ? r.R : key === 'launch' ? (sum ? r.launches : r.startedRes + r.startedExt) : key === 'ext' ? (sum ? r.ext : r.startedExt) : r.pool; }
+  function solveF0(key, target){   // the smallest input whose count, for the year shown, reaches the target: every count rises with the input
+    if (key === 'lock' && shown === 0) return Math.min(MAXF0, Math.max(1, Math.round(target) / PLAN.lockersPerEth));   // today's pool is 40 lockers per ETH
+    const saved = f0, at = (x) => { f0 = x; const rows = simulate(); return countOf(key, shown, rows, totalsOf(rows)); };
+    let lo = 1, hi = MAXF0, x;
+    if (at(lo) >= target) x = lo; else if (at(hi) < target) x = hi;
+    else { for (let i = 0; i < 36; i++){ const mid = (lo + hi) / 2; if (at(mid) >= target) hi = mid; else lo = mid; } x = hi; }
+    if (key === 'vol' || key === 'lock') x = Math.round(x * PLAN.lockersPerEth) / PLAN.lockersPerEth;   // on the locker grid: 40 lockers per ETH
+    else { const w = Math.floor(x + 1e-9); x = at(w) >= target ? w : w + 1; }   // whole ETH for whole counts
+    f0 = saved; return Math.min(MAXF0, Math.max(1, x));
+  }
+  const sig2 = (x) => { if (x < 10) return Math.max(1, Math.round(x)); const p = Math.pow(10, Math.floor(Math.log10(x)) - 1); return Math.round(x / p) * p; };   // two significant digits
+  function recompute(){
+    makePlan();
+    const rows = simulate(), n = rows.length, tot = totalsOf(rows);
+    const geo = Math.pow(rows[n - 1].poolAfter / rows[0].pool, 1 / n);   // the wheel's growth a year, over the run
+    M = { st: [1, 1, 1, 1, 1], level, rows, geo, tot, spawnRes: rows.map(r => Math.min(3, r.mRes)), unit: UNIT, totalF: tot.F, lastF: rows[n - 1].F };
+    window.__M = M;   // exact rows for the page's own checks
+  }
+
+  // ---------- the line under the wheel: a station when pinned, otherwise nothing ----------
+  const NODE_TEXT = {
+    home: ['$home', 'Launched by Bankr on Doppler. A trader pays 1.75% a swap; 0.665% of volume reaches the creator in WETH, and 100% of it funds the house. The volume is the lockers’: 200 of them trading about $28 of $home a day each is 5 ETH a year. In its first 33 days $home traded 1,580 WETH. Measure: volume and creator fees a year.'],
+    house: () => ['Based House', fmtEthW(P.budget) + ' ETH funds one residency of ' + P.cap + ', and the count follows the fees: ' + fmtEthW(2 * P.budget) + ' ETH a year runs two. The fund at basedhouse.base.eth counts creator fees plus ETH donations since 1 September 2026, toward a 10 ETH goal for Mumbai. Homebase backs based communities worldwide to run their own. Measure: ETH in, residents housed, reserve, people reached.'],
+    talent: () => ['Talent', P.cap + ' residents a residency; ' + (P.launchPerRes === 1 ? 'one of them launches' : P.launchPerRes + ' of them launch') + ' on SeedMe each year. Launching is approved-founders only today. Measure: residents who ship.'],
+    launches: () => ['SeedMe launches', (P.launchPerRes === 1 ? 'One launch' : P.launchPerRes + ' launches') + ' from each residency and ' + (P.extPerRes === 1 ? 'one' : P.extPerRes) + ' from outside. No creation fee. The founder keeps 2 to 10%, vesting 3 to 24 months. A first phase runs 7 to 28 days, up to 1,000 claimers at $1 to $1,000, and settles only at 100% fill, else everyone is refunded. Every claim needs a $home lock, so a launch’s ' + P.claimersPerLaunch + ' claimers join the pool. Measure: launches a year, phases filled.'],
+    eth: ['Based House funding', 'ETH to Based House each year: the one input, as the fund will report it. Every count on the ring follows from it. Tap the number for one more ETH, hold it to type one in, or drag it up or down. Double-click any count to set that instead.'],
+    lock: () => ['Lock $home', 'The pool: ' + fmtN(M.rows[0].pool) + ' lockers today, each with 10,000 $home locked for a year; one lock covers every claim, bigger locks run 2 to 4 years, allocation is an equal split. The pool is what trades, so every new locker is next year’s volume: the loop ends where it started. Claimers hold the launch’s LP and its fees; every claimer needs a Farcaster account. Measure: lockers, $home locked.']
+  };
+  let pinned = null, shown = 0;
+  function reader(pair){
+    if (typeof pair === 'function') pair = pair();
+    const r = $('reader'); r.textContent = '';
+    if (pair[0]) { const b = document.createElement('b'); b.textContent = pair[0] + '. '; r.appendChild(b); }
+    r.appendChild(document.createTextNode(pair[1]));
+  }
+  function paintReader(){   // the line under the years speaks only when asked: a pinned station
+    const r = $('reader');
+    if (pinned){ reader(NODE_TEXT[pinned]); r.hidden = false; return; }
+    r.textContent = ''; r.hidden = true;
+  }
+
+  // ---------- the ring: the hub is the input, the counts are the year shown ----------
+  function stepF0(dir){   // a step is one whole ETH, and a tap on the number is one; a typed-in fraction rounds toward the step
+    const v = f0, nv = Math.max(1, Math.min(MAXF0, (dir > 0 ? Math.floor(v) : Math.ceil(v)) + dir));
+    if (nv === v) return;
+    f0 = nv; update();
+    const hn = $('hubNum'); hn.classList.remove('pop'); void hn.getBoundingClientRect(); hn.classList.add('pop');
+  }
+  function paintHub(){
+    const hn = $('hubNum'), txt = fmtHub(f0); hn.textContent = ''; hn.appendChild(document.createTextNode(txt)); hn.classList.toggle('long', txt.length > 6 && txt.length <= 8); hn.classList.toggle('xlong', txt.length > 8);
+    const u = document.createElementNS(NS, 'tspan'); u.setAttribute('class', 'u'); u.setAttribute('dx', '6'); u.textContent = 'ETH'; hn.appendChild(u);
+    const g = $('n0'); g.setAttribute('aria-valuenow', String(Math.round(f0 * 100) / 100)); g.setAttribute('aria-valuetext', fmtHub(f0) + ' ETH to Based House each year');
+  }
+  const curVal = {};
+  const COUNT_LABEL = { vol: '$home volume, ETH', house: 'residencies', res: 'residents', launch: 'SeedMe launches', ext: 'outside founders', lock: 'new locks' };   // the counts a double-click can set
+  function setCount(key, val, fmt){   // a count counts up or down to its new value, on the ring and in the phone list
+    const els = ['k-' + key, 'm-' + key].map($).filter(Boolean), from = curVal[key]; curVal[key] = val;
+    const put = (v) => els.forEach(t => { t.textContent = fmt(v); });
+    if (reduced || from === undefined || from === val){ put(val); return; }
+    const t0 = performance.now(), dur = 450;
+    const step = (now) => { if (curVal[key] !== val) return; const f = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - f, 3); put(Math.round(from + (val - from) * e)); if (f < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
+  const fmtC = (n) => (n >= 1e9 ? fmtK(n) : n >= 1e8 ? Math.round(n / 1e6) + 'M' : n >= 1e4 ? fmtK(n) : fmtN(n));   // a count that would run past the frame
+  const fmtV = (n) => (n >= 1e6 ? fmtK(n) : fmtN(n));   // volume stays exact to the ETH below a million
+  const fmtMult = (m) => Math.abs(m - 1) < 0.005 ? '1×' : (Math.round(m * 10) / 10).toFixed(1).replace(/\.0$/, '') + '×';
+  function sweep(f){ $('sweep').setAttribute('stroke-dasharray', Math.max(0, Math.min(1, f)).toFixed(3) + ' 1'); }
+  function show(y){   // paint one year, or the totals, on the ring
+    shown = y;
+    const sum = y === 'sum', r = sum ? M.tot : M.rows[y];
+    setCount('vol', Math.round(r.V), v => '(' + fmtV(v) + ' ETH)');
+    setCount('house', r.houses, v => '(' + fmtC(v) + ')');
+    setCount('res', r.R, v => '(' + fmtC(v) + ')');
+    setCount('launch', sum ? r.launches : r.startedRes + r.startedExt, v => '(' + fmtC(v) + ')');
+    setCount('ext', sum ? r.ext : r.startedExt, v => '(' + fmtC(v) + ')');
+    setCount('lock', r.pool, v => '(' + fmtC(v) + ')');
+    const m = sum ? M.geo : r.mult;
+    $('k-mult').textContent = fmtMult(m);   // the wheel's growth a year, with or without attention
+    $('k-reach').textContent = attnOn ? fmtK(r.A) + ' people reached' : 'locks alone';
+    $('multBtn').setAttribute('aria-label', attnOn ? 'Attention on: the wheel grows ' + fmtMult(m) + ' a year. Press to switch it off' : 'Attention off: the wheel grows ' + fmtMult(m) + ' a year from locks alone. Press to switch it on');
+    $('multUp').setAttribute('aria-label', 'Attention multiplier ' + level + '× in year one, growing each year' + (attnOn ? '' : ', switched off') + '. Press to raise it' + (level >= 10 ? ', back to 2×' : ''));
+    const yn = $('yearNow'), label = sum ? 'Over ' + (P.turns + 1) + ' years' : r.year > P.turns + 1 ? (P.turns + 1) + '+ years' : 'Year ' + r.year + ' of ' + (P.turns + 1); if (yn.textContent !== label){ yn.textContent = label; yn.classList.remove('tick'); void yn.offsetWidth; yn.classList.add('tick'); }
+    if (sum) $('sweep').setAttribute('stroke-dasharray', '0.188 0.012'); else if (!playing) sweep((elapsed - y * T) / T);
+    paintReader();
+  }
+  function paintStatic(){
+    $('wheel').classList.toggle('attn-off', !attnOn);
+    $('multBtn').setAttribute('aria-checked', attnOn ? 'true' : 'false');
+    $('e0').style.opacity = attnOn ? '' : '0.3';
+    $('glow').style.opacity = Math.max(0, Math.min(0.85, (M.geo - 1) * 1.6)).toFixed(2);
+    $('unitNote').textContent = '1 dot = ' + UNIT + ' ETH of volume · 1 lap = 1 year (' + T + ' s)';
+  }
+
+  // ---------- the flow: one dot per unit of volume, drawn on a canvas over the ring ----------
+  const seg = {};
+  function sample(id){ const p = $(id), Lp = p.getTotalLength(), N = 160, pts = []; for (let i=0;i<=N;i++){ const q = p.getPointAtLength(Lp*i/N); pts.push(q.x, q.y); } return { L: Lp, pts }; }
+  function initSegs(){ ['a1','a2','a3','a4','a5'].forEach((k,i) => { seg[k] = sample('m'+(i+1)); seg[k].dur = T/5; }); seg.chord = sample('m0'); seg.chord.dur = T*3/5; Object.keys(seg).forEach(k => { seg[k].spd = seg[k].L / seg[k].dur; }); }   // ring and small loop both take one year
+  function posOn(s, u){ const n = s.pts.length/2 - 1, xx = Math.max(0, Math.min(1, u))*n, i = Math.floor(xx), f = xx - i, j = Math.min(n, i+1); return [ s.pts[2*i] + (s.pts[2*j]-s.pts[2*i])*f, s.pts[2*i+1] + (s.pts[2*j+1]-s.pts[2*i+1])*f ]; }
+  const Pts = [];
+  const acc = { step:[0,0,0,0,0], chord:0, big:0, base:0, ext:0 };
+  function keep(i, w){ acc.step[i] += w; if (acc.step[i] >= 1 - 1e-9){ acc.step[i] -= 1; return true; } return false; }
+  function copies(key, w){ acc[key] += w; const n = Math.floor(acc[key] + 1e-9); acc[key] -= n; return n; }
+  function spawn(segName, u, keepW){ if (Pts.length >= MAXP) return null; const p = { seg: segName, u: u || 0, dieU: null, fade: 1, grow: false }; if (keepW !== undefined && !keep(keepW.i, keepW.w)) p.dieU = 0.3 + 0.4*Math.random(); Pts.push(p); return p; }
+  function kill(p){ const i = Pts.indexOf(p); if (i >= 0) Pts.splice(i, 1); return false; }
+  const lastPulse = [0,0,0,0,0,0,0];
+  function pulse(stationIdx, now){ if (now - lastPulse[stationIdx] < 350) return; lastPulse[stationIdx] = now; const c = $('p'+stationIdx); c.classList.remove('go'); void c.getBoundingClientRect(); c.classList.add('go'); }
+  let elapsed = 0, holding = false, flowAlpha = 1, lastDt = 1/60;
+  function yearNow(){ return Math.min(M.rows.length-1, Math.floor(elapsed/T)); }
+  function dotsOpacity(o){ flowAlpha = o; }
+  function advance(p, dt, now){
+    const s = seg[p.seg];
+    p.u += dt / s.dur;
+    if (p.grow){ p.fade = Math.min(1, p.fade + dt / 0.45); if (p.fade >= 1) p.grow = false; }
+    if (p.dieU !== null && p.u >= p.dieU){ p.fade -= dt/0.45; if (p.fade <= 0) return kill(p); return true; }
+    if (p.u >= 1){
+      const carry = (p.u - 1) * s.dur, death = () => 0.3 + 0.4*Math.random();
+      switch (p.seg){
+        case 'a5': pulse(1, now); p.seg = 'a1'; p.u = carry/seg.a1.dur; p.dieU = null; break;
+        case 'a1': { pulse(2, now); const row = M.rows[yearNow()]; const nc = copies('chord', row.mKeep + row.mInit), nb = copies('big', M.spawnRes[yearNow()]);
+          for (let k=0;k<nb;k++) spawn('a2', carry/seg.a2.dur, {i:1, w:M.st[1]});
+          if (nc >= 1){ p.seg = 'chord'; p.u = carry/seg.chord.dur; p.dieU = null; for (let k=1;k<nc;k++) spawn('chord', Math.max(0, carry/seg.chord.dur - k * 0.022)); } else return kill(p);
+          break; }
+        case 'a2': pulse(3, now); p.seg = 'a3'; p.u = carry/seg.a3.dur; p.dieU = keep(2, M.st[2]) ? null : death(); break;
+        case 'a3': pulse(4, now); p.seg = 'a4'; p.u = carry/seg.a4.dur; p.dieU = keep(3, M.st[3]) ? null : death(); break;
+        case 'a4': pulse(5, now); p.seg = 'a5'; p.u = carry/seg.a5.dur; p.dieU = keep(4, M.st[4]) ? null : death(); break;
+        default:   pulse(5, now); p.seg = 'a5'; p.u = carry/seg.a5.dur; p.dieU = null; break;   // the chord ends at Lock $home
+      }
+    }
+    return true;
+  }
+  // the canvas covers the ring only and draws in the ring's own units; quality steps down by itself on a slow device
+  const flow = $('flow'), fctx = flow.getContext('2d');
+  const RING = { x: 198, y: 68, w: 464, h: 464 };   // the ring with its discs and glow, in SVG units
+  const QCAP = [450, 800, 1400], QDPR = [1, 1.5, 2], D = 13;   // dots per tier, device pixels per CSS pixel per tier, dot size in units
+  let fit = { scale: 1, dpr: 1, x0: 0, y0: 0, w: 0, h: 0 }, sprites = null, darkMode = true, STATIONS = [], Q = 2, slow = 0, tickMin = 1 / 30;
+  const SP = new Float32Array(6 * QCAP[2]);   // scratch per frame: x, y, tail dx, tail dy, alpha, size
+  const rgba = (hex, a) => { const h = hex.replace('#', ''); const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')'; };
+  function makeSprites(){
+    const cs = getComputedStyle(document.documentElement), col = (cs.getPropertyValue('--series') || '#5b8cff').trim() || '#5b8cff';
+    darkMode = (cs.colorScheme || cs.getPropertyValue('color-scheme') || 'dark').trim().indexOf('light') < 0;
+    const cv = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+    const dot = cv(64, 64), g = dot.getContext('2d'), rg = g.createRadialGradient(32, 32, 0, 32, 32, 32);   // a bright core with a soft glow
+    (darkMode ? [[0, 1], [0.2, 0.95], [0.42, 0.3], [1, 0]] : [[0, 1], [0.3, 0.9], [0.5, 0.2], [1, 0]]).forEach(([o, a]) => rg.addColorStop(o, rgba(col, a)));
+    g.fillStyle = rg; g.fillRect(0, 0, 64, 64);
+    const tail = cv(128, 32), t = tail.getContext('2d'), lg = t.createLinearGradient(0, 0, 128, 0);   // the wake behind a moving dot: a taper that fades out
+    lg.addColorStop(0, rgba(col, 0)); lg.addColorStop(0.5, rgba(col, darkMode ? 0.3 : 0.28)); lg.addColorStop(1, rgba(col, darkMode ? 0.85 : 0.7));
+    t.fillStyle = lg; t.beginPath(); t.moveTo(0, 16); t.lineTo(128, 6); t.lineTo(128, 26); t.closePath(); t.fill();
+    sprites = { dot, tail };
+  }
+  function fitCanvas(){
+    const svg = $('wheel'), sc = $('scroller'), r = svg.getBoundingClientRect(), b = sc.getBoundingClientRect(), vb = svg.viewBox.baseVal, dpr = Math.min(QDPR[Q], window.devicePixelRatio || 1);
+    const scale = Math.min(r.width / vb.width, r.height / vb.height), ox = (r.width - vb.width * scale) / 2 - vb.x * scale, oy = (r.height - vb.height * scale) / 2 - vb.y * scale;
+    const x0 = Math.max(RING.x, vb.x), y0 = Math.max(RING.y, vb.y), x1 = Math.min(RING.x + RING.w, vb.x + vb.width), y1 = Math.min(RING.y + RING.h, vb.y + vb.height);
+    flow.style.left = (r.left - b.left + sc.scrollLeft + ox + x0 * scale) + 'px'; flow.style.top = (r.top - b.top + sc.scrollTop + oy + y0 * scale) + 'px'; flow.style.width = ((x1 - x0) * scale) + 'px'; flow.style.height = ((y1 - y0) * scale) + 'px';
+    const w = Math.round((x1 - x0) * scale * dpr), h = Math.round((y1 - y0) * scale * dpr); if (flow.width !== w || flow.height !== h){ flow.width = w; flow.height = h; }
+    fit = { scale, dpr, x0, y0, w, h };
+    STATIONS = [1, 2, 3, 4, 5].map(i => { const c = document.querySelector('#n' + i + ' circle.disc'); return [+c.getAttribute('cx'), +c.getAttribute('cy')]; });
+    if (!sprites) makeSprites();
+    render();
+  }
+  function render(withStreaks){
+    const { scale, dpr, x0, y0, w, h } = fit; if (!w || !sprites) return;
+    const k = scale * dpr;
+    fctx.setTransform(1, 0, 0, 1, 0, 0); fctx.clearRect(0, 0, w, h);
+    const dim = flowAlpha; if (dim <= 0.001) return;
+    fctx.globalCompositeOperation = darkMode ? 'lighter' : 'source-over';
+    const moving = playing && !holding && !reduced, streaks = (moving || withStreaks) && Q > 0, base = darkMode ? 0.8 : 0.9;
+    let n = 0;
+    for (let i = 0; i < Pts.length && n < QCAP[2]; i++){
+      const p = Pts[i], s = seg[p.seg], xy = posOn(s, p.u), small = p.seg === 'chord'; let a = dim * p.fade * (small ? 0.62 : 1), len = streaks ? s.spd * 0.14 : 0;   // the wake is a seventh of a second of travel
+      for (let j = 0; j < 5; j++){ const dx = xy[0] - STATIONS[j][0], dy = xy[1] - STATIONS[j][1], d2 = dx*dx + dy*dy; if (d2 < 4096){ const d = Math.sqrt(d2); a *= Math.max(0, Math.min(1, (d - 27) / 10)); len = Math.min(len, Math.max(0, d - 31)); break; } }   // a station absorbs the flow and emits it again; no dot or wake over a disc
+      if (a <= 0.01) continue;
+      const j = n * 6; SP[j] = xy[0]; SP[j+1] = xy[1]; SP[j+4] = Math.min(1, a) * base; SP[j+5] = small ? D * 0.9 : D;
+      if (len > 1){ const q = posOn(s, p.u - 0.015), dx = xy[0] - q[0], dy = xy[1] - q[1], m = Math.hypot(dx, dy) || 1; SP[j+2] = dx / m * len; SP[j+3] = dy / m * len; } else { SP[j+2] = 0; SP[j+3] = 0; }
+      n++;
+    }
+    if (streaks){ const tail = sprites.tail; for (let i = 0; i < n; i++){ const j = i * 6, tx = SP[j+2], ty = SP[j+3]; if (tx === 0 && ty === 0) continue; const L = Math.hypot(tx, ty), c = tx / L, sn = ty / L, sx = L / 128 * k, sy = SP[j+5] / 32 * k; fctx.globalAlpha = SP[j+4]; fctx.setTransform(c * sx, sn * sx, -sn * sy, c * sy, (SP[j] - x0) * k, (SP[j+1] - y0) * k); fctx.drawImage(tail, -128, -16, 128, 32); } }
+    fctx.setTransform(k, 0, 0, k, -x0 * k, -y0 * k);
+    const dot = sprites.dot; for (let i = 0; i < n; i++){ const j = i * 6, d = SP[j+5]; fctx.globalAlpha = SP[j+4]; fctx.drawImage(dot, SP[j] - d/2, SP[j+1] - d/2, d, d); }
+    if (moving){ const f = (elapsed - yearNow() * T) / T, th = -Math.PI/2 + f * 2 * Math.PI; fctx.globalAlpha = 0.45 * dim; fctx.drawImage(dot, 430 + 205 * Math.cos(th) - 22, 300 + 205 * Math.sin(th) - 22, 44, 44); }   // the head of the year, where the sweep is
+    fctx.globalAlpha = 1;
+  }
+  function setQ(q){ Q = Math.max(0, Math.min(2, q)); MAXP = QCAP[Q]; for (let i = MAXP; i < Pts.length; i++) if (Pts[i].dieU === null) Pts[i].dieU = Pts[i].u; fitCanvas(); }
+  function govern(raw, ms){ if (Q === 0 || raw > 0.5 || raw <= 0) return; tickMin = Math.max(1 / 125, Math.min(tickMin, raw)); if (ms > 9 || raw > 2.2 * tickMin) slow += raw; else slow = Math.max(0, slow - raw * 2); if (slow > 1){ slow = 0; setQ(Q - 1); } }   // a second of frames that cost most of the budget, or run at under half the display's rate, drops one tier
+  function probe(){ let best = 1e9; for (let i = 0; i < 3; i++){ const t0 = performance.now(); render(true); best = Math.min(best, performance.now() - t0); } if (best > 24) setQ(0); else if (best > 12) setQ(1); render(); }   // a device that cannot draw the first frame fast enough starts lower
+  function reseed(){   // the year's volume as dots, spread around the small loop
+    Pts.length = 0;
+    acc.step = [0,0,0,0,0]; acc.chord = 0; acc.big = 0; acc.base = 0; acc.ext = 0;
+    const n0 = Math.max(1, Math.round(M.rows[yearNow()].V / M.unit));
+    for (let k=0;k<n0;k++){ const tau = (k/n0)*T; if (tau < 1.2) spawn('a1', tau/1.2); else if (tau < 4.8) spawn('chord', (tau-1.2)/3.6); else spawn('a5', (tau-4.8)/1.2); }
+    warm();
+    for (let i = Pts.length - 1; i >= 0; i--) if (Pts[i].dieU !== null) Pts.splice(i, 1);   // the silent year multiplied the dots; keep this year's volume, spread as the loop left it
+    for (let i = Pts.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); const t = Pts[i]; Pts[i] = Pts[j]; Pts[j] = t; }
+    Pts.length = Math.min(Pts.length, n0);
+    render();
+  }
+  function rebalance(){   // match the dots to the year's volume without moving the ones already there
+    const target = Math.max(1, Math.round(M.rows[yearNow()].V / M.unit)), alive = Pts.filter(p => p.dieU === null);
+    if (alive.length < target){ for (let k = alive.length; k < target; k++){ const u = Math.random() * T, p = u < 1.2 ? spawn('a1', u / 1.2) : u < 4.8 ? spawn('chord', (u - 1.2) / 3.6) : spawn('a5', (u - 4.8) / 1.2); if (!p) break; p.fade = 0.05; p.grow = true; } }
+    else if (alive.length > target){ for (let i = alive.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); const t = alive[i]; alive[i] = alive[j]; alive[j] = t; } alive.slice(0, alive.length - target).forEach(p => { p.dieU = p.u; }); }
+    render(); if (!playing) settle();
+  }
+  let settling = 0;
+  function settle(){   // while paused, the fades still finish
+    settling = 0; if (playing) return;
+    let active = false; const dt = reduced ? 1 : 1 / 60;
+    for (let i = Pts.length - 1; i >= 0; i--){ const p = Pts[i]; if (p.grow){ p.fade = Math.min(1, p.fade + dt / 0.45); if (p.fade >= 1) p.grow = false; else active = true; } else if (p.dieU !== null){ p.fade -= dt / 0.45; if (p.fade <= 0) kill(p); else active = true; } }
+    render(); if (active) settling = requestAnimationFrame(settle);
+  }
+  function tick(dt, now){   // one step of the flow: inflows, then every dot
+    const y = yearNow(), row = M.rows[y];
+    acc.ext += (row.mExt * row.V / M.unit) * dt/T; while (acc.ext >= 1){ acc.ext -= 1; spawn('a4', 0); }
+    for (let i=Pts.length-1;i>=0;i--) advance(Pts[i], dt, now);
+  }
+  function warm(){ for (let k = 0; k < 180; k++) tick(1/30, 0); render(); }   // a silent year, so the ring is mid-flow from the first frame
+  window.__flow = { count: () => Pts.length, fit: () => fit, q: () => Q, setQ, maxp: () => MAXP, dark: () => darkMode, unit: () => M.unit };
+  let playing = false, last = null, rafId = 0, visible = true;
+  function frame(ts){
+    rafId = 0;
+    if (!playing || !visible){ last = null; return; }
+    if (last === null) last = ts;
+    const raw = (ts - last)/1000, dt = Math.min(0.05, raw); last = ts; lastDt = dt;
+    elapsed += dt;
+    if (elapsed >= (P.turns+1)*T){ elapsed = (P.turns+1)*T - 0.001; holding = true; dotsOpacity(0.35); show('sum'); setPlaying(false); return; }   // the run ends on the totals and stays there until play
+    const y = yearNow();
+    const t0 = performance.now(); tick(dt, ts); render(); govern(raw, performance.now() - t0);
+    if (y !== shown) show(y);
+    sweep((elapsed - y*T)/T);
+    rafId = requestAnimationFrame(frame);
+  }
+  function setPlaying(on){ playing = on; if (!on) render(); const b = $('play'); b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.setAttribute('aria-label', on ? 'Pause' : 'Play'); $('playIcon').setAttribute('d', on ? 'M2,1 H5 V13 H2 Z M9,1 H12 V13 H9 Z' : 'M3,1 L13,7 L3,13 Z'); if (on && !rafId) rafId = requestAnimationFrame(frame); }
+
+  // ---------- wiring ----------
+  function update(){ recompute(); paintHub(); paintStatic(); saveState(); rebalance(); show(shown); }
+  function stateObj(){ const o = {}; if (f0 !== 5) o.f0 = f0; if (level !== 5) o.g = level; if (!attnOn) o.attn = 0; return o; }
+  function applyState(o){ if (!o) return; if ('f0' in o){ const v = Number(o.f0); if (Number.isFinite(v)) f0 = Math.min(MAXF0, Math.max(1, v)); } if ('g' in o){ const v = Math.round(Number(o.g)); if (Number.isFinite(v)) level = Math.min(10, Math.max(2, v)); } if ('attn' in o) attnOn = Number(o.attn) !== 0; }
+  let saveT = 0;
+  function saveState(){ clearTimeout(saveT); saveT = setTimeout(() => { const o = stateObj(); const s = JSON.stringify(o); try { if (Object.keys(o).length) localStorage.setItem('bh-flywheel', s); else localStorage.removeItem('bh-flywheel'); } catch (e) {} try { const q = Object.keys(o).map(k => k + '=' + o[k]).join('&'); history.replaceState(null, '', q ? '#' + q : location.pathname + location.search); } catch (e) {} }, 200); }
+  function loadState(){ let o = null; try { if (location.hash.length > 1){ o = {}; location.hash.slice(1).split('&').forEach(kv => { const [k, v] = kv.split('='); if (k) o[decodeURIComponent(k)] = decodeURIComponent(v || ''); }); } } catch (e) { o = null; } if (!o){ try { const s = localStorage.getItem('bh-flywheel'); if (s) o = JSON.parse(s); } catch (e) { o = null; } } applyState(o); }
+  const EDGE_OF = { home: 'e1', house: 'e2', talent: 'e3', launches: 'e4', lock: 'e5' };
+  function syncRows(){ document.querySelectorAll('.mrow[data-node]').forEach(r => { const on = r.getAttribute('data-node') === pinned; r.classList.toggle('pinned', on); r.setAttribute('aria-pressed', on ? 'true' : 'false'); }); }
+  document.querySelectorAll('.mrow[data-node]').forEach(row => { const key = row.getAttribute('data-node'); row.addEventListener('click', () => { document.querySelector('.station[data-node="' + key + '"]').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); pulse(['home', 'house', 'talent', 'launches', 'lock'].indexOf(key) + 1, performance.now()); }); });
+  Object.keys(COUNT_LABEL).forEach(key => { [$('k-' + key), $('m-' + key)].forEach(el => { if (!el) return; el.addEventListener('dblclick', (ev) => { ev.preventDefault(); ev.stopPropagation(); openEdit(key, el); }); }); });
+  const narrow = window.matchMedia('(max-width:700px)');
+  function fitRing(){ $('wheel').setAttribute('viewBox', narrow.matches ? '200 60 460 460' : '0 0 860 600'); }   // phones show the ring alone and list the stations under it
+  narrow.addEventListener('change', () => { fitRing(); fitCanvas(); });
+  if ('ResizeObserver' in window) new ResizeObserver(() => fitCanvas()).observe($('wheel')); else window.addEventListener('resize', fitCanvas);
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { makeSprites(); render(); });
+  if ('MutationObserver' in window) new MutationObserver(() => { makeSprites(); render(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  document.querySelectorAll('.station').forEach(g => {
+    const key = g.getAttribute('data-node'), edge = EDGE_OF[key] ? $(EDGE_OF[key]) : null;
+    const over = () => { if (edge) edge.classList.add('hot'); };
+    const out = () => { if (edge) edge.classList.remove('hot'); };
+    g.addEventListener('pointerenter', over); g.addEventListener('focus', () => { if (g.matches(':focus-visible')) over(); });
+    g.addEventListener('pointerleave', out); g.addEventListener('blur', out);
+    g.addEventListener('click', () => { if (key === 'eth'){ if (suppressHubClick){ suppressHubClick = false; return; } stepF0(1); return; } document.querySelectorAll('.station.pinned').forEach(x => { x.classList.remove('pinned'); x.setAttribute('aria-pressed', 'false'); }); pinned = pinned === key ? null : key; if (pinned){ g.classList.add('pinned'); g.setAttribute('aria-pressed', 'true'); } syncRows(); paintReader(); });
+    g.addEventListener('keydown', (ev) => {
+      if (key === 'eth'){ if (ev.key === 'ArrowUp' || ev.key === 'ArrowRight'){ ev.preventDefault(); ev.stopPropagation(); stepF0(1); return; } if (ev.key === 'ArrowDown' || ev.key === 'ArrowLeft'){ ev.preventDefault(); ev.stopPropagation(); stepF0(-1); return; } if (ev.key === 'PageUp' || ev.key === 'PageDown'){ ev.preventDefault(); ev.stopPropagation(); stepF0(ev.key === 'PageUp' ? 10 : -10); return; } }
+      if (key === 'eth' && ev.key === 'Enter'){ ev.preventDefault(); ev.stopPropagation(); editViaKeyboard = true; openEdit('eth'); return; }   // Enter types a value; Space is one more ETH
+      if (key === 'eth' && ev.key === ' '){ ev.preventDefault(); ev.stopPropagation(); stepF0(1); return; }
+      if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); g.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); }
+    });
+  });
+  let editing = null, editViaKeyboard = false, editClose = null, suppressHubClick = false;
+  {   // drag the number up or down, ten pixels an ETH; hold it still to type a value
+    const g = $('n0'); let drag = null, holdT = 0;
+    g.addEventListener('contextmenu', (ev) => ev.preventDefault());
+    g.addEventListener('pointerdown', (ev) => { if (ev.pointerType === 'mouse' && ev.button !== 0) return; drag = { y: ev.clientY, v: f0, moved: false, held: false }; try { g.setPointerCapture(ev.pointerId); } catch (e) {} clearTimeout(holdT); holdT = setTimeout(() => { if (drag && !drag.moved){ drag.held = true; openEdit('eth'); } }, 520); });
+    g.addEventListener('pointermove', (ev) => { if (!drag || drag.held) return; const dy = drag.y - ev.clientY; if (!drag.moved && Math.abs(dy) < 6) return; drag.moved = true; clearTimeout(holdT); const nv = Math.max(1, Math.min(MAXF0, Math.round(drag.v + dy / 10))); if (nv !== f0){ f0 = nv; update(); } });
+    const end = () => { clearTimeout(holdT); if (drag && (drag.moved || drag.held)){ suppressHubClick = true; setTimeout(() => { suppressHubClick = false; }, 0); } drag = null; };
+    g.addEventListener('pointerup', end); g.addEventListener('pointercancel', end);
+  }
+  function openEdit(key, anchor){   // the number itself takes a typed value; so does any count, and the number is solved from it
+    if (editing) return;
+    key = key || 'eth';
+    const hero = document.querySelector('.hero'), wheel = $('wheel'), hn = $('hubNum'), target = anchor || (key === 'eth' ? hn : $('k-' + key)), r = target.getBoundingClientRect(), s = hero.getBoundingClientRect(), scale = wheel.getBoundingClientRect().width / wheel.viewBox.baseVal.width;
+    const inp = document.createElement('input'); inp.className = 'hubedit' + (key === 'eth' ? '' : ' cnt'); inp.type = 'text'; inp.inputMode = 'numeric'; inp.autocomplete = 'off'; inp.setAttribute('aria-label', key === 'eth' ? 'ETH to Based House each year' : COUNT_LABEL[key]);
+    const cur = key === 'eth' ? f0 : curVal[key], initial = key === 'eth' ? String(Math.round(cur * 100) / 100) : String(Math.round(cur)); inp.value = initial;
+    const fs = key === 'eth' ? parseFloat(getComputedStyle(hn).fontSize) * scale : (anchor ? parseFloat(getComputedStyle(anchor).fontSize) : 16 * scale);
+    const side = key === 'eth' ? 'centre' : (!anchor || anchor === $('k-' + key)) && (key === 'lock' || key === 'launch') ? 'right' : 'left';   // end-anchored labels grow leftwards
+    const fit = () => { const w = key === 'eth' ? Math.max(r.width + 28 * scale, 200 * scale) : Math.max(r.width + 12, Math.max(2, inp.value.length) * fs * 0.64 + 18); inp.style.width = w + 'px'; inp.style.left = (side === 'centre' ? r.left - s.left + r.width / 2 - w / 2 : side === 'right' ? r.right - s.left - w : r.left - s.left) + 'px'; };
+    inp.style.cssText = 'top:' + (r.top - s.top - 4) + 'px;height:' + (r.height + 8) + 'px;font-size:' + fs + 'px';
+    fit(); inp.addEventListener('input', fit);
+    hero.appendChild(inp); editing = inp; target.style.visibility = 'hidden';
+    const close = (commit, refocus) => { if (editing !== inp) return; const raw = inp.value.replace(/[^0-9.]/g, ''), v = Number(raw); editing = null; editClose = null; inp.remove(); target.style.visibility = ''; if (commit && raw !== '' && Number.isFinite(v) && inp.value.trim() !== initial){ const nf = key === 'eth' ? Math.min(MAXF0, Math.max(1, Math.round(v * 100) / 100)) : solveF0(key, v); if (nf !== f0){ f0 = nf; update(); const h = $('hubNum'); h.classList.remove('pop'); void h.getBoundingClientRect(); h.classList.add('pop'); } } if (refocus) $('n0').focus(); };
+    const back = key === 'eth' && editViaKeyboard; editViaKeyboard = false;
+    inp.addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.key === 'Enter'){ ev.preventDefault(); close(true, back); } else if (ev.key === 'Escape'){ ev.preventDefault(); close(false, back); } });
+    editClose = close;
+    inp.addEventListener('blur', () => close(true, false));
+    inp.focus(); inp.select();
+  }
+  {   // the small loop: hover for what attention does this year; the multiplier is the switch
+    const over = () => { $('e0').classList.add('hot'); }, out = () => { $('e0').classList.remove('hot'); };
+    const lens = document.querySelector('.lens'), mb = $('multBtn');
+    lens.addEventListener('pointerenter', over); lens.addEventListener('pointerleave', out);
+    mb.addEventListener('pointerenter', over); mb.addEventListener('pointerleave', out); mb.addEventListener('focus', over); mb.addEventListener('blur', out);
+    const flip = () => { attnOn = !attnOn; update(); };
+    mb.addEventListener('click', flip);
+    const mu = $('multUp'), setLevel = (v) => { level = Math.min(10, Math.max(2, v)); update(); const t = $('k-mult'); t.classList.remove('pop'); void t.getBoundingClientRect(); t.classList.add('pop'); };
+    mu.addEventListener('pointerenter', over); mu.addEventListener('pointerleave', out); mu.addEventListener('focus', over); mu.addEventListener('blur', out);
+    mu.addEventListener('click', () => setLevel(level >= 10 ? 2 : level + 1));   // each tap is one more ×; past 10 it starts again at 2
+    mu.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); setLevel(level >= 10 ? 2 : level + 1); } else if (ev.key === 'ArrowUp' || ev.key === 'ArrowRight'){ ev.preventDefault(); setLevel(level + 1); } else if (ev.key === 'ArrowDown' || ev.key === 'ArrowLeft'){ ev.preventDefault(); setLevel(level - 1); } });
+    mb.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); flip(); } });
+  }
+  $('play').addEventListener('click', () => { if (playing){ setPlaying(false); return; } if (holding){ holding = false; elapsed = 0; reseed(); dotsOpacity(1); show(0); sweep(0); } setPlaying(true); });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape'){ if (pinned){ pinned = null; document.querySelectorAll('.station.pinned').forEach(x => { x.classList.remove('pinned'); x.setAttribute('aria-pressed', 'false'); }); syncRows(); paintReader(); } }
+  });
+  $('copy').addEventListener('click', () => { const text = $('addr').textContent, done = () => { const c = $('copied'); c.hidden = false; setTimeout(() => { c.hidden = true; }, 1800); }; const fallback = () => { const r = document.createRange(); r.selectNodeContents($('addr')); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }; try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); } });
+  if ('IntersectionObserver' in window){ const bar = $('sticky'); const cta = document.querySelector('.cta'); if (bar && cta) new IntersectionObserver((es) => bar.classList.toggle('hidden', es[0].isIntersecting), { threshold: 0.2 }).observe(cta); }
+  document.addEventListener('visibilitychange', () => { if (document.hidden){ visible = false; } else { visible = true; last = null; if (playing && !rafId) rafId = requestAnimationFrame(frame); } });
+  if ('IntersectionObserver' in window){ new IntersectionObserver((entries) => { const on = entries[0].isIntersecting; if (on && !visible){ visible = true; last = null; if (playing && !rafId) rafId = requestAnimationFrame(frame); } else if (!on && !document.hidden) visible = false; }, { threshold: 0.05 }).observe($('wheel')); }
+
+  fitRing();
+  initSegs();
+  loadState();
+  recompute(); paintHub(); paintStatic(); fitCanvas(); reseed(); probe(); show(0);
+  if (!reduced){ sweep(0); setPlaying(true); } else setPlaying(false);
+  const sc = $('scroller');
+  if (sc.scrollWidth > sc.clientWidth) sc.scrollLeft = (sc.scrollWidth - sc.clientWidth) / 2;
+})();
+</script>
