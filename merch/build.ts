@@ -4,7 +4,8 @@
  *
  *   bun merch/build.ts
  *
- * Print files land in merch/print at 300 DPI, mockups in merch/mockups.
+ * Print files land in merch/print at 300 DPI, with a placement guide for the
+ * Based House back; mockups land in merch/mockups.
  * Needs the Chromium Playwright drives (`bunx playwright install chromium`).
  */
 import * as NFs from "node:fs/promises"
@@ -22,7 +23,7 @@ import {
 import { liftEgg } from "./egg.ts"
 import { Space } from "./geometry.ts"
 import { light } from "./light.ts"
-import { Canvas, shirtLayers, type Side } from "./shirt.ts"
+import { BackCollar, Canvas, shirtLayers, type Side } from "./shirt.ts"
 
 const Here = NPath.dirname(NUrl.fileURLToPath(import.meta.url))
 
@@ -34,6 +35,9 @@ const Dpi = 300
 
 /** Mockup pixels per garment inch. */
 const MockupScale = 120
+
+/** Placement guide pixels per garment inch. */
+const GuideScale = 60
 
 const Sides: Side[] = ["front", "back"]
 
@@ -199,6 +203,108 @@ async function mockups(page: Page, design: Design) {
   )
 }
 
+/**
+ * The back print on the shirt with its measurements, to send the printer
+ * along with the file. Measured the way printers measure a back print:
+ * down from the back neck seam at centre back.
+ */
+async function placementGuide(page: Page, design: Design) {
+  const box = bounds(design.prints.back)
+  const jpeg = await shirt(page, design, "back", GuideScale)
+  const width = Canvas.width * GuideScale
+  const height = Canvas.height * GuideScale
+  const s = new Space(GuideScale, width / 2, Canvas.top * GuideScale)
+  const size = (inches: number) =>
+    `${+inches.toFixed(2)} in · ${(inches * 2.54).toFixed(1)} cm`
+  const font = 22
+  /** A pill centred on x, or starting at x when `from` is "left". */
+  const label = (x: number, y: number, text: string, from = "centre") => {
+    const w = text.length * font * 0.56 + 28
+    const cx = from === "left" ? x + w / 2 : x
+
+    return `<rect x="${cx - w / 2}" y="${y - font}" width="${w}" height="${
+      font * 2
+    }" rx="${font}" fill="#fff"/><text x="${cx}" y="${
+      y + font * 0.36
+    }" text-anchor="middle">${text}</text>`
+  }
+  const dimension = (x1: number, y1: number, x2: number, y2: number) =>
+    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-start="url(#tip)" marker-end="url(#tip)"/>`
+
+  const top = s.y(box.y)
+  const bottom = s.y(box.y + box.height)
+  const left = s.x(box.x)
+  const right = s.x(box.x + box.width)
+  const collar = s.y(BackCollar)
+  const pad = s.len(0.12)
+  const widthAt = bottom + s.len(0.6)
+  const heightAt = right + s.len(0.45)
+
+  const overlay =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" style="position:absolute;inset:0" font-family="Inter,sans-serif" font-weight="600" font-size="${font}" fill="#10131c">
+    <defs>
+      <marker id="tip" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+        <path d="M0 0L10 5L0 10Z" fill="#fff"/>
+      </marker>
+    </defs>
+    <g stroke="#fff" stroke-width="3" fill="none">
+      <line x1="${s.x(0)}" y1="${collar - s.len(0.4)}" x2="${s.x(0)}" y2="${
+      widthAt + s.len(1)
+    }" stroke-dasharray="10 8" stroke-opacity="0.7"/>
+      <line x1="${s.x(-1.6)}" y1="${collar}" x2="${s.x(1.6)}" y2="${collar}"/>
+      <rect x="${left - pad}" y="${top - pad}" width="${
+      right - left + pad * 2
+    }" height="${bottom - top + pad * 2}" stroke-dasharray="10 8"/>
+      ${dimension(s.x(0), collar + 4, s.x(0), top - pad - 4)}
+      ${dimension(left, widthAt, right, widthAt)}
+      <line x1="${left}" y1="${bottom + pad + 6}" x2="${left}" y2="${
+      widthAt + s.len(0.2)
+    }"/>
+      <line x1="${right}" y1="${bottom + pad + 6}" x2="${right}" y2="${
+      widthAt + s.len(0.2)
+    }"/>
+      ${dimension(heightAt, top, heightAt, bottom)}
+    </g>
+    ${label(s.x(-3.4), collar, "back neck seam")}
+    ${label(s.x(0), (collar + top) / 2, size(box.y - BackCollar))}
+    ${label(s.x(0), widthAt, size(box.width))}
+    ${
+      label(
+        heightAt + s.len(0.2),
+        (top + bottom) / 2,
+        size(box.height),
+        "left",
+      )
+    }
+    ${label(s.x(0), widthAt + s.len(1.35), "centre back")}
+    <g font-size="${font * 1.35}" text-anchor="middle">
+      <text x="${width / 2}" y="${
+      height - s.len(1.9)
+    }">${design.title.toUpperCase()} · BACK PRINT</text>
+      <text x="${width / 2}" y="${
+      height - s.len(1.25)
+    }" font-weight="500" font-size="${font}" fill="#3d4150">${design.slug}-back.png · ${
+      box.width.toFixed(2)
+    } × ${
+      box.height.toFixed(2)
+    } in at 300 DPI · white ink · centred on centre back</text>
+      <text x="${width / 2}" y="${
+      height - s.len(0.8)
+    }" font-weight="500" font-size="${font}" fill="#3d4150">Top edge ${
+      size(box.y - BackCollar)
+    } below the back neck seam, the same on every size</text>
+    </g>
+  </svg>`
+
+  await render(
+    page,
+    `<div style="position:relative;width:${width}px;height:${height}px"><img src="data:image/jpeg;base64,${jpeg}" style="display:block;width:100%">${overlay}</div>`,
+    width,
+    height,
+    NPath.join(PrintDir, `${design.slug}-back-placement.jpg`),
+  )
+}
+
 await NFs.mkdir(PrintDir, { recursive: true })
 await NFs.mkdir(MockupDir, { recursive: true })
 
@@ -214,11 +320,13 @@ const egg = await page.evaluate(liftEgg, {
   width: Math.round(EggWidth * Dpi),
 })
 
-const designs = [basedHouse(), seedMe(await loadWordmark(), egg)]
+const based = basedHouse()
+const designs = [based, seedMe(await loadWordmark(), egg)]
 
 for (const design of designs) {
   await printFiles(page, design)
   await mockups(page, design)
 }
+await placementGuide(page, based)
 
 await browser.close()

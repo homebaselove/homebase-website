@@ -1,7 +1,7 @@
 import { type DotMap, DotPitch, DotRadius, House } from "../src/ui/dots.ts"
 import type { Space } from "./geometry.ts"
 import { block } from "./lettering.ts"
-import type { Fabric, Side } from "./shirt.ts"
+import { BackCollar, type Fabric, type Side } from "./shirt.ts"
 
 /**
  * Art on the garment. Bounds are inches: x from the centre line (positive
@@ -25,10 +25,13 @@ export interface Design {
 
 export const Ink = "#ffffff"
 
-/** Homebase blue, the site’s `--color-brand`. */
-export const BaseBlue: Fabric = {
-  color: "#0000ff",
-  thread: "#3d3dff",
+/**
+ * The royal blue blank chosen for the run, sampled from its product photo.
+ * Homebase blue (`#0000ff`) is brighter than cotton can be dyed.
+ */
+export const Royal: Fabric = {
+  color: "#1d46a4",
+  thread: "#3358b4",
   relief: 0.9,
   sheen: 0.035,
 }
@@ -132,13 +135,24 @@ const Chest = {
   width: 3,
 }
 
-/** Pitch of the shoulder lettering: about 2 mm between dot centres. */
+/** Pitch of the back lettering: about 2 mm between dot centres. */
 const LetteringPitch = 0.08
 
-/** How far the shoulder blocks reach from the centre line. */
-const ShoulderReach = 6.9
-
-const ShoulderTop = 2.6
+/**
+ * The back lettering sits across the shoulder blades, where the back is
+ * flattest and moves least from one build to the next: over the shoulders
+ * it rides the slope, and that slope differs from person to person. The
+ * blades run from about T2 to T7, which puts their middle 4 to 5 inches
+ * below the collar, and print shops start an upper-back print 3 to 4
+ * inches down. So the top of the lettering is 4 inches below the back neck
+ * seam, and the band is centred about 4.6 inches down. Each block keeps 6
+ * inches from the centre line, which keeps it off the curve toward the
+ * armholes and makes the whole print 12 inches wide, the common platen.
+ */
+export const BackPlacement = {
+  belowCollar: 4,
+  reach: 6,
+}
 
 export const EggWidth = 5.75
 
@@ -146,21 +160,22 @@ export function basedHouse(): Design {
   const housePitch = Chest.width / House.columns
   const left = block(["Based House", "Mumbai"], "left")
   const right = block(["Devcon", "2026"], "right")
+  const backTop = BackCollar + BackPlacement.belowCollar
 
   return {
     slug: "based-house",
     title: "Based House Mumbai",
-    fabric: BaseBlue,
+    fabric: Royal,
     prints: {
       front: [
         dots(House, Chest.centerX - Chest.width / 2, Chest.top, housePitch),
       ],
       back: [
-        dots(left, -ShoulderReach, ShoulderTop, LetteringPitch),
+        dots(left, -BackPlacement.reach, backTop, LetteringPitch),
         dots(
           right,
-          ShoulderReach - right.columns * LetteringPitch,
-          ShoulderTop,
+          BackPlacement.reach - right.columns * LetteringPitch,
+          backTop,
           LetteringPitch,
         ),
       ],

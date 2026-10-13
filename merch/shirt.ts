@@ -112,10 +112,16 @@ const BackCollarTop: Cubic[] = [
   [pt(0, 0.46), pt(1.1, 0.46), pt(2.2, 0.38), pt(3.3, 0)],
 ]
 
+/**
+ * How far below the high point of the shoulder the back neck seam sits at
+ * centre back. Printers measure back placements from this seam.
+ */
+export const BackCollar = 1.25
+
 /** The neck seam on the back, left to right. */
 const BackNeck: Cubic[] = [
-  [pt(-3.3, 0), pt(-2.75, 0.85), pt(-1.5, 1.25), pt(0, 1.25)],
-  [pt(0, 1.25), pt(1.5, 1.25), pt(2.75, 0.85), pt(3.3, 0)],
+  [pt(-3.3, 0), pt(-2.75, 0.85), pt(-1.5, BackCollar), pt(0, BackCollar)],
+  [pt(0, BackCollar), pt(1.5, BackCollar), pt(2.75, 0.85), pt(3.3, 0)],
 ]
 
 /** The top of the back collar, seen from behind. */
