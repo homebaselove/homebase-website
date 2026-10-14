@@ -57,6 +57,24 @@ The lettering is a 5 × 7 dot-matrix face drawn for these shirts
 (`lettering.ts`). It shares the house’s grid: a line stands seven dots tall,
 as the house does, and the dots keep the house’s size to spacing.
 
+## Telegram avatar
+
+`telegram/` holds the Based House Mumbai avatar: the dot house over BASED
+HOUSE / MUMBAI in the shirt lettering, centred, in Homebase blue (`#0000ff`,
+the logo’s blue) on white.
+
+| File                          | Use                                  |
+| ----------------------------- | ------------------------------------ |
+| `based-house-mumbai-1280.png` | Upload this one to Telegram          |
+| `based-house-mumbai-8192.png` | The largest render                   |
+| `based-house-mumbai.svg`      | The vector master, sharp at any size |
+
+Telegram shows an avatar as the circle inside the square, so the lockup is
+sized to that circle: every dot sits within 84% of its radius. The lockup is
+centred on its box and raised 2.5% of its height, since a mark centred
+exactly looks low. The house dots stand five lettering dots apart, which
+keeps the house clear at chat-list size, where no lettering can be read.
+
 ## Sources
 
 - The house is `House` from `src/ui/dots.ts`, the same map the site draws.

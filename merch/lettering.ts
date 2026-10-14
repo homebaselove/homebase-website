@@ -168,7 +168,7 @@ const LetterGap = 1
 /** Empty rows between stacked lines. */
 const LineGap = 2
 
-export type Align = "left" | "right"
+export type Align = "left" | "center" | "right"
 
 export function line(text: string): DotMap {
   const dots: Dot[] = []
@@ -203,7 +203,18 @@ export function line(text: string): DotMap {
   }
 }
 
-/** Lines stacked on one grid, flush to the side the block sits on. */
+/** How much of the spare width goes before a line, by alignment. */
+const Shift: Record<Align, number> = {
+  left: 0,
+  center: 0.5,
+  right: 1,
+}
+
+/**
+ * Lines stacked on one grid, flush to the side the block sits on. Centred
+ * lines keep the block’s axis even when that puts them half a dot off the
+ * grid of a longer line.
+ */
 export function block(lines: readonly string[], align: Align): DotMap {
   const maps = lines.map(line)
   const columns = Math.max(...maps.map((map) => map.columns))
@@ -213,7 +224,7 @@ export function block(lines: readonly string[], align: Align): DotMap {
     rows: maps.length * GlyphRows + (maps.length - 1) * LineGap,
     dots: maps.flatMap((map, index) =>
       map.dots.map((dot) => ({
-        x: align === "left" ? dot.x : dot.x + columns - map.columns,
+        x: dot.x + (columns - map.columns) * Shift[align],
         y: dot.y + index * (GlyphRows + LineGap),
       }))
     ),

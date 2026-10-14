@@ -5,13 +5,15 @@
  *   bun merch/build.ts
  *
  * Print files land in merch/print at 300 DPI, with a placement guide for the
- * Based House back; mockups land in merch/mockups.
+ * Based House back; mockups land in merch/mockups, and the Telegram avatar
+ * in merch/telegram.
  * Needs the Chromium Playwright drives (`bunx playwright install chromium`).
  */
 import * as NFs from "node:fs/promises"
 import * as NPath from "node:path"
 import * as NUrl from "node:url"
 import { chromium, type Page } from "playwright"
+import { avatarSvg } from "./avatar.ts"
 import {
   basedHouse,
   bounds,
@@ -30,6 +32,14 @@ const Here = NPath.dirname(NUrl.fileURLToPath(import.meta.url))
 const PrintDir = NPath.join(Here, "print")
 
 const MockupDir = NPath.join(Here, "mockups")
+
+const TelegramDir = NPath.join(Here, "telegram")
+
+/**
+ * Telegram avatar sizes: the largest worth rendering, and a size to upload
+ * that Telegram only has to scale down.
+ */
+const AvatarSizes = [8192, 1280]
 
 const Dpi = 300
 
@@ -305,11 +315,32 @@ async function placementGuide(page: Page, design: Design) {
   )
 }
 
+/** The Based House Mumbai avatar for Telegram, as a vector and as PNGs. */
+async function telegramAvatar(page: Page) {
+  await Bun.write(
+    NPath.join(TelegramDir, "based-house-mumbai.svg"),
+    avatarSvg(1024),
+  )
+
+  for (const size of AvatarSizes) {
+    await render(
+      page,
+      avatarSvg(size).replace("<svg ", `<svg style="display:block" `),
+      size,
+      size,
+      NPath.join(TelegramDir, `based-house-mumbai-${size}.png`),
+    )
+  }
+}
+
 await NFs.mkdir(PrintDir, { recursive: true })
 await NFs.mkdir(MockupDir, { recursive: true })
+await NFs.mkdir(TelegramDir, { recursive: true })
 
 const browser = await chromium.launch()
 const page = await browser.newPage()
+
+await telegramAvatar(page)
 
 const eggSource = await Bun
   .file(NPath.join(Here, "source/seedme-egg.jpg"))

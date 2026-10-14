@@ -91,6 +91,28 @@ test("a left-aligned block starts every line at its left edge", () => {
     ])
 })
 
+test("a centred block puts every line on the same axis", () => {
+  const map = block(["Based House", "Mumbai"], "center")
+  const axis = (row: number) => {
+    const xs = map
+      .dots
+      .filter((dot) => dot.y >= row && dot.y < row + GlyphRows)
+      .map((dot) => dot.x)
+
+    return (Math.min(...xs) + Math.max(...xs)) / 2
+  }
+
+  expect(
+    axis(GlyphRows + 2),
+  )
+    .toBe(axis(0))
+
+  expect(
+    axis(0),
+  )
+    .toBe((map.columns - 1) / 2)
+})
+
 test("text without a glyph is refused rather than dropped", () => {
   expect(
     () => line("Goa"),
