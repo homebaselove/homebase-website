@@ -1,4 +1,5 @@
 /** @jsxImportSource preact */
+import LucianoDeAngelo from "../../assets/LucianoDeAngelo.webp"
 import SamanthaOuyang from "../../assets/SamanthaOuyang.webp"
 import { OutIcon } from "./Icons.tsx"
 import { SectionHeading } from "./Layout.tsx"
@@ -9,8 +10,8 @@ interface Speaker {
   name: string
   role: string
   bio: string
-  /** A square photo; without one the card shows the speaker’s initials. */
-  photo?: {
+  /** A square photo. */
+  photo: {
     src: string
     alt: string
   }
@@ -32,6 +33,10 @@ export const Speakers: Speaker[] = [
     role: "Speaker",
     bio:
       "Luciano co-founded Homebase and has helped bring Based House residencies to Ethereum events from Denver to Buenos Aires.",
+    photo: {
+      src: LucianoDeAngelo,
+      alt: "Luciano DeAngelo smiling in a navy polo, in front of a tree",
+    },
   },
 ]
 
@@ -78,32 +83,17 @@ export function CareerFair() {
 
 function SpeakerCard(props: { speaker: Speaker }) {
   const { speaker } = props
-  const initials = speaker.name
-    .split(" ")
-    .map((word) => word[0])
-    .join(String())
 
   return (
     <li class="bg-white rounded-2xl shadow-md border-[1px] border-gray-200 overflow-hidden flex flex-col">
-      {speaker.photo
-        ? (
-          <img
-            src={speaker.photo.src}
-            width={960}
-            height={960}
-            alt={speaker.photo.alt}
-            loading="lazy"
-            class="w-full aspect-square object-cover object-top"
-          />
-        )
-        : (
-          <div
-            aria-hidden="true"
-            class="w-full aspect-square flex items-center justify-center bg-brand text-white text-7xl font-bold"
-          >
-            {initials}
-          </div>
-        )}
+      <img
+        src={speaker.photo.src}
+        width={960}
+        height={960}
+        alt={speaker.photo.alt}
+        loading="lazy"
+        class="w-full aspect-square object-cover object-top"
+      />
 
       <div class="flex-1 p-6 max-sm:p-5 flex flex-col gap-3">
         <span class="text-sm font-bold uppercase tracking-wide text-brand">
