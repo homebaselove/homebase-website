@@ -23,7 +23,7 @@ const Speakers: Speaker[] = [
     name: "Samantha Ouyang",
     role: "Main speaker",
     bio:
-      "Samantha has been paving her own way in crypto and has an incredibly meaningful story to tell.",
+      "Samantha entered crypto at just 15. Now 22, she has spent seven years building, researching, and investing in Web3, winning international hackathons and speaking at major Ethereum events, including ETHDenver and Devconnect Argentina. As CEO of Elsewhere and creator of Zuvivor, she returns to Devcon to share her unconventional journey and research in privacy-preserving cryptography.",
     photo: {
       src: SamanthaOuyang,
       alt: "Samantha Ouyang at a gallery, standing before framed prints",
@@ -43,7 +43,7 @@ const Speakers: Speaker[] = [
     name: "Luciano DeAngelo",
     role: "Speaker",
     bio:
-      "Luciano co-founded Homebase and has helped bring Based House residencies to Ethereum events from Denver to Buenos Aires.",
+      "Luciano founded the blockchain club at the University at Albany in his second semester freshman year. His passion for onboarding the world to decentralized systems grew into Homebase, and more.",
     photo: {
       src: LucianoDeAngelo,
       alt: "Luciano DeAngelo smiling in a navy polo, in front of a tree",
