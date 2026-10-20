@@ -81,7 +81,7 @@ function SpeakerCard(props: { speaker: Speaker }) {
   const initials = speaker.name
     .split(" ")
     .map((word) => word[0])
-    .join("")
+    .join(String())
 
   return (
     <li class="bg-white rounded-2xl shadow-md border-[1px] border-gray-200 overflow-hidden flex flex-col">
