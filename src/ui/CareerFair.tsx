@@ -1,6 +1,7 @@
 /** @jsxImportSource preact */
 import LucianoDeAngelo from "../../assets/LucianoDeAngelo.webp"
 import SamanthaOuyang from "../../assets/SamanthaOuyang.webp"
+import Selene from "../../assets/Selene.webp"
 import { OutIcon } from "./Icons.tsx"
 import { SectionHeading } from "./Layout.tsx"
 
@@ -9,7 +10,7 @@ export const CareerFairUrl = "https://www.dev3pack.xyz/programs/career-fair"
 interface Speaker {
   name: string
   role: string
-  bio: string
+  bio?: string
   /** A square photo. */
   photo: {
     src: string
@@ -26,6 +27,14 @@ export const Speakers: Speaker[] = [
     photo: {
       src: SamanthaOuyang,
       alt: "Samantha Ouyang at a gallery, standing before framed prints",
+    },
+  },
+  {
+    name: "Selene",
+    role: "Main speaker",
+    photo: {
+      src: Selene,
+      alt: "Selene at night on a waterfront bridge, a conference badge on a pink lanyard, city towers lit behind",
     },
   },
   {
@@ -57,7 +66,7 @@ export function CareerFair() {
         lead="This year’s career fair is focused on supporting women and students."
       />
 
-      <ul class="grid gap-6 sm:grid-cols-2 w-full max-w-[840px] mx-auto">
+      <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 w-full">
         {Speakers.map((speaker) => (
           <SpeakerCard
             key={speaker.name}
@@ -104,9 +113,11 @@ function SpeakerCard(props: { speaker: Speaker }) {
           {speaker.name}
         </h3>
 
-        <p class="text-gray-700 leading-relaxed">
-          {speaker.bio}
-        </p>
+        {speaker.bio && (
+          <p class="text-gray-700 leading-relaxed">
+            {speaker.bio}
+          </p>
+        )}
       </div>
     </li>
   )
