@@ -5,7 +5,7 @@ import Selene from "../../assets/Selene.webp"
 import { OutIcon } from "./Icons.tsx"
 import { SectionHeading } from "./Layout.tsx"
 
-export const CareerFairUrl = "https://www.dev3pack.xyz/programs/career-fair"
+const CareerFairUrl = "https://www.dev3pack.xyz/programs/career-fair"
 
 interface Speaker {
   name: string
@@ -18,7 +18,7 @@ interface Speaker {
   }
 }
 
-export const Speakers: Speaker[] = [
+const Speakers: Speaker[] = [
   {
     name: "Samantha Ouyang",
     role: "Main speaker",
