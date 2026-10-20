@@ -1,7 +1,7 @@
 /** @jsxImportSource preact */
 import LucianoDeAngelo from "../../assets/LucianoDeAngelo.webp"
 import SamanthaOuyang from "../../assets/SamanthaOuyang.webp"
-import Selene from "../../assets/Selene.webp"
+import SoleneDaviaud from "../../assets/SoleneDaviaud.webp"
 import { OutIcon } from "./Icons.tsx"
 import { SectionHeading } from "./Layout.tsx"
 
@@ -30,11 +30,13 @@ const Speakers: Speaker[] = [
     },
   },
   {
-    name: "Selene",
+    name: "Solène Daviaud",
     role: "Main speaker",
+    bio:
+      "Solène is an educator and the founder of Dev3pack, a fellowship of 3,000+ builders across 50+ hubs helping women and students move into Web3 and AI.",
     photo: {
-      src: Selene,
-      alt: "Selene at night on a waterfront bridge, a conference badge on a pink lanyard, city towers lit behind",
+      src: SoleneDaviaud,
+      alt: "Solène Daviaud at night on a waterfront bridge, a conference badge on a pink lanyard, city towers lit behind",
     },
   },
   {
