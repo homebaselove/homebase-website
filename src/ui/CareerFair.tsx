@@ -26,8 +26,8 @@ export function CareerFair() {
       <article class="w-full max-w-[840px] mx-auto bg-white rounded-2xl shadow-md border-[1px] border-gray-200 overflow-hidden flex flex-col sm:flex-row">
         <img
           src={SamanthaOuyang}
-          width={300}
-          height={306}
+          width={960}
+          height={960}
           alt="Samantha Ouyang at a gallery, standing before framed prints"
           loading="lazy"
           class="w-full sm:w-[42%] aspect-square sm:aspect-auto object-cover object-top shrink-0"
