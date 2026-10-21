@@ -20,16 +20,6 @@ interface Speaker {
 
 const Speakers: Speaker[] = [
   {
-    name: "Samantha Ouyang",
-    role: "Main speaker",
-    bio:
-      "Samantha entered crypto at just 15. Now 22, she has spent seven years building, researching, and investing in Web3, winning international hackathons and speaking at major Ethereum events, including ETHDenver and Devconnect Argentina. As CEO of Elsewhere and creator of Zuvivor, she returns to Devcon to share her unconventional journey and research in privacy-preserving cryptography.",
-    photo: {
-      src: SamanthaOuyang,
-      alt: "Samantha Ouyang at a gallery, standing before framed prints",
-    },
-  },
-  {
     name: "Solène Daviaud",
     role: "Main speaker",
     bio:
@@ -37,6 +27,16 @@ const Speakers: Speaker[] = [
     photo: {
       src: SoleneDaviaud,
       alt: "Solène Daviaud at night on a waterfront bridge, a conference badge on a pink lanyard, city towers lit behind",
+    },
+  },
+  {
+    name: "Samantha Ouyang",
+    role: "Main speaker",
+    bio:
+      "Samantha entered crypto at just 15. Now 22, she has spent seven years building, researching, and investing in Web3, winning international hackathons and speaking at major Ethereum events, including ETHDenver and Devconnect Argentina. As CEO of Elsewhere and creator of Zuvivor, she returns to Devcon to share her unconventional journey and research in privacy-preserving cryptography.",
+    photo: {
+      src: SamanthaOuyang,
+      alt: "Samantha Ouyang at a gallery, standing before framed prints",
     },
   },
   {
