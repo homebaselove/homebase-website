@@ -18,8 +18,7 @@
   .slide .foot { position: absolute; left: 68px; bottom: 34px; font-size: 13px; color: #71717a; }
   .slide.blue .foot { color: rgb(255 255 255 / 0.75); }
   .kicker { color: #0000ff; font-size: 14px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
-  .blue .kicker { color: #fff; opacity: 0.8; }
-  h2 { font-size: 46px; font-weight: 700; line-height: 1.08; margin-top: 10px; letter-spacing: -0.01em; }
+  h2 { font-size: 46px; font-weight: 700; line-height: 1.08; letter-spacing: -0.01em; }
   .lead { font-size: 19px; line-height: 1.5; color: #52525b; margin-top: 14px; max-width: 760px; }
   .body { flex: 1; display: grid; gap: 18px; margin-top: 30px; margin-bottom: 84px; min-height: 0; }
   .g2 { grid-template-columns: 1fr 1fr; }
@@ -40,9 +39,7 @@
   .cover { justify-content: center; align-items: center; text-align: center; padding: 0; }
   .cover .lockup { width: 560px; }
   .cover h1 { margin-top: 44px; font-size: 18px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
-  .cover p { margin-top: 12px; font-size: 20px; opacity: 0.85; }
   .cover::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 140%; height: 160px; transform: translate(-50%, 50%); background: #fff; clip-path: ellipse(50% 50% at 50% 50%); }
-  .cover .foot { bottom: auto; top: 34px; }
 
   /* Construction */
   .grid-line { stroke: #d4d4e0; stroke-width: 0.4; fill: none; }
@@ -122,13 +119,10 @@
 <section class="slide blue cover">
   <div class="lockup">{{svg:stacked-white}}</div>
   <h1>Brand kit</h1>
-  <p>Where based builders and creators come to grow.</p>
-  <div class="foot">Homebase brand kit · v1.0 · October 2026</div>
 </section>
 
 <section class="slide">
-  <span class="kicker">Logo</span>
-  <h2>One house, one word, drawn in dots</h2>
+  <h2>Logo</h2>
   <div class="body g4">
     <div class="card"><div class="stage on-blue"><div style="width: 100%">{{svg:stacked-white}}</div></div><div class="cap"><h3>Stacked<span class="tag">Primary</span></h3><p>Use it by default, as on homebase.love.</p></div></div>
     <div class="card"><div class="stage on-white"><div style="width: 100%">{{svg:horizontal-blue}}</div></div><div class="cap"><h3>Horizontal</h3><p>Short, wide spaces: sponsor walls, partner grids, banners.</p></div></div>
@@ -139,11 +133,10 @@
 </section>
 
 <section class="slide">
-  <span class="kicker">Colour versions</span>
-  <h2>Blue, white or ink. Nothing else.</h2>
+  <h2>Colour versions</h2>
   <div class="body g4">
     <div class="card"><div class="stage on-white"><div style="width: 100%">{{svg:stacked-blue}}</div></div><div class="cap"><h3>Blue</h3><p>On white or light paper.</p></div></div>
-    <div class="card"><div class="stage on-blue"><div style="width: 100%">{{svg:stacked-white}}</div></div><div class="cap"><h3>White on blue</h3><p>The signature. Use it whenever you can.</p></div></div>
+    <div class="card"><div class="stage on-blue"><div style="width: 100%">{{svg:stacked-white}}</div></div><div class="cap"><h3>White on blue</h3><p>On the brand blue.</p></div></div>
     <div class="card"><div class="stage on-ink"><div style="width: 100%">{{svg:stacked-white}}</div></div><div class="cap"><h3>White</h3><p>On ink, dark photos and video.</p></div></div>
     <div class="card"><div class="stage on-white"><div style="width: 100%">{{svg:stacked-ink}}</div></div><div class="cap"><h3>Ink</h3><p>One-colour print, engraving, documents.</p></div></div>
   </div>
@@ -151,8 +144,7 @@
 </section>
 
 <section class="slide">
-  <span class="kicker">Construction</span>
-  <h2>Built on a ten-unit grid</h2>
+  <h2>Construction</h2>
   <div class="body" style="grid-template-columns: 330px 1fr; gap: 44px; align-items: center">
     <div class="card on-tint" style="padding: 26px">{{construction}}</div>
     <dl>
@@ -168,8 +160,7 @@
 </section>
 
 <section class="slide">
-  <span class="kicker">Clear space and size</span>
-  <h2>Give it room to breathe</h2>
+  <h2>Clear space and size</h2>
   <p class="lead">Keep at least one fifth of the logo’s height clear on every side. The white-on-blue files already include this margin.</p>
   <div class="body g2" style="margin-top: 24px">
     <div class="card"><div class="stage on-tint"><div class="frame" style="max-width: 420px">{{svg:stacked-blue}}</div></div></div>
@@ -190,8 +181,7 @@
 </section>
 
 <section class="slide">
-  <span class="kicker">Colour</span>
-  <h2>Pure blue, white, and ink</h2>
+  <h2>Colour</h2>
   <div class="body g4" style="margin-bottom: 20px">
     <div class="card swatch"><div class="chip" style="background: #0000ff; color: #fff">Homebase Blue</div><table><tr><td>HEX</td><td>#0000FF</td></tr><tr><td>RGB</td><td>0 0 255</td></tr><tr><td>CMYK</td><td>100 88 0 0*</td></tr><tr><td>Pantone</td><td>Blue 072 C*</td></tr></table></div>
     <div class="card swatch"><div class="chip" style="background: #fff; border-bottom: 1px solid #e4e4e7">Paper White</div><table><tr><td>HEX</td><td>#FFFFFF</td></tr><tr><td>RGB</td><td>255 255 255</td></tr><tr><td>CMYK</td><td>0 0 0 0</td></tr><tr><td>Use</td><td>Paper</td></tr></table></div>
@@ -203,8 +193,7 @@
 </section>
 
 <section class="slide">
-  <span class="kicker">Typography</span>
-  <h2>Lato for every word that is not the logo</h2>
+  <h2>Typography</h2>
   <div class="body g2" style="gap: 40px">
     <div>
       <div class="aa">Aa</div>
@@ -214,7 +203,7 @@
         <span style="font-weight: 700">Bold 700</span>
         <span style="font-weight: 900">Black 900</span>
       </div>
-      <p class="note" style="margin-top: 16px">Free on Google Fonts. The dot matrix belongs to the logo: never set text in dots.</p>
+      <p class="note" style="margin-top: 16px">Free on Google Fonts. Never set text in dots.</p>
     </div>
     <div class="scale">
       <div><span class="label">Kicker · 700 · caps</span><span class="kicker">Up next</span></div>
@@ -228,9 +217,8 @@
 </section>
 
 <section class="slide">
-  <span class="kicker">Interface</span>
-  <h2>Round, soft and friendly</h2>
-  <p class="lead">Buttons and chips are full pills, cards have a 16 px radius and a soft shadow, and pages open with the blue masthead that curves away into white.</p>
+  <h2>Interface</h2>
+  <p class="lead">Buttons and chips are full pills, cards have a 16 px radius and a soft shadow, and pages open with a blue masthead curved at the bottom.</p>
   <div class="body g2" style="margin-top: 24px">
     <div class="card" style="padding: 22px; gap: 18px">
       <div class="row"><span class="btn btn-brand">Donate</span><span class="btn btn-quiet">Add an event</span><span class="btn btn-text">Learn more</span></div>
@@ -239,21 +227,20 @@
     </div>
     <div class="card">
       <div class="curve"></div>
-      <div class="cap"><h3>The masthead curve</h3><p>A wide white ellipse cuts into the blue, so the page lands softly. Use it on web pages, slide covers and signage.</p><p>One primary blue button per card or dialog. Every other action is quiet.</p></div>
+      <div class="cap"><h3>The masthead curve</h3><p>A wide white ellipse cuts into the bottom of the blue masthead, as on homebase.love.</p><p>One primary blue button per card or dialog. Every other action is quiet.</p></div>
     </div>
   </div>
   <div class="foot">Homebase brand kit · {{page}}</div>
 </section>
 
 <section class="slide">
-  <span class="kicker">Voice</span>
-  <h2>Warm, plain and specific</h2>
-  <p class="lead">Like a friend who runs a good house: welcoming, direct and concrete. Name the city, the date, the number. Short sentences, no hype.</p>
+  <h2>Voice</h2>
+  <p class="lead">Name the city, the date, the number. Short sentences, no hype.</p>
   <div class="body" style="grid-template-rows: auto auto; align-content: start; margin-top: 22px">
     <div class="g3" style="display: grid; gap: 18px">
       <div class="card" style="padding: 18px"><p class="quote">Where based builders and creators come to grow.<small>Tagline</small></p></div>
-      <div class="card" style="padding: 18px"><p class="quote">From a letter to Jesse to Based House Mumbai.<small>A story in one line</small></p></div>
-      <div class="card" style="padding: 18px"><p class="quote">The events couldn’t be loaded. Refresh to try again.<small>What happened, and what to do</small></p></div>
+      <div class="card" style="padding: 18px"><p class="quote">From a letter to Jesse to Based House Mumbai.<small>Section lead</small></p></div>
+      <div class="card" style="padding: 18px"><p class="quote">The events couldn’t be loaded. Refresh to try again.<small>Error message</small></p></div>
     </div>
     <table class="names">
       <tr><td style="width: 22%"><strong>Our name</strong></td><td><span class="yes">Homebase</span>, one word, capital H. <span class="no">HomeBase</span> <span class="no">Home Base</span></td><td style="width: 22%"><strong>The token</strong></td><td><span class="yes">$home</span>, lowercase</td></tr>
@@ -265,8 +252,7 @@
 </section>
 
 <section class="slide">
-  <span class="kicker">Misuse</span>
-  <h2>Keep the dots as they are</h2>
+  <h2>Misuse</h2>
   <div class="body g3 misuse" style="grid-template-rows: 1fr 1fr">
     <div class="card"><div class="stage on-white m-stretch"><div style="width: 150px">{{svg:stacked-blue}}</div></div><div class="cap"><h3>Don’t stretch it</h3></div></div>
     <div class="card"><div class="stage on-white"><div style="width: 230px">{{svg:stacked-red}}</div></div><div class="cap"><h3>Don’t recolour it</h3></div></div>
@@ -279,8 +265,7 @@
 </section>
 
 <section class="slide">
-  <span class="kicker">Base and social</span>
-  <h2>Ready for the Base app and every feed</h2>
+  <h2>Base and social</h2>
   <div class="body" style="grid-template-columns: 1fr 1.25fr; gap: 24px">
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px">
       <div class="card"><div class="stage on-tint"><div class="icon-sq">{{svg:app-icon}}</div></div><div class="cap"><h3>App icon</h3><p>1024 × 1024, no alpha</p></div></div>
@@ -304,7 +289,7 @@
 </section>
 
 <section class="slide blue close">
-  <h2>Get the files</h2>
+  <h2>Files</h2>
   <div class="links">
     <div><span>1</span>Download the kit at homebase.love/HomebaseBrandKit.zip</div>
     <div><span>2</span>SVG for screens, PDF for print, PNG for everything else</div>
