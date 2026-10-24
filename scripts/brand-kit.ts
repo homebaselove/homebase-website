@@ -1,15 +1,18 @@
 import * as NFs from "node:fs/promises"
 import * as NPath from "node:path"
 import { chromium } from "playwright"
+import { BrandKitUrl, BrandKitZipUrl } from "../src/brand.ts"
 import { type DotMap, DotPitch, DotRadius, House, word } from "../src/ui/dots.ts"
 
 /**
  * Writes the brand kit into `brand/`: every logo as SVG, PDF and PNG, the app
  * icons and social images, and the colour tokens. Each file is drawn from the
- * same dot maps the site renders, so nothing is traced by hand.
+ * same dot maps the site renders, so nothing is traced by hand. The kit as a
+ * slide deck (`scripts/brand-deck.html`) and a zip of `brand/` go to public,
+ * where the site links them.
  *
  * Needs ImageMagick (`convert`) for the favicon and the icons that must carry
- * no alpha channel. Set CHROMIUM_PATH when the local Playwright has no browser
+ * no alpha channel, and `zip`. Set CHROMIUM_PATH when the local Playwright has no browser
  * of its own.
  *
  *   bun scripts/brand-kit.ts
@@ -183,10 +186,13 @@ function magick(...args: string[]) {
   }
 }
 
-await NFs.rm(OutDir, {
-  recursive: true,
-  force: true,
-})
+// The README and the guidelines page are written by hand, so only the generated folders are cleared.
+for (const generated of ["logo", "icon", "social"]) {
+  await NFs.rm(NPath.join(OutDir, generated), {
+    recursive: true,
+    force: true,
+  })
+}
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH,
@@ -339,6 +345,76 @@ await banner("social/homebase-og-2400x1260.png", 2400, 1260, 1436, true)
 await banner("social/homebase-x-header-1500x500.png", 1500, 500, 640, false)
 await banner("social/homebase-hero-1200x630.png", 1200, 630, 760, false)
 
+/** The house on its grid, with the pitch and the dot measured, for the construction slide. */
+function construction() {
+  const on = new Set(House.dots.map((dot) => `${dot.x},${dot.y}`))
+  const parts: string[] = []
+
+  for (let i = 0; i <= House.columns; i++) {
+    parts.push(
+      `<line class="grid-line" x1="${i * DotPitch}" y1="0" x2="${i * DotPitch}" y2="70"/>`,
+      `<line class="grid-line" x1="0" y1="${i * DotPitch}" x2="70" y2="${i * DotPitch}"/>`,
+    )
+  }
+
+  for (let y = 0; y < House.rows; y++) {
+    for (let x = 0; x < House.columns; x++) {
+      parts.push(
+        `<circle class="${on.has(`${x},${y}`) ? "dot" : "ghost"}" cx="${x * DotPitch + DotPitch / 2}" cy="${
+          y * DotPitch + DotPitch / 2
+        }" r="${DotRadius}"/>`,
+      )
+    }
+  }
+
+  parts.push(
+    `<line class="dim" x1="0" y1="-4" x2="10" y2="-4"/><line class="dim" x1="0" y1="-5.5" x2="0" y2="-2.5"/><line class="dim" x1="10" y1="-5.5" x2="10" y2="-2.5"/><text class="dim-text" x="12" y="-2.8">10 pitch</text>`,
+    `<line class="dim" x1="1" y1="75" x2="9" y2="75"/><line class="dim" x1="1" y1="73.5" x2="1" y2="76.5"/><line class="dim" x1="9" y1="73.5" x2="9" y2="76.5"/><text class="dim-text" x="11" y="76.3">8 dot · 2 gap</text>`,
+  )
+
+  return `<svg viewBox="-3 -10 76 90" xmlns="http://www.w3.org/2000/svg">${parts.join("")}</svg>`
+}
+
+function deckLogo(name: string) {
+  const [lockup, color] = name === "app-icon"
+    ? ["mark", "white"]
+    : name.split(/-(.*)/s)
+  const art = Lockups[lockup as keyof typeof Lockups]
+
+  if (name === "app-icon") {
+    return svg(art, Colors.white, Colors.blue, {
+      width: 1024,
+      height: 1024,
+      padding: 256,
+    })
+  }
+
+  // The misuse slide shows the logo in a colour it must never take.
+  return svg(art, color === "red" ? "#FF3B30" : Colors[color as ColorName])
+}
+
+let deck = await NFs.readFile(NPath.join(import.meta.dir, "brand-deck.html"), "utf8")
+for (const placeholder of new Set(deck.match(/\{\{svg:[\w-]+\}\}/g))) {
+  deck = deck.replaceAll(placeholder, deckLogo(placeholder.slice(6, -2)))
+}
+deck = deck.replace("{{construction}}", construction())
+const slides = deck.match(/class="slide/g)?.length ?? 0
+let slide = 1
+deck = deck.replace(/\{\{page\}\}/g, () => `${++slide} / ${slides}`)
+
+await page.setViewportSize({
+  width: 1280,
+  height: 720,
+})
+await page.setContent(deck)
+await page.evaluate(() => document.fonts.ready)
+await page.pdf({
+  path: NPath.join("public", BrandKitUrl),
+  width: "1280px",
+  height: "720px",
+  printBackground: true,
+})
+
 await browser.close()
 
 await write(
@@ -377,4 +453,13 @@ await write(
 `,
 )
 
-console.log(`Brand kit written to ${OutDir}/`)
+const zipPath = NPath.resolve("public", BrandKitZipUrl.slice(1))
+await NFs.rm(zipPath, {
+  force: true,
+})
+const zipped = Bun.spawnSync(["zip", "-qrX", zipPath, OutDir])
+if (zipped.exitCode !== 0) {
+  throw new Error(`zip: ${zipped.stderr.toString()}`)
+}
+
+console.log(`Brand kit written to ${OutDir}/, public${BrandKitUrl} and public${BrandKitZipUrl}`)

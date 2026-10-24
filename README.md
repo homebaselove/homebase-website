@@ -18,6 +18,9 @@ The Homebase website serves as a hub for the Base community, featuring:
   $home volume funds Based House, launches on SeedMe need $home locks, and
   attention brings more lockers
 - Farcaster Frame integration
+- Brand kit (linked from the footer): a slide deck at
+  `/HomebaseBrandKit.pdf` and every logo file at `/HomebaseBrandKit.zip`,
+  both written by `bun scripts/brand-kit.ts` with the files in `brand/`
 
 ## 🚀 Tech Stack
 

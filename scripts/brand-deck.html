@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Homebase brand kit</title>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: "Lato", sans-serif; color: #18181b; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  h1, h2, h3, p { margin: 0; }
+  svg { display: block; width: 100%; height: auto; }
+
+  .slide { width: 1280px; height: 720px; position: relative; overflow: hidden; padding: 64px 68px 0; background: #fff; break-after: page; display: flex; flex-direction: column; }
+  .slide:last-child { break-after: auto; }
+  .slide.blue { background: #0000ff; color: #fff; }
+  .slide .foot { position: absolute; left: 68px; bottom: 34px; font-size: 13px; color: #71717a; }
+  .slide.blue .foot { color: rgb(255 255 255 / 0.75); }
+  .kicker { color: #0000ff; font-size: 14px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+  .blue .kicker { color: #fff; opacity: 0.8; }
+  h2 { font-size: 46px; font-weight: 700; line-height: 1.08; margin-top: 10px; letter-spacing: -0.01em; }
+  .lead { font-size: 19px; line-height: 1.5; color: #52525b; margin-top: 14px; max-width: 760px; }
+  .body { flex: 1; display: grid; gap: 18px; margin-top: 30px; margin-bottom: 84px; min-height: 0; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+  .card { border: 1px solid #e4e4e7; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; background: #fff; }
+  .card .stage { flex: 1; display: grid; place-items: center; padding: 22px; min-height: 0; }
+  .card .cap { padding: 14px 18px 16px; }
+  .card h3 { font-size: 18px; font-weight: 700; }
+  .card .cap p { font-size: 14px; color: #52525b; margin-top: 4px; line-height: 1.45; }
+  .on-white { background: #fff; }
+  .on-blue { background: #0000ff; }
+  .on-ink { background: #18181b; }
+  .on-tint { background: #f4f4fb; }
+  .tag { display: inline-block; margin-left: 8px; padding: 2px 9px; border-radius: 999px; background: #0000ff; color: #fff; font-size: 11px; font-weight: 700; vertical-align: 3px; }
+  .tag.quiet { background: #f4f4f5; color: #52525b; }
+
+  /* Cover */
+  .cover { justify-content: center; align-items: center; text-align: center; padding: 0; }
+  .cover .lockup { width: 560px; }
+  .cover h1 { margin-top: 44px; font-size: 18px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
+  .cover p { margin-top: 12px; font-size: 20px; opacity: 0.85; }
+  .cover::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 140%; height: 160px; transform: translate(-50%, 50%); background: #fff; clip-path: ellipse(50% 50% at 50% 50%); }
+  .cover .foot { bottom: auto; top: 34px; }
+
+  /* Construction */
+  .grid-line { stroke: #d4d4e0; stroke-width: 0.4; fill: none; }
+  .dot { fill: #0000ff; }
+  .ghost { fill: none; stroke: #a1a1aa; stroke-width: 0.5; stroke-dasharray: 1.2 1.2; }
+  .dim { stroke: #71717a; stroke-width: 0.4; }
+  .dim-text { fill: #71717a; font: 700 3.6px "Lato", sans-serif; }
+  dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 9px 18px; font-size: 15px; line-height: 1.45; }
+  dt { font-weight: 700; }
+  dd { margin: 0; color: #52525b; }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th, td { text-align: left; padding: 8px 10px; border-top: 1px solid #e4e4e7; }
+  th { font-size: 11px; color: #71717a; text-transform: uppercase; letter-spacing: 0.08em; border-top: 0; }
+  .frame { position: relative; padding: 9%; border: 1.5px dashed #0000ff; width: 100%; background: #fff; }
+  .frame::before { content: ""; position: absolute; inset: 9%; border: 1px solid rgb(0 0 255 / 0.25); }
+
+  /* Colour */
+  .swatch .chip { height: 170px; display: flex; align-items: flex-end; padding: 16px 18px; font-size: 24px; font-weight: 900; }
+  .swatch td { font-size: 14px; padding: 6px 18px; }
+  .swatch td:first-child { color: #71717a; width: 38%; }
+  .swatch td:last-child { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+  .note { font-size: 13px; color: #71717a; line-height: 1.5; }
+
+  /* Type */
+  .aa { font-size: 150px; font-weight: 900; line-height: 0.9; letter-spacing: -0.03em; }
+  .weights { display: grid; gap: 4px; font-size: 28px; margin-top: 18px; }
+  .scale > div { display: grid; grid-template-columns: 170px 1fr; gap: 16px; align-items: baseline; padding: 11px 0; border-top: 1px solid #e4e4e7; }
+  .scale .label { color: #71717a; font-size: 12px; font-family: ui-monospace, Menlo, monospace; }
+
+  /* Interface */
+  .btn { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 24px; border-radius: 999px; font-weight: 700; font-size: 16px; border: 1px solid transparent; }
+  .btn-brand { background: #0000ff; color: #fff; }
+  .btn-quiet { background: #fff; color: #27272a; border-color: #d4d4d8; }
+  .btn-text { color: #0000ff; font-weight: 600; padding: 0; }
+  .chip-ui { display: inline-flex; align-items: center; min-height: 36px; padding: 6px 14px; border-radius: 999px; border: 1px solid #e5e7eb; background: #f9fafb; color: #374151; font-size: 14px; }
+  .chip-ui.on { border-color: rgb(0 0 255 / 0.4); background: #e6e6ff; color: #0000ff; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .panel { border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+  .panel .ph { padding: 16px; border-bottom: 1px solid #e5e7eb; background: linear-gradient(#f3f4f6, #fff); }
+  .panel .ph strong { display: block; font-size: 24px; line-height: 1; }
+  .panel .ph span { color: #6b7280; font-size: 15px; }
+  .panel .pb { padding: 16px; }
+  .curve { height: 150px; background: #0000ff; position: relative; overflow: hidden; }
+  .curve::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 140%; height: 100px; transform: translate(-50%, 50%); background: #fff; clip-path: ellipse(50% 50% at 50% 50%); }
+
+  /* Voice */
+  .quote { font-size: 22px; font-weight: 700; line-height: 1.3; }
+  .quote small { display: block; margin-top: 8px; font-size: 13px; font-weight: 400; color: #71717a; }
+  .yes { color: #0a7d3b; font-weight: 700; }
+  .no { color: #c0262d; font-weight: 700; text-decoration: line-through; }
+  .names td { font-size: 15px; padding: 9px 12px; vertical-align: top; }
+
+  /* Misuse */
+  .misuse .stage { position: relative; }
+  .misuse .stage::after { content: ""; position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; border-radius: 50%; background: #c0262d url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M7 7l10 10M17 7L7 17'/%3E%3C/svg%3E") center/13px no-repeat; }
+  .m-stretch svg { transform: scaleX(1.6); }
+  .m-rotate svg { transform: rotate(-14deg); }
+  .m-shadow svg { filter: drop-shadow(4px 6px 0 #ff00aa); }
+  .m-busy { background: repeating-linear-gradient(45deg, #ffcc00 0 14px, #ff6600 14px 28px); }
+
+  /* Base and social */
+  .icon-sq { width: 120px; height: 120px; border-radius: 27px; overflow: hidden; }
+  .icon-sq svg, .icon-round svg { width: 100%; height: 100%; }
+  .icon-round { width: 110px; height: 110px; border-radius: 50%; overflow: hidden; }
+  .mono { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+
+  /* Close */
+  .close { justify-content: center; }
+  .close h2 { font-size: 64px; }
+  .close .links { margin-top: 34px; display: grid; gap: 14px; font-size: 22px; font-weight: 700; }
+  .close .links span { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #fff; color: #0000ff; font-size: 15px; margin-right: 14px; }
+  .close .mark { position: absolute; right: 90px; top: 50%; transform: translateY(-50%); width: 260px; }
+</style>
+</head>
+<body>
+
+<section class="slide blue cover">
+  <div class="lockup">{{svg:stacked-white}}</div>
+  <h1>Brand kit</h1>
+  <p>Where based builders and creators come to grow.</p>
+  <div class="foot">Homebase brand kit · v1.0 · October 2026</div>
+</section>
+
+<section class="slide">
+  <span class="kicker">Logo</span>
+  <h2>One house, one word, drawn in dots</h2>
+  <div class="body g4">
+    <div class="card"><div class="stage on-blue"><div style="width: 100%">{{svg:stacked-white}}</div></div><div class="cap"><h3>Stacked<span class="tag">Primary</span></h3><p>Use it by default, as on homebase.love.</p></div></div>
+    <div class="card"><div class="stage on-white"><div style="width: 100%">{{svg:horizontal-blue}}</div></div><div class="cap"><h3>Horizontal</h3><p>Short, wide spaces: sponsor walls, partner grids, banners.</p></div></div>
+    <div class="card"><div class="stage on-blue"><div style="width: 72px">{{svg:mark-white}}</div></div><div class="cap"><h3>House mark</h3><p>Avatars, app icons, favicons, stickers.</p></div></div>
+    <div class="card"><div class="stage on-white"><div style="width: 100%">{{svg:wordmark-blue}}</div></div><div class="cap"><h3>Wordmark</h3><p>Very wide, very short placements.</p></div></div>
+  </div>
+  <div class="foot">Homebase brand kit · {{page}}</div>
+</section>
+
+<section class="slide">
+  <span class="kicker">Colour versions</span>
+  <h2>Blue, white or ink. Nothing else.</h2>
+  <div class="body g4">
+    <div class="card"><div class="stage on-white"><div style="width: 100%">{{svg:stacked-blue}}</div></div><div class="cap"><h3>Blue</h3><p>On white or light paper.</p></div></div>
+    <div class="card"><div class="stage on-blue"><div style="width: 100%">{{svg:stacked-white}}</div></div><div class="cap"><h3>White on blue</h3><p>The signature. Use it whenever you can.</p></div></div>
+    <div class="card"><div class="stage on-ink"><div style="width: 100%">{{svg:stacked-white}}</div></div><div class="cap"><h3>White</h3><p>On ink, dark photos and video.</p></div></div>
+    <div class="card"><div class="stage on-white"><div style="width: 100%">{{svg:stacked-ink}}</div></div><div class="cap"><h3>Ink</h3><p>One-colour print, engraving, documents.</p></div></div>
+  </div>
+  <div class="foot">Homebase brand kit · {{page}}</div>
+</section>
+
+<section class="slide">
+  <span class="kicker">Construction</span>
+  <h2>Built on a ten-unit grid</h2>
+  <div class="body" style="grid-template-columns: 330px 1fr; gap: 44px; align-items: center">
+    <div class="card on-tint" style="padding: 26px">{{construction}}</div>
+    <dl>
+      <dt>Grid</dt><dd>10 units from dot centre to dot centre.</dd>
+      <dt>Dot</dt><dd>8 units across, 80% of the pitch. The gap is 2 units.</dd>
+      <dt>House</dt><dd>7 × 7 cells: a one-dot peak, a stepped roof, eaves one dot wider each side, and a door one dot wide and two tall.</dd>
+      <dt>Letters</dt><dd>Solid blocks 11 cells wide and 15 tall, traced to their outline, so every stroke reads as two lines of dots. Letters sit 3 cells apart.</dd>
+      <dt>Stacked</dt><dd>The house at 3.2 × the wordmark’s scale, centred, 7.7 wordmark cells above it.</dd>
+      <dt>Horizontal</dt><dd>The house as tall as the letters, 6 cells from the H.</dd>
+    </dl>
+  </div>
+  <div class="foot">Homebase brand kit · {{page}}</div>
+</section>
+
+<section class="slide">
+  <span class="kicker">Clear space and size</span>
+  <h2>Give it room to breathe</h2>
+  <p class="lead">Keep at least one fifth of the logo’s height clear on every side. The white-on-blue files already include this margin.</p>
+  <div class="body g2" style="margin-top: 24px">
+    <div class="card"><div class="stage on-tint"><div class="frame" style="max-width: 420px">{{svg:stacked-blue}}</div></div></div>
+    <div class="card" style="padding: 18px 20px; gap: 12px">
+      <table>
+        <thead><tr><th>Lockup</th><th>Screen</th><th>Print</th></tr></thead>
+        <tbody>
+          <tr><td>Stacked</td><td>200 px wide</td><td>35 mm wide</td></tr>
+          <tr><td>Horizontal</td><td>240 px wide</td><td>40 mm wide</td></tr>
+          <tr><td>Wordmark</td><td>240 px wide</td><td>40 mm wide</td></tr>
+          <tr><td>House mark</td><td>24 px</td><td>8 mm</td></tr>
+        </tbody>
+      </table>
+      <p class="note">Below these sizes the dots in the letters blur into lines. Use the favicon files for 16 px rather than shrinking the mark.</p>
+    </div>
+  </div>
+  <div class="foot">Homebase brand kit · {{page}}</div>
+</section>
+
+<section class="slide">
+  <span class="kicker">Colour</span>
+  <h2>Pure blue, white, and ink</h2>
+  <div class="body g4" style="margin-bottom: 20px">
+    <div class="card swatch"><div class="chip" style="background: #0000ff; color: #fff">Homebase Blue</div><table><tr><td>HEX</td><td>#0000FF</td></tr><tr><td>RGB</td><td>0 0 255</td></tr><tr><td>CMYK</td><td>100 88 0 0*</td></tr><tr><td>Pantone</td><td>Blue 072 C*</td></tr></table></div>
+    <div class="card swatch"><div class="chip" style="background: #fff; border-bottom: 1px solid #e4e4e7">Paper White</div><table><tr><td>HEX</td><td>#FFFFFF</td></tr><tr><td>RGB</td><td>255 255 255</td></tr><tr><td>CMYK</td><td>0 0 0 0</td></tr><tr><td>Use</td><td>Paper</td></tr></table></div>
+    <div class="card swatch"><div class="chip" style="background: #18181b; color: #fff">Ink</div><table><tr><td>HEX</td><td>#18181B</td></tr><tr><td>RGB</td><td>24 24 27</td></tr><tr><td>CMYK</td><td>0 0 0 90</td></tr><tr><td>Use</td><td>Text</td></tr></table></div>
+    <div class="card swatch"><div class="chip" style="background: #0000cc; color: #fff">Pressed Blue</div><table><tr><td>HEX</td><td>#0000CC</td></tr><tr><td>RGB</td><td>0 0 204</td></tr><tr><td>Use</td><td>Hover state</td></tr><tr><td>Never</td><td>In the logo</td></tr></table></div>
+  </div>
+  <p class="note" style="margin-bottom: 84px">White on blue and blue on white both reach 8.6 : 1, ink on white 17.7 : 1 (WCAG AAA). * #0000FF is brighter than CMYK can print: these are starting points, so always ask for a proof.</p>
+  <div class="foot">Homebase brand kit · {{page}}</div>
+</section>
+
+<section class="slide">
+  <span class="kicker">Typography</span>
+  <h2>Lato for every word that is not the logo</h2>
+  <div class="body g2" style="gap: 40px">
+    <div>
+      <div class="aa">Aa</div>
+      <div class="weights">
+        <span style="font-weight: 300">Light 300</span>
+        <span style="font-weight: 400">Regular 400</span>
+        <span style="font-weight: 700">Bold 700</span>
+        <span style="font-weight: 900">Black 900</span>
+      </div>
+      <p class="note" style="margin-top: 16px">Free on Google Fonts. The dot matrix belongs to the logo: never set text in dots.</p>
+    </div>
+    <div class="scale">
+      <div><span class="label">Kicker · 700 · caps</span><span class="kicker">Up next</span></div>
+      <div><span class="label">Display · 700 · 36</span><span style="font-size: 36px; font-weight: 700; line-height: 1.1">Based House Mumbai</span></div>
+      <div><span class="label">Title · 700 · 30</span><span style="font-size: 30px; font-weight: 700; line-height: 1.1">Homebase Map</span></div>
+      <div><span class="label">Lead · 400 · 17</span><span style="font-size: 17px; color: #52525b">From a letter to Jesse to Based House Mumbai.</span></div>
+      <div><span class="label">Button · 700 · 16</span><span style="font-weight: 700">Apply to Based House</span></div>
+    </div>
+  </div>
+  <div class="foot">Homebase brand kit · {{page}}</div>
+</section>
+
+<section class="slide">
+  <span class="kicker">Interface</span>
+  <h2>Round, soft and friendly</h2>
+  <p class="lead">Buttons and chips are full pills, cards have a 16 px radius and a soft shadow, and pages open with the blue masthead that curves away into white.</p>
+  <div class="body g2" style="margin-top: 24px">
+    <div class="card" style="padding: 22px; gap: 18px">
+      <div class="row"><span class="btn btn-brand">Donate</span><span class="btn btn-quiet">Add an event</span><span class="btn btn-text">Learn more</span></div>
+      <div class="row"><span class="chip-ui on">Upcoming</span><span class="chip-ui">Past</span><span class="chip-ui">$25</span><span class="chip-ui">$100</span></div>
+      <div class="panel"><div class="ph"><strong>Homebase Live</strong><span>Streams ahead, in your timezone</span></div><div class="pb"><span class="btn btn-brand" style="min-height: 36px; padding: 6px 16px; font-size: 14px">Add a calendar</span></div></div>
+    </div>
+    <div class="card">
+      <div class="curve"></div>
+      <div class="cap"><h3>The masthead curve</h3><p>A wide white ellipse cuts into the blue, so the page lands softly. Use it on web pages, slide covers and signage.</p><p>One primary blue button per card or dialog. Every other action is quiet.</p></div>
+    </div>
+  </div>
+  <div class="foot">Homebase brand kit · {{page}}</div>
+</section>
+
+<section class="slide">
+  <span class="kicker">Voice</span>
+  <h2>Warm, plain and specific</h2>
+  <p class="lead">Like a friend who runs a good house: welcoming, direct and concrete. Name the city, the date, the number. Short sentences, no hype.</p>
+  <div class="body" style="grid-template-rows: auto auto; align-content: start; margin-top: 22px">
+    <div class="g3" style="display: grid; gap: 18px">
+      <div class="card" style="padding: 18px"><p class="quote">Where based builders and creators come to grow.<small>Tagline</small></p></div>
+      <div class="card" style="padding: 18px"><p class="quote">From a letter to Jesse to Based House Mumbai.<small>A story in one line</small></p></div>
+      <div class="card" style="padding: 18px"><p class="quote">The events couldn’t be loaded. Refresh to try again.<small>What happened, and what to do</small></p></div>
+    </div>
+    <table class="names">
+      <tr><td style="width: 22%"><strong>Our name</strong></td><td><span class="yes">Homebase</span>, one word, capital H. <span class="no">HomeBase</span> <span class="no">Home Base</span></td><td style="width: 22%"><strong>The token</strong></td><td><span class="yes">$home</span>, lowercase</td></tr>
+      <tr><td><strong>Our houses</strong></td><td><span class="yes">Based House</span> + city</td><td><strong>The network</strong></td><td><span class="yes">Base</span></td></tr>
+      <tr><td><strong>Web</strong></td><td class="mono">homebase.love</td><td><strong>Socials</strong></td><td class="mono">@homebasedotlove · /homebase</td></tr>
+    </table>
+  </div>
+  <div class="foot">Homebase brand kit · {{page}}</div>
+</section>
+
+<section class="slide">
+  <span class="kicker">Misuse</span>
+  <h2>Keep the dots as they are</h2>
+  <div class="body g3 misuse" style="grid-template-rows: 1fr 1fr">
+    <div class="card"><div class="stage on-white m-stretch"><div style="width: 150px">{{svg:stacked-blue}}</div></div><div class="cap"><h3>Don’t stretch it</h3></div></div>
+    <div class="card"><div class="stage on-white"><div style="width: 230px">{{svg:stacked-red}}</div></div><div class="cap"><h3>Don’t recolour it</h3></div></div>
+    <div class="card"><div class="stage on-white m-rotate"><div style="width: 220px">{{svg:stacked-blue}}</div></div><div class="cap"><h3>Don’t rotate it</h3></div></div>
+    <div class="card"><div class="stage on-white m-shadow"><div style="width: 230px">{{svg:stacked-blue}}</div></div><div class="cap"><h3>Don’t add effects</h3></div></div>
+    <div class="card"><div class="stage m-busy"><div style="width: 230px">{{svg:stacked-blue}}</div></div><div class="cap"><h3>Don’t lose the contrast</h3></div></div>
+    <div class="card"><div class="stage on-white"><div style="font-size: 40px; font-weight: 900; color: #0000ff">HOMEBASE</div></div><div class="cap"><h3>Don’t retype it</h3></div></div>
+  </div>
+  <div class="foot">Homebase brand kit · {{page}}</div>
+</section>
+
+<section class="slide">
+  <span class="kicker">Base and social</span>
+  <h2>Ready for the Base app and every feed</h2>
+  <div class="body" style="grid-template-columns: 1fr 1.25fr; gap: 24px">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px">
+      <div class="card"><div class="stage on-tint"><div class="icon-sq">{{svg:app-icon}}</div></div><div class="cap"><h3>App icon</h3><p>1024 × 1024, no alpha</p></div></div>
+      <div class="card"><div class="stage on-tint"><div class="icon-round">{{svg:app-icon}}</div></div><div class="cap"><h3>Avatar</h3><p>400 × 400, circle-safe</p></div></div>
+    </div>
+    <div class="card" style="padding: 8px 10px">
+      <table>
+        <thead><tr><th>Use</th><th>Size</th><th>File</th></tr></thead>
+        <tbody>
+          <tr><td>Base mini app icon</td><td>1024 × 1024</td><td class="mono">homebase-app-icon-1024.png</td></tr>
+          <tr><td>Base splash</td><td>200 × 200</td><td class="mono">homebase-splash-200.png</td></tr>
+          <tr><td>Link preview</td><td>1200 × 630</td><td class="mono">homebase-og-1200x630.png</td></tr>
+          <tr><td>Avatar</td><td>400 × 400</td><td class="mono">homebase-avatar-400.png</td></tr>
+          <tr><td>X header</td><td>1500 × 500</td><td class="mono">homebase-x-header-1500x500.png</td></tr>
+          <tr><td>Favicon</td><td>16, 32, 48</td><td class="mono">favicon.ico</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="foot">Homebase brand kit · {{page}}</div>
+</section>
+
+<section class="slide blue close">
+  <h2>Get the files</h2>
+  <div class="links">
+    <div><span>1</span>Download the kit at homebase.love/HomebaseBrandKit.zip</div>
+    <div><span>2</span>SVG for screens, PDF for print, PNG for everything else</div>
+    <div><span>3</span>Start from a file, never redraw the dots</div>
+  </div>
+  <div class="mark">{{svg:mark-white}}</div>
+  <div class="foot">Homebase brand kit · {{page}}</div>
+</section>
+
+</body>
+</html>

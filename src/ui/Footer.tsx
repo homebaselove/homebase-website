@@ -1,11 +1,13 @@
 /** @jsxImportSource preact */
+import { BrandKitUrl } from "../brand.ts"
 import { HouseLogo } from "./HouseLogo.tsx"
 import { Socials } from "./Socials.tsx"
 
 /**
  * The foot of every page: the house in the middle, with the social links in
- * the bottom left and one text link in the bottom right, Learn more unless a
- * page names another, as the header pairs the links with the wallet.
+ * the bottom left and, in the bottom right, the brand kit and one text link,
+ * Learn more unless a page names another, as the header pairs the links with
+ * the wallet.
  */
 export function Footer(props: {
   readonly link?: {
@@ -46,12 +48,24 @@ export function Footer(props: {
           <div class="flex items-center justify-between gap-4 text-white">
             <Socials />
 
-            <a
-              href={link.href}
-              class="text-lg max-sm:text-base font-bold whitespace-nowrap rounded-md underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"
-            >
-              {link.label}
-            </a>
+            <div class="flex flex-wrap items-center justify-end gap-x-6 gap-y-2">
+              {/* The deck opens in a new tab, as the ecosystem deck does. */}
+              <a
+                href={BrandKitUrl}
+                target="_blank"
+                aria-label="Brand kit (PDF)"
+                class="text-lg max-sm:text-base font-bold whitespace-nowrap rounded-md underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"
+              >
+                Brand kit
+              </a>
+
+              <a
+                href={link.href}
+                class="text-lg max-sm:text-base font-bold whitespace-nowrap rounded-md underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"
+              >
+                {link.label}
+              </a>
+            </div>
           </div>
         </div>
       </div>
