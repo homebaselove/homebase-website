@@ -31,7 +31,7 @@ column of bands, each a `Band` at the width its content reads best at:
 | Homebase Map | `MapCard`, `MapView`, `EventList`, `EventDetails`, `AddEventDialog` | Luma events pinned on Base, on a MapLibre map and in a list that point at each other. `docs/map.md` covers it in full. |
 | Homebase Live | `LiveCard`, `AddCalendarDialog` | Streams ahead from the calendars the admin added, by day, in any zone. `docs/live.md` covers it in full. |
 | Videos | `VideoGallery` (data in `videos.ts`) | Talks and build sessions; YouTube plays in a dialog, anything else opens where it was posted. |
-| Footer | `Footer` | The house again, with the social links in the bottom left and, in the bottom right, Brand kit (the deck in `public`, as `BrandKitUrl` in `src/brand.ts` names it) and Learn more (Back home on Learn). |
+| Footer | `Footer` | The house again, with the social links in the bottom left and, in the bottom right, Brand kit (`/brandkit`, the deck in `public`, as `src/brand.ts` names it) and Learn more (Back home on Learn). |
 
 Underneath, the browser talks to three endpoints through `call` in
 `src/call.ts`, and to the wallet through `src/wallet/client.ts`, which loads

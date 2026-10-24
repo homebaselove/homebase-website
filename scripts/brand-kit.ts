@@ -1,7 +1,7 @@
 import * as NFs from "node:fs/promises"
 import * as NPath from "node:path"
 import { chromium } from "playwright"
-import { BrandKitUrl, BrandKitZipUrl } from "../src/brand.ts"
+import { BrandKitFile, BrandKitZipUrl } from "../src/brand.ts"
 import { type DotMap, DotPitch, DotRadius, House, word } from "../src/ui/dots.ts"
 
 /**
@@ -409,7 +409,7 @@ await page.setViewportSize({
 await page.setContent(deck)
 await page.evaluate(() => document.fonts.ready)
 await page.pdf({
-  path: NPath.join("public", BrandKitUrl),
+  path: NPath.join("public", BrandKitFile),
   width: "1280px",
   height: "720px",
   printBackground: true,
@@ -462,4 +462,4 @@ if (zipped.exitCode !== 0) {
   throw new Error(`zip: ${zipped.stderr.toString()}`)
 }
 
-console.log(`Brand kit written to ${OutDir}/, public${BrandKitUrl} and public${BrandKitZipUrl}`)
+console.log(`Brand kit written to ${OutDir}/, public${BrandKitFile} and public${BrandKitZipUrl}`)
