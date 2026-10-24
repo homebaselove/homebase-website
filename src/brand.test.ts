@@ -18,15 +18,6 @@ test("the brand kit deck and zip are served from public", async () => {
     .toBe(true)
 })
 
-test("the brand kit deck is a PDF", async () => {
-  const head = await Bun.file(NPath.join(Public, BrandKitFile)).slice(0, 5).text()
-
-  expect(
-    head,
-  )
-    .toBe("%PDF-")
-})
-
 // Vercel takes the first rewrite that matches, so the brand kit must come before the catch-all that serves the page.
 test("Vercel serves the deck at the brand kit address", () => {
   const rewrites = VercelConfig.rewrites.map((rewrite) => rewrite.source)

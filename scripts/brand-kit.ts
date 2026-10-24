@@ -19,7 +19,7 @@ import { type DotMap, DotPitch, DotRadius, House, word } from "../src/ui/dots.ts
  */
 const OutDir = "brand"
 
-export const Colors = {
+const Colors = {
   blue: "#0000FF",
   white: "#FFFFFF",
   ink: "#18181B",
@@ -39,10 +39,13 @@ interface Art {
   circles: Circle[]
 }
 
-/** How much bigger the house is drawn than the wordmark in the stacked lockup, as on the Open Graph image. */
-const StackedHouseScale = 3.2
-
-/** Dot edge to dot edge, between the house and the wordmark, in wordmark units. */
+/**
+ * How much bigger the house is drawn than the wordmark in the stacked lockup,
+ * and the gap between them, dot edge to dot edge in wordmark units: both
+ * measured from public/OpenGraphImage.png, where the house rows sit 21.41 px
+ * apart and the letter rows 6.48 px.
+ */
+const StackedHouseScale = 3.3
 const StackedGap = 77
 
 const HorizontalGap = 60
@@ -159,7 +162,6 @@ async function write(path: string, content: string | Uint8Array) {
     recursive: true,
   })
   await NFs.writeFile(full, content)
-  return full
 }
 
 function pad(art: Art, by: number): Art {
@@ -174,7 +176,10 @@ function pad(art: Art, by: number): Art {
   }
 }
 
-/** Mini app icons must carry no alpha channel at all, so these are written as plain 24-bit RGB. */
+/**
+ * Files with a solid ground are written as plain 24-bit RGB: the Base mini app
+ * icon must carry no alpha channel at all, and the others gain nothing by one.
+ */
 function removeAlpha(path: string) {
   magick(path, "-background", Colors.blue, "-alpha", "remove", "-alpha", "off", `PNG24:${path}`)
 }
@@ -186,7 +191,7 @@ function magick(...args: string[]) {
   }
 }
 
-// The README and the guidelines page are written by hand, so only the generated folders are cleared.
+// The README is written by hand, so only the generated folders are cleared.
 for (const generated of ["logo", "icon", "social"]) {
   await NFs.rm(NPath.join(OutDir, generated), {
     recursive: true,
@@ -198,6 +203,22 @@ const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH,
 })
 const page = await browser.newPage()
+
+/**
+ * Lato comes from Google Fonts; without it Chromium falls back to another
+ * face and says nothing. `document.fonts.ready` can settle before a face has
+ * started to load, so each weight is asked for by name.
+ */
+async function awaitLato(weights: readonly number[]) {
+  const missing = await page.evaluate(async (weights) => {
+    const fonts = weights.map((weight) => `${weight} 16px Lato`)
+    await Promise.all(fonts.map((font) => document.fonts.load(font)))
+    return fonts.filter((font) => !document.fonts.check(font))
+  }, weights)
+  if (missing.length > 0) {
+    throw new Error(`Lato did not load from Google Fonts (${missing.join(", ")}); check the network and run again`)
+  }
+}
 
 async function png(path: string, markup: string, width: number, height: number) {
   await page.setViewportSize({
@@ -229,7 +250,6 @@ async function pdf(path: string, markup: string, art: Art) {
       width: `${art.width}px`,
       height: `${art.height}px`,
       printBackground: true,
-      pageRanges: "1",
     }),
   )
 }
@@ -296,17 +316,18 @@ async function icon(path: string, side: number, padding = 0.25, opaque = true) {
 
 const appIcon = await icon("icon/homebase-app-icon-1024.png", 1024)
 await write("icon/homebase-app-icon.svg", appIcon.markup)
-await icon("icon/homebase-icon-512.png", 512)
-await icon("icon/homebase-icon-192.png", 192)
-await icon("icon/apple-touch-icon-180.png", 180)
 await icon("icon/homebase-avatar-400.png", 400, 0.28)
 await icon("icon/homebase-splash-200.png", 200, 0.2, false)
 
+// The sizes go into one .ico and are not kept on their own.
 const favicons = []
 for (const side of [16, 32, 48]) {
   favicons.push((await icon(`icon/favicon-${side}.png`, side, 0.08)).full)
 }
 magick(...favicons, NPath.join(OutDir, "icon/favicon.ico"))
+for (const favicon of favicons) {
+  await NFs.rm(favicon)
+}
 
 const Tagline = "Where based builders and creators come to grow."
 
@@ -329,7 +350,7 @@ async function banner(path: string, width: number, height: number, logoWidth: nu
       p{margin:${Math.round(taglineSize * 1.6)}px 0 0;color:#fff;opacity:.85;font-size:${taglineSize}px}
     </style>
     ${markup}${tagline ? `<p>${Tagline}</p>` : ""}`)
-  await page.evaluate(() => document.fonts.ready)
+  await awaitLato([400])
   const full = NPath.join(OutDir, path)
   await NFs.mkdir(NPath.dirname(full), {
     recursive: true,
@@ -341,9 +362,7 @@ async function banner(path: string, width: number, height: number, logoWidth: nu
 }
 
 await banner("social/homebase-og-1200x630.png", 1200, 630, 718, true)
-await banner("social/homebase-og-2400x1260.png", 2400, 1260, 1436, true)
 await banner("social/homebase-x-header-1500x500.png", 1500, 500, 640, false)
-await banner("social/homebase-hero-1200x630.png", 1200, 630, 760, false)
 
 /** The house on its grid, with the pitch and the dot measured, for the construction slide. */
 function construction() {
@@ -375,22 +394,16 @@ function construction() {
   return `<svg viewBox="-3 -10 76 90" xmlns="http://www.w3.org/2000/svg">${parts.join("")}</svg>`
 }
 
+/** A `{{svg:lockup-color}}` placeholder in the deck, or the app icon. */
 function deckLogo(name: string) {
-  const [lockup, color] = name === "app-icon"
-    ? ["mark", "white"]
-    : name.split(/-(.*)/s)
-  const art = Lockups[lockup as keyof typeof Lockups]
-
   if (name === "app-icon") {
-    return svg(art, Colors.white, Colors.blue, {
-      width: 1024,
-      height: 1024,
-      padding: 256,
-    })
+    return appIcon.markup
   }
 
+  const [lockup, color] = name.split("-") as [keyof typeof Lockups, string]
+
   // The misuse slide shows the logo in a colour it must never take.
-  return svg(art, color === "red" ? "#FF3B30" : Colors[color as ColorName])
+  return svg(Lockups[lockup], color === "red" ? "#FF3B30" : Colors[color as ColorName])
 }
 
 let deck = await NFs.readFile(NPath.join(import.meta.dir, "brand-deck.html"), "utf8")
@@ -407,7 +420,7 @@ await page.setViewportSize({
   height: 720,
 })
 await page.setContent(deck)
-await page.evaluate(() => document.fonts.ready)
+await awaitLato([300, 400, 700, 900])
 await page.pdf({
   path: NPath.join("public", BrandKitFile),
   width: "1280px",

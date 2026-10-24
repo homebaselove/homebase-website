@@ -3,6 +3,9 @@ import { BrandKitUrl } from "../brand.ts"
 import { HouseLogo } from "./HouseLogo.tsx"
 import { Socials } from "./Socials.tsx"
 
+const LinkClass =
+  "text-lg max-sm:text-base font-bold whitespace-nowrap rounded-md underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"
+
 /**
  * The foot of every page: the house in the middle, with the social links in
  * the bottom left and, in the bottom right, the brand kit and one text link,
@@ -54,14 +57,14 @@ export function Footer(props: {
                 href={BrandKitUrl}
                 target="_blank"
                 aria-label="Brand kit (PDF)"
-                class="text-lg max-sm:text-base font-bold whitespace-nowrap rounded-md underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"
+                class={LinkClass}
               >
                 Brand kit
               </a>
 
               <a
                 href={link.href}
-                class="text-lg max-sm:text-base font-bold whitespace-nowrap rounded-md underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"
+                class={LinkClass}
               >
                 {link.label}
               </a>
