@@ -33,7 +33,7 @@ const Speakers: Speaker[] = [
     name: "Samantha Ouyang",
     role: "Main speaker",
     bio:
-      "Samantha entered crypto at just 15. Now 22, she has spent seven years building, researching, and investing in Web3, winning international hackathons and speaking at major Ethereum events, including ETHDenver and Devconnect Argentina. As CEO of Elsewhere and creator of Zuvivor, she returns to Devcon to share her unconventional journey and research in privacy-preserving cryptography.",
+      "Samantha entered crypto at just 15. Now 22, she has spent seven years building, researching, and investing in Web3, winning international hackathons and speaking at major Ethereum events, including ETHDenver and Devconnect Argentina.",
     photo: {
       src: SamanthaOuyang,
       alt: "Samantha Ouyang at a gallery, standing before framed prints",
