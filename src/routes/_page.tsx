@@ -18,12 +18,12 @@ export default function() {
         <BasedHouseStory />
       </Band>
 
-      <Band width="medium">
-        <CareerFair />
-      </Band>
-
       <Band width="raised">
         <BasedHouseCard />
+      </Band>
+
+      <Band width="medium">
+        <CareerFair />
       </Band>
 
       <Band width="wide">
