@@ -8,9 +8,9 @@ const LinkClass =
 
 /**
  * The foot of every page: the house in the middle, with the social links in
- * the bottom left and, in the bottom right, the brand kit and one text link,
- * Learn more unless a page names another, as the header pairs the links with
- * the wallet.
+ * the bottom left and, in the bottom right, one text link, Learn more unless
+ * a page names another, then the brand kit, as the header pairs the links
+ * with the wallet.
  */
 export function Footer(props: {
   readonly link?: {
@@ -52,6 +52,13 @@ export function Footer(props: {
             <Socials />
 
             <div class="flex flex-wrap items-center justify-end gap-x-6 gap-y-2">
+              <a
+                href={link.href}
+                class={LinkClass}
+              >
+                {link.label}
+              </a>
+
               {/* The deck opens in a new tab, as the ecosystem deck does. */}
               <a
                 href={BrandKitUrl}
@@ -60,13 +67,6 @@ export function Footer(props: {
                 class={LinkClass}
               >
                 Brand kit
-              </a>
-
-              <a
-                href={link.href}
-                class={LinkClass}
-              >
-                {link.label}
               </a>
             </div>
           </div>
