@@ -8,6 +8,7 @@ import {
   headlineInk,
   insideMargin,
   layout,
+  Lockups,
   logoInk,
   type Metrics,
 } from "./banners.ts"
@@ -19,6 +20,14 @@ const logo = await Bun
   .text()
 
 const ink = logoInk(logo)
+
+const mark = logoInk(
+  await Bun
+    .file(
+      new URL("../brand/logo/svg/homebase-mark-white.svg", import.meta.url),
+    )
+    .text(),
+)
 
 /** Lato Bold’s proportions, near enough to test the rules with. */
 const metrics = (format: Format, headline: string): Metrics => ({
@@ -49,6 +58,59 @@ test("the logo is the kit’s horizontal lockup, inked one unit inside its box",
     })
 })
 
+test("the house mark is the kit’s, inked one unit inside its box", () => {
+  expect(
+    mark,
+  )
+    .toEqual({
+      viewWidth: 70,
+      viewHeight: 70,
+      left: 1,
+      right: 69,
+      top: 1,
+      bottom: 69,
+    })
+})
+
+test("Welcome $home carries the house mark alone, Based House Mumbai the full logo", () => {
+  expect(
+    Object.fromEntries(Banners.map((banner) => [banner.slug, banner.logo])),
+  )
+    .toEqual({
+      "welcome-home": "mark",
+      "based-house-mumbai": "horizontal",
+    })
+})
+
+test("the house mark is drawn larger than the house in the full logo", () => {
+  for (const format of Formats) {
+    const m = metrics(format, "Welcome $home")
+    const alone = layout(format, m, "mark", mark).logoInk
+    const full = layout(format, m, "horizontal", ink).logoInk
+
+    expect(
+      alone.bottom - alone.top,
+    )
+      .toBeCloseTo(format.height * Lockups.mark.share, 9)
+
+    expect(
+      alone.bottom - alone.top,
+    )
+      .toBeGreaterThan(full.bottom - full.top)
+
+    expect(
+      [
+        alone.left,
+        alone.top,
+      ],
+    )
+      .toEqual([
+        full.left,
+        full.top,
+      ])
+  }
+})
+
 test("the copy follows the kit’s voice", () => {
   const copy = Banners
     .map((banner) => banner.headline)
@@ -68,7 +130,12 @@ test("the copy follows the kit’s voice", () => {
 
 test("the logo’s ink sits on the top and left margins", () => {
   for (const format of Formats) {
-    const placed = layout(format, metrics(format, "Welcome $home"), ink)
+    const placed = layout(
+      format,
+      metrics(format, "Welcome $home"),
+      "horizontal",
+      ink,
+    )
 
     expect(
       [
@@ -87,7 +154,7 @@ test("the headline’s ink is centred across and its cap height down", () => {
   for (const format of Formats) {
     for (const banner of Banners) {
       const m = metrics(format, banner.headline)
-      const placed = layout(format, m, ink)
+      const placed = layout(format, m, "horizontal", ink)
       const box = headlineInk(placed, m)
 
       expect(
@@ -112,12 +179,12 @@ test("a headline wider than the space between the margins is caught", () => {
   }
 
   expect(
-    insideMargin(format, layout(format, fits, ink), fits),
+    insideMargin(format, layout(format, fits, "horizontal", ink), fits),
   )
     .toBe(true)
 
   expect(
-    insideMargin(format, layout(format, tooWide, ink), tooWide),
+    insideMargin(format, layout(format, tooWide, "horizontal", ink), tooWide),
   )
     .toBe(false)
 })
@@ -125,10 +192,15 @@ test("a headline wider than the space between the margins is caught", () => {
 test("a centred headline keeps out of the logo’s clear space, one under it does not", () => {
   for (const format of Formats) {
     const m = metrics(format, "Welcome $home")
-    const placed = layout(format, m, ink)
+    const placed = layout(format, m, "horizontal", ink)
 
     expect(
       clearOfLogo(placed, m),
+    )
+      .toBe(true)
+
+    expect(
+      clearOfLogo(layout(format, m, "mark", mark), m),
     )
       .toBe(true)
 
@@ -152,7 +224,7 @@ test("the X header headlines stay clear of X’s avatar", () => {
     const m = metrics(format, banner.headline)
 
     expect(
-      coversAvatar(layout(format, m, ink), m),
+      coversAvatar(layout(format, m, "horizontal", ink), m),
     )
       .toBe(false)
   }
@@ -161,7 +233,7 @@ test("the X header headlines stay clear of X’s avatar", () => {
 test("a headline low on the left of the X header would run under the avatar", () => {
   const format = Formats.find((f) => f.name === "1500x500")!
   const m = metrics(format, "Welcome $home")
-  const placed = layout(format, m, ink)
+  const placed = layout(format, m, "horizontal", ink)
 
   expect(
     coversAvatar({

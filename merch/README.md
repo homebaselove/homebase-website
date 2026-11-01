@@ -84,17 +84,19 @@ keeps the house clear at chat-list size, where no lettering can be read.
 `banners/` holds two banners in the brand kit’s social sizes, each at 1× and
 2×: the X header (1500 × 500) and the link preview (1200 × 630).
 
-| File                   | Headline           |
-| ---------------------- | ------------------ |
-| `welcome-home-*`       | Welcome $home      |
-| `based-house-mumbai-*` | Based House Mumbai |
+| File                   | Logo, top left           | Headline           |
+| ---------------------- | ------------------------ | ------------------ |
+| `welcome-home-*`       | The house mark alone     | Welcome $home      |
+| `based-house-mumbai-*` | The full horizontal logo | Based House Mumbai |
 
-They follow the brand kit (homebase.love/brandkit): the kit’s horizontal
-logo, the lockup it names for banners, white on Homebase Blue, top left with
-far more than its clear space; the headline in Lato Bold at the kit’s display
-setting, centred; `$home` in lowercase. Nothing is set in dots. The logo file
-is read from `brand/logo/svg`, so a change to the kit carries over on the
-next build.
+They follow the brand kit (homebase.love/brandkit): the kit’s logo files,
+white on Homebase Blue, top left with far more than their clear space; the
+headline in Lato Bold at the kit’s display setting, centred; `$home` in
+lowercase. Nothing is set in dots. Based House Mumbai carries the horizontal
+logo, the lockup the kit names for banners. Welcome $home carries the house
+mark alone, a third taller than the house in the horizontal logo, so it holds
+the corner without the wordmark. The logo files are read from
+`brand/logo/svg`, so a change to the kit carries over on the next build.
 
 The headline is centred on its ink, so the side bearing of its first letter
 and the tracking after its last do not pull it off the middle, with its cap

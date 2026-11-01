@@ -1,9 +1,9 @@
 /// <reference lib="dom" />
 /**
  * Homebase banners, in the brand kit’s two social sizes: the X header
- * (1500 × 500) and the link preview (1200 × 630). Each is the kit’s
- * horizontal logo, white, top left, with a headline in Lato Bold centred on
- * Homebase Blue, the way the kit’s own social images are set.
+ * (1500 × 500) and the link preview (1200 × 630). Each is a logo from the
+ * kit, white, top left, with a headline in Lato Bold centred on Homebase
+ * Blue, the way the kit’s own social images are set.
  *
  *   bun merch/banners.ts
  *
@@ -38,9 +38,29 @@ export const Formats: Format[] = [
   },
 ]
 
+/**
+ * The kit’s lockups a banner can carry top left, white, each with its ink
+ * height as a share of the banner’s height. The house mark alone is drawn
+ * larger than the house in the horizontal lockup, so it holds the corner
+ * without the wordmark beside it.
+ */
+export const Lockups = {
+  horizontal: {
+    file: "homebase-horizontal-white.svg",
+    share: 0.09,
+  },
+  mark: {
+    file: "homebase-mark-white.svg",
+    share: 0.12,
+  },
+}
+
+export type Lockup = keyof typeof Lockups
+
 export interface Banner {
   slug: string
   headline: string
+  logo: Lockup
 }
 
 /** Copy per the kit’s voice: $home in lowercase, Based House and the city. */
@@ -48,10 +68,12 @@ export const Banners: Banner[] = [
   {
     slug: "welcome-home",
     headline: "Welcome $home",
+    logo: "mark",
   },
   {
     slug: "based-house-mumbai",
     headline: "Based House Mumbai",
+    logo: "horizontal",
   },
 ]
 
@@ -61,9 +83,7 @@ export const Display = {
   tracking: -0.01,
 }
 
-/** Logo height and outer margin, as shares of the banner’s height. */
-const LogoShare = 0.09
-
+/** The outer margin, as a share of the banner’s height. */
 const MarginShare = 0.128
 
 /** The kit’s clear space: a fifth of the logo’s height on every side. */
@@ -123,9 +143,14 @@ export interface Layout {
   }
 }
 
-export function layout(format: Format, metrics: Metrics, ink: LogoInk): Layout {
+export function layout(
+  format: Format,
+  metrics: Metrics,
+  lockup: Lockup,
+  ink: LogoInk,
+): Layout {
   const margin = format.height * MarginShare
-  const scale = (format.height * LogoShare) / (ink.bottom - ink.top)
+  const scale = (format.height * Lockups[lockup].share) / (ink.bottom - ink.top)
   const logo = {
     x: margin - ink.left * scale,
     y: margin - ink.top * scale,
@@ -240,10 +265,20 @@ if (import.meta.main) {
   const { chromium } = await import("playwright")
   const Here = NPath.dirname(NUrl.fileURLToPath(import.meta.url))
   const OutDir = NPath.join(Here, "banners")
-  const logoSvg = await Bun
-    .file(NPath.join(Here, "../brand/logo/svg/homebase-horizontal-white.svg"))
-    .text()
-  const ink = logoInk(logoSvg)
+  const logos = Object.fromEntries(
+    await Promise.all(
+      Object.entries(Lockups).map(async ([lockup, { file }]) => {
+        const svg = await Bun
+          .file(NPath.join(Here, "../brand/logo/svg", file))
+          .text()
+
+        return [lockup, {
+          svg,
+          ink: logoInk(svg),
+        }]
+      }),
+    ),
+  ) as Record<Lockup, { svg: string; ink: LogoInk }>
   const head =
     `<link href="https://fonts.googleapis.com/css2?family=Lato:wght@${Display.weight}&display=swap" rel="stylesheet">`
     + `<style>html,body{margin:0}</style>`
@@ -301,7 +336,8 @@ if (import.meta.main) {
             tracking: Display.tracking,
           },
         )
-        const placed = layout(format, metrics, ink)
+        const logo = logos[banner.logo]
+        const placed = layout(format, metrics, banner.logo, logo.ink)
         const name = `${banner.slug}-${format.name}`
 
         if (!insideMargin(format, placed, metrics)) {
@@ -321,7 +357,7 @@ if (import.meta.main) {
         })
         await page.evaluate((svg) => {
           document.body.innerHTML = svg
-        }, bannerSvg(format, placed, banner.headline, logoSvg))
+        }, bannerSvg(format, placed, banner.headline, logo.svg))
         const suffix = density === 1 ? "" : `@${density}x`
         await page.screenshot({
           path: NPath.join(OutDir, `${name}${suffix}.png`),
