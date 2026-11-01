@@ -3,9 +3,9 @@ import * as NPath from "node:path"
 import { chromium } from "playwright"
 
 /**
- * Writes the SeedMe banner into `print/`: SeedMe's logo and its name in
- * lowercase, with no space between them, centred on its ink, for a 4 × 8 ft
- * banner hung landscape.
+ * Writes the SeedMe banner into `print/`: SeedMe's logo followed by its name
+ * in lowercase, spaced as one more letter of the word, centred on its ink, for
+ * a 4 × 8 ft banner hung landscape.
  *
  * - `seedme-banner-4x8ft.pdf`: one 96 × 48 in page, the size it prints at.
  *   All of it is vector but the logo's soft inner shadow, which Chromium
@@ -70,7 +70,7 @@ const Wordmark = {
  * The lockup at the sizes of SeedMe's share card
  * (`frontend/src/lib/shareCard.tsx`), in its pixels: the logo in a 60 square
  * and the type at its wordmark's size, the 1533-unit ink box of "SeedMe" 32
- * tall. The word follows the seed with no space between their ink, and the
+ * tall. The word follows the seed at the spacing of its own letters, and the
  * two are centred on one line.
  */
 const Mark = 60
@@ -84,12 +84,19 @@ const WordWidth = Wordmark.width * FontUnit
 const WordHeight = Wordmark.height * FontUnit
 
 /**
+ * The seed takes the space a round letter would: what an o leaves before the
+ * s, its right side bearing (76 units) and the s's left (73) less the
+ * tracking (51). The round letters of "seedme" leave 95 to 97.
+ */
+const Space = 98 * FontUnit
+
+/**
  * The lockup's ink, seed to word, spans two thirds of the width. That leaves
  * 16 in clear at either end and over 14 above and below, well inside any hem,
  * grommet or pole pocket.
  */
 const LockupWidth = Width * 2 / 3
-const Scale = LockupWidth / (SeedWidth + WordWidth)
+const Scale = LockupWidth / (SeedWidth + Space + WordWidth)
 const SeedX = (Width - LockupWidth) / 2
 const Middle = Height / 2
 
@@ -144,7 +151,7 @@ const svg = [
   `<rect width="${Width}" height="${Height}" fill="${Brand.ink}"/>`,
   logo(SeedX - SeedMargin * Scale, Middle - Mark * Scale / 2, Mark * Scale),
   wordmark(
-    SeedX + SeedWidth * Scale,
+    SeedX + (SeedWidth + Space) * Scale,
     Middle - WordHeight * Scale / 2,
     WordWidth * Scale,
     WordHeight * Scale,
