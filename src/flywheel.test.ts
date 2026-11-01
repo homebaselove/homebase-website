@@ -47,6 +47,17 @@ test("the flywheel welcomes people to Based House where it asked them to apply",
     })
 })
 
+// SeedMe marks Launch on SeedMe as for approved founders; Learn leaves the
+// mark off.
+test("the flywheel offers Launch on SeedMe without a note", async () => {
+  expect(
+    (await document()).includes(
+      `<a class="btn" href="https://seedme.xyz/profile" target="_blank" rel="noreferrer">Launch on SeedMe</a>`,
+    ),
+  )
+    .toBe(true)
+})
+
 // The document forces its light theme, so its light tokens are the ones shown.
 test("the flywheel shows its light theme in the site blue", async () => {
   const html = await document()

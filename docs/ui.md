@@ -17,8 +17,9 @@ the one document `public/flywheel.html` and shown in a frame (`Flywheel`)
 that takes the height of its content. The copy differs from SeedMe's in a
 few places, listed at its top: it is always light, on white, in the site's
 blue and Lato, it leaves out the notes on how to read the wheel, Welcome to
-Based House stands where its Apply buttons were, and it names the fund
-basedhouse.base.eth, the Basename of the address Donate sends to.
+Based House stands where its Apply buttons were, Launch on SeedMe carries no
+note on who may launch, and it names the fund basedhouse.base.eth, the
+Basename of the address Donate sends to.
 The footer's Learn more leads there, and the header's house and wordmark
 lead home. The home page is a
 column of bands, each a `Band` at the width its content reads best at:
