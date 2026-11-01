@@ -1,10 +1,12 @@
 import { expect, test } from "bun:test"
 import {
   Banners,
+  clearOfLogo,
   coversAvatar,
-  Display,
   type Format,
   Formats,
+  headlineInk,
+  insideMargin,
   layout,
   logoInk,
   type Metrics,
@@ -19,42 +21,37 @@ const logo = await Bun
 const ink = logoInk(logo)
 
 /** Lato Bold’s proportions, near enough to test the rules with. */
-const metrics = (format: Format, lines: readonly string[]): Metrics => ({
+const metrics = (format: Format, headline: string): Metrics => ({
   cap: format.size * 0.72,
-  lines: lines.map((line) => ({
-    width: format.size * 0.55 * line.length,
-    left: format.size * 0.05,
-    descent: format.size * 0.12,
-  })),
+  left: format.size * 0.05,
+  right: format.size * 0.53 * headline.length,
+  descent: format.size * 0.12,
 })
-
-const format = (name: string) => Formats.find((f) => f.name === name)!
 
 test("the logo is the kit’s horizontal lockup, inked one unit inside its box", () => {
   expect(
-    ink,
+    {
+      viewWidth: ink.viewWidth,
+      viewHeight: ink.viewHeight,
+      left: ink.left,
+      right: Math.round(ink.right),
+      top: ink.top,
+      bottom: ink.bottom,
+    },
   )
     .toEqual({
       viewWidth: 1318,
       viewHeight: 150,
       left: 1,
+      right: 1317,
       top: 1,
       bottom: 149,
     })
 })
 
-test("every banner has its headline set for every format", () => {
-  for (const banner of Banners) {
-    expect(
-      Formats.every((f) => banner.lines[f.name]?.length > 0),
-    )
-      .toBe(true)
-  }
-})
-
 test("the copy follows the kit’s voice", () => {
   const copy = Banners
-    .flatMap((banner) => Object.values(banner.lines).flat())
+    .map((banner) => banner.headline)
     .join(" ")
 
   expect(
@@ -69,78 +66,111 @@ test("the copy follows the kit’s voice", () => {
     .toMatch(/\$Home|\$HOME|Homebase|HomeBase/)
 })
 
-test("the logo’s ink and the headline’s ink start on the same margin", () => {
-  const f = format("1200x630")
-  const text = ["Based House", "Mumbai"]
-  const m = metrics(f, text)
-  const placed = layout(f, text, m, ink)
-  const scale = placed.logo.height / ink.viewHeight
-
-  expect(
-    placed.logo.x + ink.left * scale,
-  )
-    .toBeCloseTo(placed.margin, 9)
-
-  expect(
-    placed.logo.y + ink.top * scale,
-  )
-    .toBeCloseTo(placed.margin, 9)
-
-  expect(
-    placed.lines.map((line, index) => line.x + m.lines[index].left),
-  )
-    .toEqual([
-      placed.margin,
-      placed.margin,
-    ])
-})
-
-test("the link preview headline ends on the bottom margin", () => {
-  const f = format("1200x630")
-  const text = ["Welcome", "$home"]
-  const placed = layout(f, text, metrics(f, text), ink)
-
-  expect(
-    placed.lines.at(-1)!.baseline,
-  )
-    .toBeCloseTo(f.height - placed.margin, 9)
-
-  expect(
-    placed.lines[1].baseline - placed.lines[0].baseline,
-  )
-    .toBeCloseTo(f.size * Display.lineHeight, 9)
-})
-
-test("the X header headline is centred and clear of X’s avatar", () => {
-  const f = format("1500x500")
-
-  for (const banner of Banners) {
-    const text = banner.lines[f.name]
-    const m = metrics(f, text)
-    const placed = layout(f, text, m, ink)
+test("the logo’s ink sits on the top and left margins", () => {
+  for (const format of Formats) {
+    const placed = layout(format, metrics(format, "Welcome $home"), ink)
 
     expect(
-      placed.lines[0].baseline - m.cap / 2,
+      [
+        placed.logoInk.left,
+        placed.logoInk.top,
+      ],
     )
-      .toBeCloseTo(f.height / 2, 9)
+      .toEqual([
+        placed.margin,
+        placed.margin,
+      ])
+  }
+})
+
+test("the headline’s ink is centred across and its cap height down", () => {
+  for (const format of Formats) {
+    for (const banner of Banners) {
+      const m = metrics(format, banner.headline)
+      const placed = layout(format, m, ink)
+      const box = headlineInk(placed, m)
+
+      expect(
+        (box.left + box.right) / 2,
+      )
+        .toBeCloseTo(format.width / 2, 9)
+
+      expect(
+        (box.top + placed.headline.baseline) / 2,
+      )
+        .toBeCloseTo(format.height / 2, 9)
+    }
+  }
+})
+
+test("a headline wider than the space between the margins is caught", () => {
+  const format = Formats.find((f) => f.name === "1200x630")!
+  const fits = metrics(format, "Welcome $home")
+  const tooWide = {
+    ...fits,
+    right: format.width,
+  }
+
+  expect(
+    insideMargin(format, layout(format, fits, ink), fits),
+  )
+    .toBe(true)
+
+  expect(
+    insideMargin(format, layout(format, tooWide, ink), tooWide),
+  )
+    .toBe(false)
+})
+
+test("a centred headline keeps out of the logo’s clear space, one under it does not", () => {
+  for (const format of Formats) {
+    const m = metrics(format, "Welcome $home")
+    const placed = layout(format, m, ink)
 
     expect(
-      coversAvatar(placed, m),
+      clearOfLogo(placed, m),
+    )
+      .toBe(true)
+
+    expect(
+      clearOfLogo({
+        ...placed,
+        headline: {
+          x: placed.margin,
+          baseline: placed.logoInk.bottom + m.cap,
+        },
+      }, m),
     )
       .toBe(false)
   }
 })
 
-test("a headline on the bottom margin of the X header would run under the avatar", () => {
-  const f = {
-    ...format("1500x500"),
-    anchor: "bottom" as const,
+test("the X header headlines stay clear of X’s avatar", () => {
+  const format = Formats.find((f) => f.name === "1500x500")!
+
+  for (const banner of Banners) {
+    const m = metrics(format, banner.headline)
+
+    expect(
+      coversAvatar(layout(format, m, ink), m),
+    )
+      .toBe(false)
   }
-  const text = ["Welcome $home"]
-  const m = metrics(f, text)
+})
+
+test("a headline low on the left of the X header would run under the avatar", () => {
+  const format = Formats.find((f) => f.name === "1500x500")!
+  const m = metrics(format, "Welcome $home")
+  const placed = layout(format, m, ink)
 
   expect(
-    coversAvatar(layout(f, text, m, ink), m),
+    coversAvatar({
+      ...placed,
+      headline: {
+        x: placed.margin,
+        baseline: format.height - placed.margin,
+      },
+    }, m),
   )
     .toBe(true)
 })

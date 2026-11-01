@@ -2,7 +2,7 @@
 /**
  * Homebase banners, in the brand kit’s two social sizes: the X header
  * (1500 × 500) and the link preview (1200 × 630). Each is the kit’s
- * horizontal logo, white, top left, over a headline in Lato Bold, on
+ * horizontal logo, white, top left, with a headline in Lato Bold centred on
  * Homebase Blue, the way the kit’s own social images are set.
  *
  *   bun merch/banners.ts
@@ -21,12 +21,6 @@ export interface Format {
   height: number
   /** Headline size in px. */
   size: number
-  /**
-   * Where the headline sits: in the middle, or on the bottom margin. The X
-   * header keeps it in the middle because X lays the avatar over the
-   * bottom left of the header.
-   */
-  anchor: "middle" | "bottom"
 }
 
 export const Formats: Format[] = [
@@ -35,45 +29,35 @@ export const Formats: Format[] = [
     width: 1500,
     height: 500,
     size: 140,
-    anchor: "middle",
   },
   {
     name: "1200x630",
     width: 1200,
     height: 630,
-    size: 165,
-    anchor: "bottom",
+    size: 110,
   },
 ]
 
 export interface Banner {
   slug: string
-  /** The headline, line by line, for each format. */
-  lines: Record<string, string[]>
+  headline: string
 }
 
 /** Copy per the kit’s voice: $home in lowercase, Based House and the city. */
 export const Banners: Banner[] = [
   {
     slug: "welcome-home",
-    lines: {
-      "1500x500": ["Welcome $home"],
-      "1200x630": ["Welcome", "$home"],
-    },
+    headline: "Welcome $home",
   },
   {
     slug: "based-house-mumbai",
-    lines: {
-      "1500x500": ["Based House Mumbai"],
-      "1200x630": ["Based House", "Mumbai"],
-    },
+    headline: "Based House Mumbai",
   },
 ]
 
-/** The kit’s display setting: Lato 700, 1.08 line height, −0.01 em tracking. */
+/** The kit’s display setting: Lato 700, −0.01 em tracking. */
 export const Display = {
   weight: 700,
-  lineHeight: 1.08,
   tracking: -0.01,
 }
 
@@ -81,6 +65,9 @@ export const Display = {
 const LogoShare = 0.09
 
 const MarginShare = 0.128
+
+/** The kit’s clear space: a fifth of the logo’s height on every side. */
+export const ClearSpace = 0.2
 
 /**
  * Where X’s avatar covers a 1500 × 500 header, in header pixels: a circle
@@ -92,18 +79,15 @@ export const XAvatar = {
   r: 335 / 2,
 }
 
-export interface LineMetrics {
-  width: number
-  /** Ink start, right of the pen: the left side bearing of the first glyph. */
-  left: number
-  /** Ink depth below the baseline. */
-  descent: number
-}
-
 export interface Metrics {
   /** Cap height of the face at the headline size. */
   cap: number
-  lines: LineMetrics[]
+  /** Where the ink starts, right of the pen: the first glyph’s side bearing. */
+  left: number
+  /** Where the ink ends, right of the pen. */
+  right: number
+  /** Ink depth below the baseline. */
+  descent: number
 }
 
 /** The logo’s dots inside its viewBox, so its ink can sit on the margin. */
@@ -111,6 +95,14 @@ export interface LogoInk {
   viewWidth: number
   viewHeight: number
   left: number
+  right: number
+  top: number
+  bottom: number
+}
+
+export interface Box {
+  left: number
+  right: number
   top: number
   bottom: number
 }
@@ -123,58 +115,77 @@ export interface Layout {
     width: number
     height: number
   }
-  lines: {
+  /** Ink bounds of the logo on the banner. */
+  logoInk: Box
+  headline: {
     x: number
     baseline: number
-    text: string
-  }[]
-}
-
-export function layout(
-  format: Format,
-  text: readonly string[],
-  metrics: Metrics,
-  ink: LogoInk,
-): Layout {
-  const margin = format.height * MarginShare
-  const scale = (format.height * LogoShare) / (ink.bottom - ink.top)
-  const leading = format.size * Display.lineHeight
-  const block = metrics.cap + (text.length - 1) * leading
-  const firstBaseline = format.anchor === "middle"
-    ? format.height / 2 - block / 2 + metrics.cap
-    : format.height - margin - (text.length - 1) * leading
-
-  return {
-    margin,
-    logo: {
-      x: margin - ink.left * scale,
-      y: margin - ink.top * scale,
-      width: ink.viewWidth * scale,
-      height: ink.viewHeight * scale,
-    },
-    lines: text.map((line, index) => ({
-      x: margin - metrics.lines[index].left,
-      baseline: firstBaseline + index * leading,
-      text: line,
-    })),
   }
 }
 
-/** Whether any line’s ink box reaches into X’s avatar on the header. */
-export function coversAvatar(placed: Layout, metrics: Metrics) {
-  return placed.lines.some((line, index) => {
-    const { width, left, descent } = metrics.lines[index]
-    const box = {
-      left: line.x + left,
-      right: line.x + width,
-      top: line.baseline - metrics.cap,
-      bottom: line.baseline + descent,
-    }
-    const nearestX = Math.max(box.left, Math.min(XAvatar.cx, box.right))
-    const nearestY = Math.max(box.top, Math.min(XAvatar.cy, box.bottom))
+export function layout(format: Format, metrics: Metrics, ink: LogoInk): Layout {
+  const margin = format.height * MarginShare
+  const scale = (format.height * LogoShare) / (ink.bottom - ink.top)
+  const logo = {
+    x: margin - ink.left * scale,
+    y: margin - ink.top * scale,
+    width: ink.viewWidth * scale,
+    height: ink.viewHeight * scale,
+  }
 
-    return Math.hypot(nearestX - XAvatar.cx, nearestY - XAvatar.cy) < XAvatar.r
-  })
+  return {
+    margin,
+    logo,
+    logoInk: {
+      left: logo.x + ink.left * scale,
+      right: logo.x + ink.right * scale,
+      top: logo.y + ink.top * scale,
+      bottom: logo.y + ink.bottom * scale,
+    },
+    // Centred on its ink, so neither the first letter’s side bearing nor the
+    // tracking after the last one pulls it off the middle; the cap height
+    // sits on the middle line.
+    headline: {
+      x: format.width / 2 - (metrics.left + metrics.right) / 2,
+      baseline: format.height / 2 + metrics.cap / 2,
+    },
+  }
+}
+
+/** The headline’s ink on the banner, from cap height to its lowest stroke. */
+export function headlineInk(placed: Layout, metrics: Metrics): Box {
+  return {
+    left: placed.headline.x + metrics.left,
+    right: placed.headline.x + metrics.right,
+    top: placed.headline.baseline - metrics.cap,
+    bottom: placed.headline.baseline + metrics.descent,
+  }
+}
+
+/** Whether the headline’s ink reaches into X’s avatar on the header. */
+export function coversAvatar(placed: Layout, metrics: Metrics) {
+  const box = headlineInk(placed, metrics)
+  const nearestX = Math.max(box.left, Math.min(XAvatar.cx, box.right))
+  const nearestY = Math.max(box.top, Math.min(XAvatar.cy, box.bottom))
+
+  return Math.hypot(nearestX - XAvatar.cx, nearestY - XAvatar.cy) < XAvatar.r
+}
+
+/** Whether the headline keeps out of the logo’s clear space. */
+export function clearOfLogo(placed: Layout, metrics: Metrics) {
+  const box = headlineInk(placed, metrics)
+  const logo = placed.logoInk
+  const clear = (logo.bottom - logo.top) * ClearSpace
+
+  return box.top >= logo.bottom + clear || box.left >= logo.right + clear
+}
+
+/** Whether the headline’s ink stays inside the outer margin. */
+export function insideMargin(format: Format, placed: Layout, metrics: Metrics) {
+  const box = headlineInk(placed, metrics)
+
+  return box.left >= placed.margin
+    && box.right <= format.width - placed.margin
 }
 
 export function logoInk(svg: string): LogoInk {
@@ -193,6 +204,7 @@ export function logoInk(svg: string): LogoInk {
     viewWidth,
     viewHeight,
     left: Math.min(...circles.map((c) => c.cx - c.r)),
+    right: Math.max(...circles.map((c) => c.cx + c.r)),
     top: Math.min(...circles.map((c) => c.cy - c.r)),
     bottom: Math.max(...circles.map((c) => c.cy + c.r)),
   }
@@ -201,6 +213,7 @@ export function logoInk(svg: string): LogoInk {
 export function bannerSvg(
   format: Format,
   placed: Layout,
+  headline: string,
   logoSvg: string,
 ): string {
   const logo = logoSvg
@@ -217,14 +230,9 @@ export function bannerSvg(
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${format.width}" height="${format.height}" viewBox="0 0 ${format.width} ${format.height}" style="display:block">`
     + `<rect width="${format.width}" height="${format.height}" fill="${colors.blue.hex}"/>`
     + logo
-    + placed
-      .lines
-      .map((line) =>
-        `<text x="${line.x}" y="${line.baseline}" fill="${colors.white.hex}" font-family="Lato" font-weight="${Display.weight}" font-size="${format.size}" letter-spacing="${
-          Display.tracking * format.size
-        }">${line.text}</text>`
-      )
-      .join("")
+    + `<text x="${placed.headline.x}" y="${placed.headline.baseline}" fill="${colors.white.hex}" font-family="Lato" font-weight="${Display.weight}" font-size="${format.size}" letter-spacing="${
+      Display.tracking * format.size
+    }">${headline}</text>`
     + `</svg>`
 }
 
@@ -272,50 +280,38 @@ if (import.meta.main) {
 
     for (const format of Formats) {
       for (const banner of Banners) {
-        const text = banner.lines[format.name]
         const metrics: Metrics = await page.evaluate(
-          ({ text, size, weight, tracking }) => {
+          ({ headline, size, weight, tracking }) => {
             const context = document.createElement("canvas").getContext("2d")!
             context.font = `${weight} ${size}px Lato`
             context.letterSpacing = `${tracking * size}px`
+            const measured = context.measureText(headline)
 
             return {
               cap: context.measureText("H").actualBoundingBoxAscent,
-              lines: text.map((line) => {
-                const measured = context.measureText(line)
-
-                return {
-                  width: measured.width,
-                  left: -measured.actualBoundingBoxLeft,
-                  descent: measured.actualBoundingBoxDescent,
-                }
-              }),
+              left: -measured.actualBoundingBoxLeft,
+              right: measured.actualBoundingBoxRight,
+              descent: measured.actualBoundingBoxDescent,
             }
           },
           {
-            text,
+            headline: banner.headline,
             size: format.size,
             weight: Display.weight,
             tracking: Display.tracking,
           },
         )
-        const placed = layout(format, text, metrics, ink)
+        const placed = layout(format, metrics, ink)
+        const name = `${banner.slug}-${format.name}`
 
-        for (const [index, line] of metrics.lines.entries()) {
-          const right = placed.lines[index].x + line.width
-          if (right > format.width - placed.margin) {
-            throw new Error(
-              `"${
-                text[index]
-              }" runs past the margin of the ${format.name} banner`,
-            )
-          }
+        if (!insideMargin(format, placed, metrics)) {
+          throw new Error(`The ${name} headline runs past the margin`)
         }
-
+        if (!clearOfLogo(placed, metrics)) {
+          throw new Error(`The ${name} headline crowds the logo`)
+        }
         if (format.name === "1500x500" && coversAvatar(placed, metrics)) {
-          throw new Error(
-            `The ${banner.slug} headline runs under X’s avatar in the header`,
-          )
+          throw new Error(`The ${name} headline runs under X’s avatar`)
         }
 
         // Only the body changes, so the Lato already loaded stays loaded.
@@ -325,13 +321,10 @@ if (import.meta.main) {
         })
         await page.evaluate((svg) => {
           document.body.innerHTML = svg
-        }, bannerSvg(format, placed, logoSvg))
+        }, bannerSvg(format, placed, banner.headline, logoSvg))
         const suffix = density === 1 ? "" : `@${density}x`
         await page.screenshot({
-          path: NPath.join(
-            OutDir,
-            `${banner.slug}-${format.name}${suffix}.png`,
-          ),
+          path: NPath.join(OutDir, `${name}${suffix}.png`),
         })
       }
     }

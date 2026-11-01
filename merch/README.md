@@ -92,13 +92,15 @@ keeps the house clear at chat-list size, where no lettering can be read.
 They follow the brand kit (homebase.love/brandkit): the kit’s horizontal
 logo, the lockup it names for banners, white on Homebase Blue, top left with
 far more than its clear space; the headline in Lato Bold at the kit’s display
-setting, with each line’s first stroke set on the logo’s left edge; `$home` in
-lowercase. Nothing is set in dots. The logo file is read from
-`brand/logo/svg`, so a change to the kit carries over on the next build.
+setting, centred; `$home` in lowercase. Nothing is set in dots. The logo file
+is read from `brand/logo/svg`, so a change to the kit carries over on the
+next build.
 
-On the X header the headline sits in the middle, clear of the bottom left,
-where X lays the avatar over the header; the build stops if a headline would
-run under it. On the link preview it stands on the bottom margin.
+The headline is centred on its ink, so the side bearing of its first letter
+and the tracking after its last do not pull it off the middle, with its cap
+height on the middle line. The build stops if a headline would run past the
+margins, into the logo’s clear space, or, on the X header, under the avatar
+X lays over the bottom left.
 
 ## Sources
 
