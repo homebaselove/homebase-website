@@ -16,9 +16,10 @@ home page. Learn is the Based House flywheel, the final build from SeedMe
 the one document `public/flywheel.html` and shown in a frame (`Flywheel`)
 that takes the height of its content. The copy differs from SeedMe's in a
 few places, listed at its top: it is always light, on white, in the site's
-blue and Lato, its Apply buttons open the site's one application form, and it
-names the fund basedhouse.base.eth, the Basename of the address Donate sends
-to.
+blue and Lato, it leaves out the notes on how to read the wheel, Welcome to
+Based House stands where its Apply buttons were, Launch on SeedMe carries no
+note on who may launch, and it names the fund basedhouse.base.eth, the
+Basename of the address Donate sends to.
 The footer's Learn more leads there, and the header's house and wordmark
 lead home. The home page is a
 column of bands, each a `Band` at the width its content reads best at:
@@ -26,7 +27,7 @@ column of bands, each a `Band` at the width its content reads best at:
 | Band | Component | What it does |
 | --- | --- | --- |
 | Header | `Header`, `Socials`, `ConnectButton`, `HouseLogo`, `Wordmark` | The dot-matrix house and wordmark (`DotMatrix` over the dot maps in `dots.ts`), the social links and the one wallet button. |
-| Our Story | `BasedHouseStory` (`Story.tsx`, data in `story.ts`) | A scroll-snap reel of chapters with a dot rail. It opens on the interview and holds it while the page settles; off-centre cards are `inert`; the arrow keys, dots and swipes move it. A chapter can lead with a `Film` (no download until Watch) or a `Cover` of one or two photos. |
+| Our Story | `BasedHouseStory` (`Story.tsx`, data in `story.ts`) | A scroll-snap reel of chapters with a dot rail. It opens on the most recent chapter and holds it while the page settles; off-centre cards are `inert`; the arrow keys, dots and swipes move it. A chapter can lead with a `Film` (no download until Watch) or a `Cover` of one or two photos. |
 | Based House Mumbai | `BasedHouseCard`, `FundingCard`, `BasedHouseBlueprint` | The raise and how to give; the BasedPaint blueprint the reader can pick up and drop, with reduced motion honoured. |
 | Homebase Map | `MapCard`, `MapView`, `EventList`, `EventDetails`, `AddEventDialog` | Luma events pinned on Base, on a MapLibre map and in a list that point at each other. `docs/map.md` covers it in full. |
 | Homebase Live | `LiveCard`, `AddCalendarDialog` | Streams ahead from the calendars the admin added, by day, in any zone. `docs/live.md` covers it in full. |
@@ -325,9 +326,10 @@ page builds from GitHub, nor Foundry, so these were not run:
 
 - Donate is the funding card's one primary action and comes first, since the
   amount choice belongs to it and Buy and Lock $home leave for SeedMe.
-- The funding card and the story's Apply button open the same application,
-  `BasedHouseMumbaiApplyUrl` in `src/funding.ts`. The Mumbai announcement's
-  description still names the form its image shows, since it describes the
-  image.
+- Welcome to Based House, Homebase's post on X, stands where the application
+  form was: first in the story's Mumbai chapter, and first under the
+  flywheel's Take part. Both are `WelcomeToBasedHouseUrl` in `src/story.ts`.
+  The Mumbai announcement's description still names the form its image
+  shows, since it describes the image.
 - Raised for Based House counts the $home fee share only; donations, which
   go to basedhouse.base.eth, are not added to it.

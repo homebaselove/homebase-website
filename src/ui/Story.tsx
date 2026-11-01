@@ -5,17 +5,14 @@ import {
   type Chapter,
   Chapters,
   type CoverPhoto,
-  OpeningChapterId,
   type StoryVideo,
 } from "../story.ts"
 import { Disclosure } from "./Disclosure.tsx"
 import { OutIcon, PlayIcon } from "./Icons.tsx"
 import { SectionHeading } from "./Layout.tsx"
 
-const Opening = Math.max(
-  0,
-  Chapters.findIndex((chapter) => chapter.id === OpeningChapterId),
-)
+/** The chapter the reel opens on: the most recent, the last, since a test keeps the chapters in order. */
+const Opening = Chapters.length - 1
 
 /** How long after the page has loaded the opening chapter is put back if the reel is found elsewhere. */
 const HoldMs = 5000
@@ -45,13 +42,14 @@ function scrollTo(anchor: string) {
  * center at full size, with the one behind and the one ahead peeking in at
  * a smaller scale. Scrolling, swiping, the dots and the arrow keys all move
  * the focus; off-center chapters are inert so focus never lands in a card
- * the reader cannot see. The reel opens on the interview rather than the
- * first letter, with the story so far one step back, and stays there while
- * the page settles until the reader takes the reel. From the sm breakpoint
- * up every card stands as tall as the tallest, so the reel reads as one band
- * whichever chapter is in focus; on a phone, where one card fills the
- * screen, each keeps its own height. No apostrophes or quotes in prose here:
- * the class scanner pairs any quote with the next one of any kind.
+ * the reader cannot see. The reel opens on the most recent chapter rather
+ * than the first letter, with the story so far one step back, and stays
+ * there while the page settles until the reader takes the reel. From the sm
+ * breakpoint up every card stands as tall as the tallest, so the reel reads
+ * as one band whichever chapter is in focus; on a phone, where one card
+ * fills the screen, each keeps its own height. No apostrophes or quotes in
+ * prose here: the class scanner pairs any quote with the next one of any
+ * kind.
  */
 export function BasedHouseStory() {
   const active = useSignal(Opening)

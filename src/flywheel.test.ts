@@ -1,10 +1,7 @@
 import { expect, test } from "bun:test"
 import * as NPath from "node:path"
-import {
-  BasedHouseMumbaiApplyUrl,
-  DonationAddress,
-  DonationName,
-} from "./funding.ts"
+import { DonationAddress, DonationName } from "./funding.ts"
+import { WelcomeToBasedHouseUrl } from "./story.ts"
 import { FlywheelUrl } from "./ui/Flywheel.tsx"
 
 const document = () =>
@@ -21,17 +18,44 @@ test("the flywheel /learn frames is served from public", async () => {
     .toBe(true)
 })
 
-// The flywheel was built for SeedMe with its own residency form; on this
-// site every Apply opens the one form the funding card and the story use.
-test("the flywheel applies through the same form as the rest of the site", async () => {
+// Learn shows the wheel and then the ways to take part, without the notes
+// on reading the wheel that SeedMe puts between them.
+test("the flywheel leaves out How to read it", async () => {
   expect(
-    [
-      ...new Set((await document()).match(/https:\/\/forms\.gle\/[\w-]+/g)),
-    ],
+    /<h2[^>]*>How to read it<\/h2>/.test(await document()),
   )
-    .toEqual([
-      BasedHouseMumbaiApplyUrl,
-    ])
+    .toBe(false)
+})
+
+// The flywheel was built for SeedMe with its own residency form; on this
+// site the post the story leads its Mumbai chapter with stands where Apply
+// was, and no application form is left.
+test("the flywheel welcomes people to Based House where it asked them to apply", async () => {
+  const html = await document()
+
+  expect(
+    {
+      forms: html.match(/https:\/\/forms\.gle\/[\w-]+/g),
+      welcome: html.includes(
+        `<a class="btn primary" href="${WelcomeToBasedHouseUrl}" target="_blank" rel="noreferrer">Welcome to Based House</a>`,
+      ),
+    },
+  )
+    .toEqual({
+      forms: null,
+      welcome: true,
+    })
+})
+
+// SeedMe marks Launch on SeedMe as for approved founders; Learn leaves the
+// mark off.
+test("the flywheel offers Launch on SeedMe without a note", async () => {
+  expect(
+    (await document()).includes(
+      `<a class="btn" href="https://seedme.xyz/profile" target="_blank" rel="noreferrer">Launch on SeedMe</a>`,
+    ),
+  )
+    .toBe(true)
 })
 
 // The document forces its light theme, so its light tokens are the ones shown.
