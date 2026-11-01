@@ -1,4 +1,8 @@
-# Shirts
+# Merch
+
+Shirts, the Based House Mumbai Telegram avatar, and Homebase banners.
+
+## Shirts
 
 Two tees: Based House Mumbai for Devcon 2026, and SeedMe.
 
@@ -75,6 +79,27 @@ centred on its box and raised 2.5% of its height, since a mark centred
 exactly looks low. The house dots stand five lettering dots apart, which
 keeps the house clear at chat-list size, where no lettering can be read.
 
+## Banners
+
+`banners/` holds two banners in the brand kit’s social sizes, each at 1× and
+2×: the X header (1500 × 500) and the link preview (1200 × 630).
+
+| File                   | Headline           |
+| ---------------------- | ------------------ |
+| `welcome-home-*`       | Welcome $home      |
+| `based-house-mumbai-*` | Based House Mumbai |
+
+They follow the brand kit (homebase.love/brandkit): the kit’s horizontal
+logo, the lockup it names for banners, white on Homebase Blue, top left with
+far more than its clear space; the headline in Lato Bold at the kit’s display
+setting, with each line’s first stroke set on the logo’s left edge; `$home` in
+lowercase. Nothing is set in dots. The logo file is read from
+`brand/logo/svg`, so a change to the kit carries over on the next build.
+
+On the X header the headline sits in the middle, clear of the bottom left,
+where X lays the avatar over the header; the build stops if a headline would
+run under it. On the link preview it stands on the bottom margin.
+
 ## Sources
 
 - The house is `House` from `src/ui/dots.ts`, the same map the site draws.
@@ -95,3 +120,10 @@ bun merch/build.ts
 It needs Playwright’s Chromium (`bunx playwright install chromium`). The
 shirt is drawn as flat layers in `shirt.ts` and lit in `light.ts`; output is
 the same on every run.
+
+The banners build on their own, since Lato comes from Google Fonts and needs
+the network:
+
+```sh
+bun merch/banners.ts
+```
