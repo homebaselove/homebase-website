@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import * as NPath from "node:path"
-import { Chapters, LetterToJesseV1Url, OpeningChapterId } from "./story.ts"
+import { Chapters, LetterToJesseV1Url } from "./story.ts"
 
 test("chapters run in order from the first letter to today", () => {
   expect(
@@ -115,32 +115,22 @@ test("every chapter points at its sources, or is one", () => {
     .toEqual([])
 })
 
-test("the reel opens on the interview, one step before today", () => {
+// The welcome took the place of the application to Based House Mumbai.
+test("today leads with Welcome to Based House, as Homebase posted it on X", () => {
   expect(
-    Chapters
-      .slice(-2)
-      .map((chapter) => [
-        chapter.id,
-        chapter.video !== undefined,
-      ]),
+    Chapters.find((chapter) => chapter.id === "today")?.links[0],
   )
-    .toEqual([
-      [
-        OpeningChapterId,
-        true,
-      ],
-      [
-        "today",
-        false,
-      ],
-    ])
+    .toEqual({
+      label: "Welcome to Based House",
+      href: "https://x.com/homebasedotlove/status/2116932670341136778",
+    })
 })
 
 // The index ahead of the frames lets play start before the file has all
 // arrived, and its running time is what the play button reads out.
 test("the video plays as it loads and runs as long as it says", async () => {
   const video = Chapters
-    .find((chapter) => chapter.id === OpeningChapterId)!
+    .find((chapter) => chapter.id === "jesse-at-based-house")!
     .video!
   const file = Bun.file(NPath.join(import.meta.dir, "..", "public", video.src))
   const read = async (offset: number, length: number) =>

@@ -22,8 +22,8 @@ test("the flywheel /learn frames is served from public", async () => {
 })
 
 // The flywheel was built for SeedMe with its own residency form; on this
-// site every Apply opens the one form the funding card and the story use.
-test("the flywheel applies through the same form as the rest of the site", async () => {
+// site its Apply buttons open the Based House Mumbai application instead.
+test("the flywheel applies through the Based House Mumbai application", async () => {
   expect(
     [
       ...new Set((await document()).match(/https:\/\/forms\.gle\/[\w-]+/g)),

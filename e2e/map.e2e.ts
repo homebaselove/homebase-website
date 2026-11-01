@@ -1639,9 +1639,8 @@ try {
   })
   const still = await open(calm)
 
-  // The story reel opens on the interview, which waits on its poster with
-  // nothing of the browser drawn over it until the reader presses Watch,
-  // beside its text at the height of every card.
+  // The story reel opens on the most recent chapter, which leads with
+  // Welcome to Based House in place of an Apply button.
   await still.evaluate(() =>
     document.getElementById("story")?.scrollIntoView({
       block: "start",
@@ -1651,14 +1650,56 @@ try {
   const opening = await still.evaluate(() => {
     const scroller = document.querySelector<HTMLElement>("#story .story-reel")!
     const card = document.querySelector<HTMLElement>(
-      "#story [data-chapter=jesse-at-based-house]",
+      "#story [data-chapter=today]",
     )!
-    const video = card.querySelector("video")!
+    const lead = card.querySelector<HTMLAnchorElement>(".flex-wrap a")!
 
     return {
       dot: document
         .querySelector("#story [aria-current=step]")
         ?.getAttribute("aria-label") ?? String(),
+      offCenter: Math.abs(
+        card.offsetLeft
+          + card.offsetWidth / 2
+          - (scroller.scrollLeft + scroller.clientWidth / 2),
+      ),
+      lead: `${lead.textContent?.trim()} -> ${lead.href}`,
+      primary: lead.classList.contains("btn-brand"),
+      apply: card.querySelector("a[href*='forms.gle']") !== null,
+    }
+  })
+
+  check(
+    "the story reel opens on today, which leads with Welcome to Based House and links no application form",
+    opening.dot === "Today: Based House Mumbai"
+      && opening.offCenter < 2
+      && opening.lead
+        === "Welcome to Based House -> https://x.com/homebasedotlove/status/2116932670341136778"
+      && opening.primary
+      && !opening.apply,
+    JSON.stringify(opening),
+  )
+
+  // One step back, the interview waits on its poster with nothing of the
+  // browser drawn over it until the reader presses Watch, beside its text
+  // at the height of every card.
+  await still
+    .locator("#story button[aria-label='Feb 2026: Jesse at Based House']")
+    .click()
+  await still.waitForFunction(() =>
+    document
+      .querySelector("#story [aria-current=step]")
+      ?.getAttribute("aria-label") === "Feb 2026: Jesse at Based House"
+  )
+
+  const waiting = await still.evaluate(() => {
+    const scroller = document.querySelector<HTMLElement>("#story .story-reel")!
+    const card = document.querySelector<HTMLElement>(
+      "#story [data-chapter=jesse-at-based-house]",
+    )!
+    const video = card.querySelector("video")!
+
+    return {
       offCenter: Math.abs(
         card.offsetLeft
           + card.offsetWidth / 2
@@ -1678,18 +1719,17 @@ try {
   })
 
   check(
-    "the story reel opens on the interview, paused on its poster behind a Watch button",
-    opening.dot === "Feb 2026: Jesse at Based House"
-      && opening.offCenter < 2
-      && opening.paused
-      && !opening.controls
-      && !opening.autoplay
-      && opening.preload === "none"
-      && opening.poster.includes("JesseAtBasedHouse")
-      && opening.src === "/JesseAtBasedHouse.mp4#t=2.95"
-      && opening.watch === "Watch · 11 min"
-      && opening.film === opening.inside,
-    JSON.stringify(opening),
+    "one step back, the interview waits paused on its poster behind a Watch button",
+    waiting.offCenter < 2
+      && waiting.paused
+      && !waiting.controls
+      && !waiting.autoplay
+      && waiting.preload === "none"
+      && waiting.poster.includes("JesseAtBasedHouse")
+      && waiting.src === "/JesseAtBasedHouse.mp4#t=2.95"
+      && waiting.watch === "Watch · 11 min"
+      && waiting.film === waiting.inside,
+    JSON.stringify(waiting),
   )
 
   await still.locator("#story .story-film button").click()
@@ -1873,9 +1913,9 @@ try {
   })
   const thumb = await open(touch)
 
-  // On a phone the reel opens on the interview and holds it while the page
-  // settles: a browser snapping the reel back to its first chapter is undone,
-  // until the reader takes the reel.
+  // On a phone the reel opens on the most recent chapter and holds it while
+  // the page settles: a browser snapping the reel back to its first chapter
+  // is undone, until the reader takes the reel.
   const nearestChapter = () =>
     thumb.evaluate(() => {
       const reel = document.querySelector<HTMLElement>("#story .story-reel")!
@@ -1920,9 +1960,9 @@ try {
   const releasedTo = await nearestChapter()
 
   check(
-    "on a phone the reel opens on the interview and puts it back if the browser snaps the reel away, until the reader takes the reel",
-    opensOn === "jesse-at-based-house"
-      && heldOn === "jesse-at-based-house"
+    "on a phone the reel opens on today and puts it back if the browser snaps the reel away, until the reader takes the reel",
+    opensOn === "today"
+      && heldOn === "today"
       && releasedTo === "inception",
     `opens ${opensOn}, held ${heldOn}, released ${releasedTo}`,
   )

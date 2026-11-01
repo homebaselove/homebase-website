@@ -8,7 +8,6 @@ import {
   HomePoolId,
 } from "../api/funding.ts"
 import {
-  BasedHouseMumbaiApplyUrl,
   BaseRpcUrl,
   DonationAddress,
   DonationName,
@@ -22,7 +21,7 @@ import {
   SustainableEcosystemUrl,
   transactionUrl,
 } from "./funding.ts"
-import { Chapters, OpeningChapterId } from "./story.ts"
+import { Chapters } from "./story.ts"
 
 test("next milestone steps past the amount already raised", () => {
   expect(
@@ -319,22 +318,11 @@ test("every preset amount is offered exactly as it is sent", () => {
     .toEqual(PresetsEth.map((preset) => formatEth(preset)))
 })
 
-test("the story applies through the Based House Mumbai form", () => {
-  const today = Chapters.find((chapter) => chapter.id === "today")
-
-  expect(
-    today?.links.map((link) => link.href),
-  )
-    .toContain(BasedHouseMumbaiApplyUrl)
-  expect(
-    BasedHouseMumbaiApplyUrl,
-  )
-    .toBe("https://forms.gle/Jc6an9SCdYaP95us9")
-})
-
 // The info button on the funding card opens the same deck.
 test("the interview ends on the deck on how the funding works", () => {
-  const interview = Chapters.find((chapter) => chapter.id === OpeningChapterId)
+  const interview = Chapters.find((chapter) =>
+    chapter.id === "jesse-at-based-house"
+  )
 
   expect(
     interview?.links.at(-1),

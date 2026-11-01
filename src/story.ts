@@ -15,11 +15,7 @@ import JesseHappyToFund from "../assets/story/JesseHappyToFund.webp"
 import LetterToJesseCast from "../assets/story/LetterToJesseCast.webp"
 import LetterToJesseV2Cast from "../assets/story/LetterToJesseV2Cast.webp"
 import MumbaiAnnouncement from "../assets/story/MumbaiAnnouncement.webp"
-import {
-  BasedHouseMumbaiApplyUrl,
-  SeedMeUrl,
-  SustainableEcosystemUrl,
-} from "./funding.ts"
+import { SeedMeUrl, SustainableEcosystemUrl } from "./funding.ts"
 
 export interface StoryLink {
   label: string
@@ -124,15 +120,13 @@ const EthDenverReturnRecapUrl =
 /** The long cut of the interview with Jesse, served from public. */
 const JesseAtBasedHouseVideoUrl = "/JesseAtBasedHouse.mp4"
 
-/**
- * The chapter the reel opens on: the interview, which the trailer on X sends
- * people here to watch.
- */
-export const OpeningChapterId = "jesse-at-based-house"
-
 /** The announcement of the next house on X, which its cover opens. */
 const BasedHouseMumbaiAnnouncementUrl =
   "https://x.com/homebasedotlove/status/2095444222090592396"
+
+/** Welcome to Based House, as Homebase posted it on X, which leads the Mumbai chapter. */
+const WelcomeToBasedHouseUrl =
+  "https://x.com/homebasedotlove/status/2116932670341136778"
 
 export const Chapters: Chapter[] = [
   {
@@ -387,7 +381,7 @@ export const Chapters: Chapter[] = [
     ],
   },
   {
-    id: OpeningChapterId,
+    id: "jesse-at-based-house",
     month: "2026-02",
     when: "Feb 2026",
     kicker: "The interview",
@@ -446,8 +440,8 @@ export const Chapters: Chapter[] = [
       "The next house is headed to Mumbai, and the community funds it directly: every creator fee $home earns goes to Based House Mumbai. Applications are open, founders in residence keep launching through SeedMe, and locking $home grants access to their claims. Welcome home. Welcome to Base.",
     links: [
       {
-        label: "Apply to Based House Mumbai",
-        href: BasedHouseMumbaiApplyUrl,
+        label: "Welcome to Based House",
+        href: WelcomeToBasedHouseUrl,
       },
       {
         label: "Track Progress",

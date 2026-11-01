@@ -33,7 +33,7 @@ export const transactionUrl = (hash: string) =>
 export const HomeTokenUrl =
   "https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24"
 
-/** The application to Based House Mumbai, where the raise is headed, which the story's Apply button opens. */
+/** The application to Based House Mumbai, where the raise is headed, which the Apply buttons of the flywheel on Learn open. */
 export const BasedHouseMumbaiApplyUrl = "https://forms.gle/Jc6an9SCdYaP95us9"
 
 /**
