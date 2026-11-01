@@ -3,8 +3,9 @@ import * as NPath from "node:path"
 import { chromium } from "playwright"
 
 /**
- * Writes the SeedMe banner into `print/`: SeedMe's logo and wordmark, centred
- * on its ink, for a 4 × 8 ft banner hung landscape.
+ * Writes the SeedMe banner into `print/`: SeedMe's logo and its name in
+ * lowercase, with no space between them, centred on its ink, for a 4 × 8 ft
+ * banner hung landscape.
  *
  * - `seedme-banner-4x8ft.pdf`: one 96 × 48 in page, the size it prints at.
  *   All of it is vector but the logo's soft inner shadow, which Chromium
@@ -28,10 +29,10 @@ const Height = 48
 const PngPpi = 150
 
 /**
- * SeedMe's colours and drawings, copied from seedme-xyz/SeedMe at 5e4f888:
- * `BRAND` and `iconSvg` from `frontend/src/lib/brand.ts`, `WORDMARK` from
- * `frontend/src/lib/wordmark.ts`. Its `frontend/BRAND.md` says what each is
- * for. When the drawing changes there, copy it here again and rerun.
+ * SeedMe's colours and logo, copied from seedme-xyz/SeedMe at 5e4f888:
+ * `BRAND` and `iconSvg` from `frontend/src/lib/brand.ts`. Its
+ * `frontend/BRAND.md` says what each is for. When the drawing changes there,
+ * copy it here again and rerun.
  */
 const Brand = {
   ink: "#030712",
@@ -51,36 +52,45 @@ const Egg =
 const EggScale = 0.6076
 
 /**
- * "SeedMe" set in Inter Bold as outlines: font units, the ink box at the
- * origin.
+ * "seedme", set as SeedMe sets its wordmark (`frontend/src/lib/wordmark.ts`):
+ * Inter 4.001 Bold at optical size 18, with the font's own kerning and
+ * -0.025em of tracking (-51 of its 2048 units), as outlines in font units,
+ * y down, with the ink box's top-left at the origin and the baseline 1490
+ * down. Set with HarfBuzz from SeedMe's `InterVariable.woff2`; set the same
+ * way, "SeedMe" comes out within a unit of `WORDMARK`. Changing it means
+ * setting the face again, never editing these numbers.
  */
 const Wordmark = {
-  width: 7710,
-  height: 1533,
-  d: "m598 1533q-182 0-315-56-133-56-207-165-73-110-76-269h297q4 76 43 129 39 52 105 78 66 27 151 27 82 0 144-24 61-24 95-67 34-43 34-99 0-51-29-86-30-35-88-60-57-25-142-44l-162-40q-196-46-304-145-107-100-107-262 0-135 73-236 72-101 198-158 127-56 291-56 166 0 289 57 124 57 193 159 69 102 72 237h-294q-8-93-77-145-70-52-185-52-77 0-133 22-56 23-86 62-29 40-29 91 0 53 31 89 32 35 88 58 55 24 124 40l136 33q99 22 182 59 82 36 142 88 60 52 92 123 32 71 32 162 0 137-69 239-69 101-198 156-129 55-311 55zm1232 0q-169 0-292-70-122-70-188-198-67-128-67-301 0-171 66-300 66-128 186-200 120-73 281-73 111 0 206 36 95 36 166 107 72 70 112 176 39 105 39 243v83h-937v-188h792l-139 49q0-86-27-149-27-63-80-98-52-34-129-34-77 0-131 35-54 35-82 96-29 61-29 140v132q0 93 32 158 32 65 91 99 58 33 136 33 53 0 96-15 44-16 74-46 31-29 47-72l271 39q-26 96-94 167-67 72-168 112-102 39-232 39zm1153 0q-169 0-291-70-123-70-190-198-66-128-66-301 0-171 66-300 66-128 186-200 120-73 281-73 111 0 206 36 95 36 167 107 71 70 110 176 40 105 40 243v83h-937v-188h792l-139 49q0-86-27-149-27-63-79-98-53-34-130-34-77 0-131 35-54 35-83 96-28 61-28 140v132q0 93 32 158 32 65 90 99 59 33 137 33 53 0 97-15 43-16 74-46 30-29 46-72l271 39q-26 96-93 167-68 72-170 112-101 39-231 39zm1062-3q-131 0-234-67-103-67-163-194-59-127-59-309 0-185 61-312 61-126 164-192 103-65 229-65 89 0 151 29 62 29 102 74 41 44 64 92h8v-565h298v1490h-294v-175h-11q-23 48-65 92-41 45-102 74-62 28-149 28zm88-240q77 0 131-42 54-41 83-115 29-74 29-174 0-100-28-173-29-74-84-114-54-41-131-41-76 0-129 41-54 41-82 115-27 74-27 172 0 99 27 173 28 75 82 116 53 42 129 42zm734 221v-1490h465l242 686q15 48 35 123 20 74 41 159 20 85 38 165 17 79 29 137h-64q12-57 29-136 18-79 38-165 21-85 40-160 20-75 36-123l238-686h466v1490h-306v-704q0-49 2-121 1-72 4-155 2-83 4-167 2-85 3-160h23q-20 82-44 169-23 87-46 169-24 83-44 152-21 68-36 113l-248 704h-256l-251-704q-16-45-37-113-20-68-44-150-24-82-48-169-24-87-46-171h28q1 72 3 156 2 84 4 168 2 84 4 156 2 73 2 123v704zm2334 22q-169 0-291-70-123-70-190-198-66-128-66-301 0-171 66-300 66-128 186-200 120-73 281-73 111 0 206 36 95 36 167 107 71 70 110 176 40 105 40 243v83h-937v-188h792l-139 49q0-86-27-149-27-63-79-98-53-34-130-34-77 0-131 35-54 35-83 96-28 61-28 140v132q0 93 32 158 32 65 90 99 59 33 137 33 53 0 97-15 43-16 74-46 30-29 46-72l271 39q-26 96-93 167-68 72-170 112-101 39-231 39z",
+  width: 7473,
+  height: 1513,
+  d: "m493 1513q-135 0-240-40q-105-39-170-114q-66-75-83-180l282-38q19 76 72 115q54 39 145 39q85 0 134-32q49-33 49-83q0-43-36-70q-35-28-107-43l-191-38q-160-33-240-112q-80-79-80-204q0-105 58-182q58-77 162-119q104-42 245-42q133 0 232 38q98 38 157 108q59 70 76 165l-268 37q-14-59-62-97q-49-37-130-37q-74 0-123 31q-48 32-48 82q0 42 32 70q33 29 108 44l201 40q161 32 240 106q78 74 78 193q0 109-63 191q-63 81-174 126q-111 46-256 46zm1135-1q-168 0-291-70q-123-70-189-198q-66-128-66-301q0-171 66-299q66-129 186-202q120-72 280-72q112 0 207 36q95 36 166 106q71 71 111 177q40 105 40 243v83h-937v-188h791l-138 49q0-86-27-149q-28-63-80-97q-53-35-130-35q-76 0-130 35q-54 35-83 96q-28 61-28 140v132q0 93 32 158q31 65 90 98q58 34 136 34q54 0 97-16q43-15 74-45q31-29 46-72l271 39q-25 96-93 167q-67 72-169 112q-102 39-232 39zm1153 0q-168 0-291-70q-123-70-189-198q-66-128-66-301q0-171 66-299q66-129 186-202q120-72 280-72q112 0 207 36q95 36 166 106q71 71 111 177q40 105 40 243v83h-937v-188h791l-138 49q0-86-27-149q-28-63-80-97q-53-35-130-35q-76 0-130 35q-54 35-83 96q-28 61-28 140v132q0 93 32 158q31 65 90 98q58 34 136 34q54 0 97-16q43-15 74-45q31-29 46-72l271 39q-25 96-93 167q-67 72-169 112q-102 39-232 39zm1062-3q-130 0-234-67q-103-67-162-194q-59-127-59-309q0-185 60-312q61-126 164-192q104-65 229-65q90 0 152 29q62 29 102 74q41 44 63 92h8v-565h299v1490h-294v-175h-12q-23 48-64 93q-41 44-103 73q-62 28-149 28zm89-240q76 0 130-41q55-42 83-116q29-74 29-174q0-100-28-173q-29-74-83-115q-55-40-131-40q-77 0-130 41q-54 41-81 115q-28 74-28 172q0 99 28 173q28 75 81 117q54 41 130 41zm727 221v-1104h280l11 269h-21q26-100 77-163q51-64 119-94q68-30 142-30q121 0 198 75q78 75 109 226h-34q24-102 79-169q56-66 132-99q76-33 162-33q103 0 183 44q81 45 127 130q46 84 46 206v742h-298v-685q0-95-52-142q-51-46-126-46q-57 0-98 24q-42 25-64 69q-23 44-23 104v676h-288v-694q0-82-49-131q-48-48-126-48q-52 0-95 24q-43 24-67 71q-25 46-25 114v664zm2304 22q-168 0-291-70q-123-70-189-198q-66-128-66-301q0-171 66-299q66-129 186-202q120-72 280-72q112 0 207 36q95 36 166 106q71 71 111 177q40 105 40 243v83h-937v-188h791l-138 49q0-86-27-149q-28-63-80-97q-53-35-130-35q-76 0-130 35q-54 35-83 96q-28 61-28 140v132q0 93 32 158q31 65 90 98q58 34 136 34q54 0 97-16q43-15 74-45q31-29 46-72l271 39q-25 96-93 167q-67 72-169 112q-102 39-232 39z",
 } as const
 
 /**
- * The lockup as SeedMe's share card sets it (`frontend/src/lib/shareCard.tsx`),
- * in its pixels: the logo in a 60 square, a gap of 16, then the wordmark 32
- * tall, the two centred on one line.
+ * The lockup at the sizes of SeedMe's share card
+ * (`frontend/src/lib/shareCard.tsx`), in its pixels: the logo in a 60 square
+ * and the type at its wordmark's size, the 1533-unit ink box of "SeedMe" 32
+ * tall. The word follows the seed with no space between their ink, and the
+ * two are centred on one line.
  */
 const Mark = 60
-const Gap = 16
-const WordmarkHeight = 32
-const WordmarkWidth = WordmarkHeight * Wordmark.width / Wordmark.height
+const FontUnit = 32 / 1533
 
-/** The seed's ink is narrower than the logo's square, which centres it. */
-const SeedLeft = Mark * (50 - 48 * EggScale) / 100
+/** The seed's ink, which the logo's square centres with room to spare. */
+const SeedWidth = Mark * 96 * EggScale / 100
+const SeedMargin = (Mark - SeedWidth) / 2
+
+const WordWidth = Wordmark.width * FontUnit
+const WordHeight = Wordmark.height * FontUnit
 
 /**
- * The lockup's ink, seed to wordmark, spans two thirds of the width. That
- * leaves about 16 in clear on every side, well inside any hem, grommet or
- * pole pocket.
+ * The lockup's ink, seed to word, spans two thirds of the width. That leaves
+ * 16 in clear at either end and over 14 above and below, well inside any hem,
+ * grommet or pole pocket.
  */
 const LockupWidth = Width * 2 / 3
-const Scale = LockupWidth / (Mark + Gap + WordmarkWidth - SeedLeft)
-const MarkX = (Width - LockupWidth) / 2 - SeedLeft * Scale
+const Scale = LockupWidth / (SeedWidth + WordWidth)
+const SeedX = (Width - LockupWidth) / 2
 const Middle = Height / 2
 
 /**
@@ -132,12 +142,12 @@ const svg = [
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Width} ${Height}" width="${Width}in" height="${Height}in">`,
   `<title>SeedMe</title>`,
   `<rect width="${Width}" height="${Height}" fill="${Brand.ink}"/>`,
-  logo(MarkX, Middle - Mark * Scale / 2, Mark * Scale),
+  logo(SeedX - SeedMargin * Scale, Middle - Mark * Scale / 2, Mark * Scale),
   wordmark(
-    MarkX + (Mark + Gap) * Scale,
-    Middle - WordmarkHeight * Scale / 2,
-    WordmarkWidth * Scale,
-    WordmarkHeight * Scale,
+    SeedX + SeedWidth * Scale,
+    Middle - WordHeight * Scale / 2,
+    WordWidth * Scale,
+    WordHeight * Scale,
   ),
   `</svg>`,
 ].join("\n") + "\n"
