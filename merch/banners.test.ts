@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test"
 import {
   Banners,
+  bannerSvg,
   clearOfLogo,
   coversAvatar,
+  CssPerInch,
   type Format,
   Formats,
   headlineInk,
@@ -245,4 +247,63 @@ test("a headline low on the left of the X header would run under the avatar", ()
     }, m),
   )
     .toBe(true)
+})
+
+test("the print banner is 3 × 6 ft at actual size, with half an inch of bleed", () => {
+  const print = Formats.filter((f) => f.print)
+
+  expect(
+    print.map((f) => ({
+      name: f.name,
+      inches: [
+        f.width / CssPerInch,
+        f.height / CssPerInch,
+      ],
+      bleed: f.print!.bleed,
+    })),
+  )
+    .toEqual([
+      {
+        name: "72x36in",
+        inches: [
+          72,
+          36,
+        ],
+        bleed: 0.5,
+      },
+    ])
+})
+
+test("bleed widens the blue on every side without moving the art", () => {
+  const format = Formats.find((f) => f.print)!
+  const placed = layout(format, metrics(format, "Welcome $home"), "mark", mark)
+  const bleed = 0.5 * CssPerInch
+  const trim = bannerSvg(format, placed, "Welcome $home", logo)
+  const bled = bannerSvg(format, placed, "Welcome $home", logo, bleed)
+  const art = (svg: string) => svg.slice(svg.indexOf("/>") + 2)
+
+  expect(
+    bled,
+  )
+    .toContain(
+      `width="${format.width + 2 * bleed}" height="${
+        format.height + 2 * bleed
+      }" viewBox="${-bleed} ${-bleed} ${format.width + 2 * bleed} ${
+        format.height + 2 * bleed
+      }"`,
+    )
+
+  expect(
+    bled,
+  )
+    .toContain(
+      `<rect x="${-bleed}" y="${-bleed}" width="${
+        format.width + 2 * bleed
+      }" height="${format.height + 2 * bleed}"`,
+    )
+
+  expect(
+    art(bled),
+  )
+    .toBe(art(trim))
 })

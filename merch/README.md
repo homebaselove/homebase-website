@@ -82,7 +82,8 @@ keeps the house clear at chat-list size, where no lettering can be read.
 ## Banners
 
 `banners/` holds two banners in the brand kit’s social sizes, each at 1× and
-2×: the X header (1500 × 500) and the link preview (1200 × 630).
+2×: the X header (1500 × 500) and the link preview (1200 × 630). `banners/print`
+holds both for print at 3 × 6 ft.
 
 | File                   | Logo, top left           | Headline           |
 | ---------------------- | ------------------------ | ------------------ |
@@ -103,6 +104,22 @@ and the tracking after its last do not pull it off the middle, with its cap
 height on the middle line. The build stops if a headline would run past the
 margins, into the logo’s clear space, or, on the X header, under the avatar
 X lays over the bottom left.
+
+### Printing the banners at 3 × 6 ft
+
+| File                         | What it is                                                   |
+| ---------------------------- | ------------------------------------------------------------ |
+| `*-72x36in.pdf`              | Vector, 72 × 36 in, Lato embedded: send this                 |
+| `*-72x36in-bleed.pdf`        | The same with 0.5 in of blue past every edge, 73 × 37 in     |
+| `*-72x36in-300dpi.png`       | 21600 × 10800 px, rasterised from the PDF, if a PNG is asked |
+| `*-72x36in-bleed-300dpi.png` | 21900 × 11100 px, the bleed version as PNG                   |
+
+The PDFs hold the dots and the type as vectors, with no images inside, so
+they print sharp at any size. Send the bleed version if the shop asks for
+bleed, the exact size otherwise. Logo and headline stay more than 4 in from
+the edge, clear of hems and grommets. `#0000FF` is brighter than CMYK can
+print: the kit’s starting points are CMYK 100 88 0 0 or Pantone Blue 072 C,
+so ask the shop for a proof.
 
 ## Sources
 

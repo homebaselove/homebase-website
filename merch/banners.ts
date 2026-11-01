@@ -1,14 +1,17 @@
 /// <reference lib="dom" />
 /**
- * Homebase banners, in the brand kit’s two social sizes: the X header
- * (1500 × 500) and the link preview (1200 × 630). Each is a logo from the
- * kit, white, top left, with a headline in Lato Bold centred on Homebase
- * Blue, the way the kit’s own social images are set.
+ * Homebase banners, in the brand kit’s two social sizes, the X header
+ * (1500 × 500) and the link preview (1200 × 630), and printed at 3 × 6 ft.
+ * Each is a logo from the kit, white, top left, with a headline in Lato Bold
+ * centred on Homebase Blue, the way the kit’s own social images are set.
  *
  *   bun merch/banners.ts
  *
- * Writes merch/banners at 1× and 2×. Lato comes from Google Fonts, as in
- * scripts/brand-kit.ts, so it needs the network.
+ * Writes the social sizes to merch/banners at 1× and 2×, and the print size
+ * to merch/banners/print as vector PDF at actual size, with and without
+ * bleed, each with a 300 DPI PNG rasterised from the PDF itself. Lato comes
+ * from Google Fonts, as in scripts/brand-kit.ts, so it needs the network;
+ * the PNGs need pdftoppm (poppler).
  */
 import * as NFs from "node:fs/promises"
 import * as NPath from "node:path"
@@ -21,7 +24,20 @@ export interface Format {
   height: number
   /** Headline size in px. */
   size: number
+  /** A print format: written as PDF and 300 DPI PNG, with this bleed in inches. */
+  print?: {
+    bleed: number
+  }
 }
+
+/**
+ * CSS pixels to the inch. Chromium prints at this scale, so a print format
+ * is laid out in pixels and comes out of the PDF at its size in inches.
+ */
+export const CssPerInch = 96
+
+/** Raster resolution of the print PNGs. */
+export const PrintDpi = 300
 
 export const Formats: Format[] = [
   {
@@ -35,6 +51,18 @@ export const Formats: Format[] = [
     width: 1200,
     height: 630,
     size: 110,
+  },
+  // A 3 × 6 ft vinyl banner. Half an inch of bleed covers a trim that
+  // wanders; the margin keeps logo and headline over 4 in from the edge,
+  // clear of hems and grommets.
+  {
+    name: "72x36in",
+    width: 72 * CssPerInch,
+    height: 36 * CssPerInch,
+    size: 0.18 * 36 * CssPerInch,
+    print: {
+      bleed: 0.5,
+    },
   },
 ]
 
@@ -235,12 +263,19 @@ export function logoInk(svg: string): LogoInk {
   }
 }
 
+/**
+ * The banner as SVG. `bleed` (px) widens the blue on every side without
+ * moving anything on it: the viewBox starts that far before the trim.
+ */
 export function bannerSvg(
   format: Format,
   placed: Layout,
   headline: string,
   logoSvg: string,
+  bleed = 0,
 ): string {
+  const width = format.width + 2 * bleed
+  const height = format.height + 2 * bleed
   const logo = logoSvg
     .trim()
     .replace(/<svg [^>]*>/, (open) =>
@@ -252,8 +287,8 @@ export function bannerSvg(
           `<svg x="${placed.logo.x}" y="${placed.logo.y}" width="${placed.logo.width}" height="${placed.logo.height}" `,
         ))
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${format.width}" height="${format.height}" viewBox="0 0 ${format.width} ${format.height}" style="display:block">`
-    + `<rect width="${format.width}" height="${format.height}" fill="${colors.blue.hex}"/>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${-bleed} ${-bleed} ${width} ${height}" style="display:block">`
+    + `<rect x="${-bleed}" y="${-bleed}" width="${width}" height="${height}" fill="${colors.blue.hex}"/>`
     + logo
     + `<text x="${placed.headline.x}" y="${placed.headline.baseline}" fill="${colors.white.hex}" font-family="Lato" font-weight="${Display.weight}" font-size="${format.size}" letter-spacing="${
       Display.tracking * format.size
@@ -281,14 +316,16 @@ if (import.meta.main) {
   ) as Record<Lockup, { svg: string; ink: LogoInk }>
   const head =
     `<link href="https://fonts.googleapis.com/css2?family=Lato:wght@${Display.weight}&display=swap" rel="stylesheet">`
-    + `<style>html,body{margin:0}</style>`
+    + `<style>@page{margin:0}html,body{margin:0}</style>`
+  const PrintDir = NPath.join(OutDir, "print")
 
-  await NFs.mkdir(OutDir, {
+  await NFs.mkdir(PrintDir, {
     recursive: true,
   })
   const browser = await chromium.launch()
 
-  for (const density of [1, 2]) {
+  /** A page with Lato loaded, checked by the loaded face itself. */
+  async function open(density: number) {
     const page = await browser.newPage({
       deviceScaleFactor: density,
     })
@@ -313,59 +350,108 @@ if (import.meta.main) {
       throw new Error("Lato did not load from Google Fonts; check the network")
     }
 
-    for (const format of Formats) {
-      for (const banner of Banners) {
-        const metrics: Metrics = await page.evaluate(
-          ({ headline, size, weight, tracking }) => {
-            const context = document.createElement("canvas").getContext("2d")!
-            context.font = `${weight} ${size}px Lato`
-            context.letterSpacing = `${tracking * size}px`
-            const measured = context.measureText(headline)
+    return page
+  }
 
-            return {
-              cap: context.measureText("H").actualBoundingBoxAscent,
-              left: -measured.actualBoundingBoxLeft,
-              right: measured.actualBoundingBoxRight,
-              descent: measured.actualBoundingBoxDescent,
-            }
-          },
-          {
-            headline: banner.headline,
-            size: format.size,
-            weight: Display.weight,
-            tracking: Display.tracking,
-          },
-        )
-        const logo = logos[banner.logo]
-        const placed = layout(format, metrics, banner.logo, logo.ink)
-        const name = `${banner.slug}-${format.name}`
+  const pages = {
+    1: await open(1),
+    2: await open(2),
+  }
 
-        if (!insideMargin(format, placed, metrics)) {
-          throw new Error(`The ${name} headline runs past the margin`)
-        }
-        if (!clearOfLogo(placed, metrics)) {
-          throw new Error(`The ${name} headline crowds the logo`)
-        }
-        if (format.name === "1500x500" && coversAvatar(placed, metrics)) {
-          throw new Error(`The ${name} headline runs under X’s avatar`)
-        }
+  /** Only the body changes, so the Lato already loaded stays loaded. */
+  async function show(page: typeof pages[1], svg: string) {
+    await page.evaluate((markup) => {
+      document.body.innerHTML = markup
+    }, svg)
+  }
 
-        // Only the body changes, so the Lato already loaded stays loaded.
-        await page.setViewportSize({
+  for (const format of Formats) {
+    for (const banner of Banners) {
+      const metrics: Metrics = await pages[1].evaluate(
+        ({ headline, size, weight, tracking }) => {
+          const context = document.createElement("canvas").getContext("2d")!
+          context.font = `${weight} ${size}px Lato`
+          context.letterSpacing = `${tracking * size}px`
+          const measured = context.measureText(headline)
+
+          return {
+            cap: context.measureText("H").actualBoundingBoxAscent,
+            left: -measured.actualBoundingBoxLeft,
+            right: measured.actualBoundingBoxRight,
+            descent: measured.actualBoundingBoxDescent,
+          }
+        },
+        {
+          headline: banner.headline,
+          size: format.size,
+          weight: Display.weight,
+          tracking: Display.tracking,
+        },
+      )
+      const logo = logos[banner.logo]
+      const placed = layout(format, metrics, banner.logo, logo.ink)
+      const name = `${banner.slug}-${format.name}`
+
+      if (!insideMargin(format, placed, metrics)) {
+        throw new Error(`The ${name} headline runs past the margin`)
+      }
+      if (!clearOfLogo(placed, metrics)) {
+        throw new Error(`The ${name} headline crowds the logo`)
+      }
+      if (format.name === "1500x500" && coversAvatar(placed, metrics)) {
+        throw new Error(`The ${name} headline runs under X’s avatar`)
+      }
+
+      if (format.print) {
+        for (const bleed of [0, format.print.bleed]) {
+          const pad = bleed * CssPerInch
+          const file = NPath.join(PrintDir, `${name}${bleed ? "-bleed" : ""}`)
+          await show(
+            pages[1],
+            bannerSvg(format, placed, banner.headline, logo.svg, pad),
+          )
+          await pages[1].pdf({
+            path: `${file}.pdf`,
+            width: `${(format.width + 2 * pad) / CssPerInch}in`,
+            height: `${(format.height + 2 * pad) / CssPerInch}in`,
+            printBackground: true,
+            pageRanges: "1",
+          })
+
+          // Rasterised from the PDF, so the PNG cannot drift from it.
+          const raster = Bun.spawnSync([
+            "pdftoppm",
+            "-r",
+            String(PrintDpi),
+            "-png",
+            "-singlefile",
+            `${file}.pdf`,
+            `${file}-${PrintDpi}dpi`,
+          ], {
+            stderr: "pipe",
+          })
+          if (raster.exitCode !== 0) {
+            throw new Error(`pdftoppm: ${raster.stderr.toString()}`)
+          }
+        }
+        continue
+      }
+
+      for (const density of [1, 2] as const) {
+        await pages[density].setViewportSize({
           width: format.width,
           height: format.height,
         })
-        await page.evaluate((svg) => {
-          document.body.innerHTML = svg
-        }, bannerSvg(format, placed, banner.headline, logo.svg))
+        await show(
+          pages[density],
+          bannerSvg(format, placed, banner.headline, logo.svg),
+        )
         const suffix = density === 1 ? "" : `@${density}x`
-        await page.screenshot({
+        await pages[density].screenshot({
           path: NPath.join(OutDir, `${name}${suffix}.png`),
         })
       }
     }
-
-    await page.close()
   }
 
   await browser.close()
