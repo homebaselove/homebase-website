@@ -2,7 +2,8 @@
 <!-- The Based House flywheel, the final build from seedme-xyz/SeedMe
      (claude/intelligent-franklin-hyyxtm, 90734c2), shown at /learn. Changed
      for homebase.love: always light, on white, in the site blue and Lato;
-     Apply opens the site application form; the fund is named by its Basename,
+     no reading notes under the wheel; Welcome to Based House, Homebase's post
+     on X, stands where Apply was; the fund is named by its Basename,
      basedhouse.base.eth; the page pads it, so it keeps no padding of its own
      or room for the hidden phone bar. -->
 <title>Based House Flywheel</title>
@@ -12,7 +13,7 @@
   .wrap>header,.sticky{display:none!important} .wrap{padding:0 0 8px!important} body{margin:0;padding-bottom:0!important}
 
   /* Layout: one column. The wheel is the page: a ring of five stations with the one input in the middle, the year
-     shown underneath, a line that narrates it, and a guided walk. Then how to read it, and the ways to take part.
+     shown underneath, a line that narrates it, and a guided walk. Then the ways to take part.
      Dark-first in SeedMe's ink and seed blue (BRAND.md); homebase.love shows the light theme in its own blue, in Lato. */
   :root{
     color-scheme:dark;
@@ -157,9 +158,7 @@
     body{padding-bottom:64px}
   }
 
-  /* How to read it, and taking part */
-  .read{margin-top:40px;max-width:74ch;margin-inline:auto;text-align:center}
-  .read p{text-wrap:pretty}
+  /* Taking part */
   .cta{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);text-align:center}
   .cta .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin-top:10px}
   .donate{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;font-size:13px;color:var(--muted)}
@@ -297,18 +296,13 @@
     <p class="reader" id="reader"></p>
   </section>
 
-  <section class="read" aria-labelledby="read-h">
-    <h2 id="read-h">How to read it</h2>
-    <p>Volume is where the loop starts: lockers trade $home, every trade pays a creator fee, and 100% of it funds Based House. The base is today: 200 lockers trading about $28 of $home a day each, which is 5 ETH a year. 5 ETH funds a residency of 15; a residency launches one founder and draws one from outside; every claim needs a lock of 10,000 $home for a year, so each launch’s 50 claimers join the pool. Attention is the multiplier: at 5×, a residency and its two launches reach 2,800 people, and one in four of them lock, which takes the pool from 200 to 1,000 in the first year. Attention begets attention: each year a residency reaches √2 times the people it reached the year before, so the multiplier climbs from 5× to 15.5× by year five and the pool passes a million lockers in it. The number in the small loop is the wheel’s growth for the year on the ring: tap it to raise the attention, each step reaching 800 more people per residency, and the switch under it shows the locks alone. The year under the ring is where today’s plan reaches the numbers shown; past year five it reads 5+. Tap the ETH number for one more, hold it to type, drag it up or down, or double-click any count. The wheel runs five years, one lap each, and ends on the totals; pause to hold a moment, play to run it again. It is the plan at its best: nothing fades and no lock lapses. Every new locker trades, so the loop ends where it began, in volume: in its first 33 days $home traded 1,580 WETH, 10.5 ETH of it to the house, well above this floor.</p>
-  </section>
-
   <nav class="sticky" id="sticky" aria-label="Take part">
-    <a class="btn" href="https://seedme.xyz/lock" target="_blank" rel="noreferrer">Lock</a><a class="btn" href="https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24" target="_blank" rel="noreferrer">Buy</a><a class="btn" href="https://forms.gle/Jc6an9SCdYaP95us9" target="_blank" rel="noreferrer">Apply</a><a class="btn" href="#addr">Donate</a>
+    <a class="btn" href="https://seedme.xyz/lock" target="_blank" rel="noreferrer">Lock</a><a class="btn" href="https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24" target="_blank" rel="noreferrer">Buy</a><a class="btn" href="https://x.com/homebasedotlove/status/2116932670341136778" target="_blank" rel="noreferrer">Welcome</a><a class="btn" href="#addr">Donate</a>
   </nav>
   <section class="cta" aria-labelledby="cta-h">
     <h2 id="cta-h">Take part</h2>
     <div class="row">
-      <a class="btn primary" href="https://forms.gle/Jc6an9SCdYaP95us9" target="_blank" rel="noreferrer">Apply to Based House</a>
+      <a class="btn primary" href="https://x.com/homebasedotlove/status/2116932670341136778" target="_blank" rel="noreferrer">Welcome to Based House</a>
       <a class="btn" href="https://seedme.xyz/lock" target="_blank" rel="noreferrer">Lock $home</a>
       <a class="btn" href="https://dexscreener.com/base/0xcfa6173616804aa9974bf7a648149a98b5ce64251f3ed0b9852dd3dc0d8caa24" target="_blank" rel="noreferrer">Buy $home</a>
       <a class="btn" href="https://seedme.xyz/profile" target="_blank" rel="noreferrer">Launch on SeedMe <small>approved founders</small></a>

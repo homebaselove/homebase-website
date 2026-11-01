@@ -124,8 +124,8 @@ const JesseAtBasedHouseVideoUrl = "/JesseAtBasedHouse.mp4"
 const BasedHouseMumbaiAnnouncementUrl =
   "https://x.com/homebasedotlove/status/2095444222090592396"
 
-/** Welcome to Based House, as Homebase posted it on X, which leads the Mumbai chapter. */
-const WelcomeToBasedHouseUrl =
+/** Welcome to Based House, as Homebase posted it on X: it leads the Mumbai chapter, and the flywheel on Learn offers it where Apply was. */
+export const WelcomeToBasedHouseUrl =
   "https://x.com/homebasedotlove/status/2116932670341136778"
 
 export const Chapters: Chapter[] = [

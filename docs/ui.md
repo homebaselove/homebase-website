@@ -16,9 +16,9 @@ home page. Learn is the Based House flywheel, the final build from SeedMe
 the one document `public/flywheel.html` and shown in a frame (`Flywheel`)
 that takes the height of its content. The copy differs from SeedMe's in a
 few places, listed at its top: it is always light, on white, in the site's
-blue and Lato, its Apply buttons open the site's one application form, and it
-names the fund basedhouse.base.eth, the Basename of the address Donate sends
-to.
+blue and Lato, it leaves out the notes on how to read the wheel, Welcome to
+Based House stands where its Apply buttons were, and it names the fund
+basedhouse.base.eth, the Basename of the address Donate sends to.
 The footer's Learn more leads there, and the header's house and wordmark
 lead home. The home page is a
 column of bands, each a `Band` at the width its content reads best at:
@@ -325,10 +325,10 @@ page builds from GitHub, nor Foundry, so these were not run:
 
 - Donate is the funding card's one primary action and comes first, since the
   amount choice belongs to it and Buy and Lock $home leave for SeedMe.
-- The story's Mumbai chapter leads with Welcome to Based House, Homebase's
-  post on X, where its Apply button was. The flywheel's Apply buttons still
-  open the application, `BasedHouseMumbaiApplyUrl` in `src/funding.ts`. The
-  Mumbai announcement's description still names the form its image shows,
-  since it describes the image.
+- Welcome to Based House, Homebase's post on X, stands where the application
+  form was: first in the story's Mumbai chapter, and first under the
+  flywheel's Take part. Both are `WelcomeToBasedHouseUrl` in `src/story.ts`.
+  The Mumbai announcement's description still names the form its image
+  shows, since it describes the image.
 - Raised for Based House counts the $home fee share only; donations, which
   go to basedhouse.base.eth, are not added to it.
