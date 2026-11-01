@@ -5,7 +5,8 @@ import { chromium } from "playwright"
 /**
  * Writes the SeedMe banner into `print/`: SeedMe's logo followed by its name
  * in lowercase, spaced as one more letter of the word, centred on its ink, for
- * a 4 × 8 ft banner hung landscape.
+ * a 4 × 8 ft banner hung landscape. Homebase's logo sits in the top left, and
+ * a QR code to seedme.xyz in the bottom right.
  *
  * - `seedme-banner-4x8ft.pdf`: one 96 × 48 in page, the size it prints at.
  *   All of it is vector but the logo's soft inner shadow, which Chromium
@@ -38,6 +39,7 @@ const Brand = {
   ink: "#030712",
   blue: "#0052ff",
   blueHi: "#7d9eff",
+  paper: "#f9fafb",
 } as const
 
 /**
@@ -101,6 +103,68 @@ const SeedX = (Width - LockupWidth) / 2
 const Middle = Height / 2
 
 /**
+ * Homebase's logo in the top left and the QR code in the bottom right, each
+ * this far in from both edges, clear of hems and grommets.
+ */
+const CornerMargin = 3
+
+/**
+ * Homebase's horizontal lockup in white, which its brand kit
+ * (homebase.love/brandkit) gives for banners and for ink, read from the kit's
+ * own file. The kit asks for a fifth of the logo's height clear around it,
+ * which the margin gives many times over.
+ */
+const HomebaseFile = NPath.join(
+  import.meta.dir,
+  "..",
+  "brand/logo/svg/homebase-horizontal-white.svg",
+)
+const HomebaseWidth = 20
+
+/**
+ * https://seedme.xyz (`SeedMeUrl` in src/funding.ts) as a QR code, one string
+ * a row with # for a dark module: version 2 with error correction Q, which
+ * reads with a quarter of it scuffed or creased, set by segno 1.6.6 (mask 1).
+ * The rendered banner decodes to the URL with zxing-cpp; scan the printer's
+ * proof too.
+ */
+const Qr = [
+  "#######..###......#######",
+  "#.....#....###..#.#.....#",
+  "#.###.#...#.#####.#.###.#",
+  "#.###.#.####...##.#.###.#",
+  "#.###.#..#.#.##...#.###.#",
+  "#.....#.####......#.....#",
+  "#######.#.#.#.#.#.#######",
+  "........##..#............",
+  ".##...#...##.##...##.#...",
+  "...###.#.#...#.##.##.#.##",
+  "#....###..###..##.#..##.#",
+  "#...#...#.#..#.###...#...",
+  "#.#..##...##.#..#.#.....#",
+  "...#.#.#.##....#..##...##",
+  "##..#.#.####.###..#..##.#",
+  "...##...#..##.#.##.###...",
+  "#####.#...#....######..#.",
+  "........###.###.#...#...#",
+  "#######..#.#.##.#.#.#...#",
+  "#.....#...##..###...#...#",
+  "#.###.#....##..######..##",
+  "#.###.#........#.#..#.##.",
+  "#.###.#.##..###..#.###.##",
+  "#.....#.####.#..##.##....",
+  "#######.....#...###..#..#",
+]
+
+/**
+ * Each module is 0.3 in, a whole 45 px at the PNG's 150 ppi, so its edges
+ * land on pixels. Scanners want four modules of light around the code.
+ */
+const QrModule = 0.3
+const QrQuiet = 4
+const QrSize = (Qr.length + 2 * QrQuiet) * QrModule
+
+/**
  * The logo: `iconSvg("bare")`, the seed in its lit gradient with one inner
  * shadow and no ground, which BRAND.md keeps for surfaces already dark.
  */
@@ -145,6 +209,36 @@ function place(x: number, y: number, width: number, height: number) {
     .join(" ")
 }
 
+/** Homebase's logo from the kit's file, its dots as drawn there. */
+async function homebase(x: number, y: number, width: number) {
+  const file = await NFs.readFile(HomebaseFile, "utf8")
+  const box = file.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/)
+  if (!box) {
+    throw new Error(`${HomebaseFile} has no viewBox`)
+  }
+  const [, w, h] = box
+  const height = width * +h / +w
+  const dots = file
+    .replace(/^<svg[^>]*>/, "")
+    .replace(/<\/svg>\s*$/, "")
+  return `<svg ${place(x, y, width, height)} viewBox="0 0 ${w} ${h}">${dots}</svg>`
+}
+
+/** The QR code, dark on a paper tile that holds its quiet zone. */
+function qr(x: number, y: number) {
+  const side = Qr.length + 2 * QrQuiet
+  // One path, so neighbouring modules fill as one shape, with no seams.
+  const modules = Qr.flatMap((row, r) =>
+    [...row.matchAll(/#+/g)].map(({ 0: run, index }) =>
+      `M${index + QrQuiet} ${r + QrQuiet}h${run.length}v1h-${run.length}z`
+    )
+  )
+  return `<svg ${place(x, y, QrSize, QrSize)} viewBox="0 0 ${side} ${side}">
+  <rect width="${side}" height="${side}" rx="1.5" fill="${Brand.paper}"/>
+  <path d="${modules.join("")}" fill="${Brand.ink}"/>
+</svg>`
+}
+
 const svg = [
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Width} ${Height}" width="${Width}in" height="${Height}in">`,
   `<title>SeedMe</title>`,
@@ -156,6 +250,8 @@ const svg = [
     WordWidth * Scale,
     WordHeight * Scale,
   ),
+  await homebase(CornerMargin, CornerMargin, HomebaseWidth),
+  qr(Width - CornerMargin - QrSize, Height - CornerMargin - QrSize),
   `</svg>`,
 ].join("\n") + "\n"
 
