@@ -1,12 +1,14 @@
 import * as NFs from "node:fs/promises"
 import * as NPath from "node:path"
 import { chromium } from "playwright"
+import HomebaseColors from "../brand/colors.json" with { type: "json" }
+import { DotPitch, DotRadius, House } from "../src/ui/dots.ts"
 
 /**
  * Writes the SeedMe banner into `print/`: SeedMe's logo followed by its name
  * in lowercase, spaced as one more letter of the word, centred on its ink, for
- * a 4 × 8 ft banner hung landscape. Homebase's logo sits in the top left, and
- * a QR code to seedme.xyz in the bottom right.
+ * a 4 × 8 ft banner hung landscape. In the bottom right, a QR code to
+ * seedme.xyz drawn in Homebase's dots, with Homebase's house in the code.
  *
  * - `seedme-banner-4x8ft.pdf`: one 96 × 48 in page, the size it prints at.
  *   All of it is vector but the logo's soft inner shadow, which Chromium
@@ -39,7 +41,6 @@ const Brand = {
   ink: "#030712",
   blue: "#0052ff",
   blueHi: "#7d9eff",
-  paper: "#f9fafb",
 } as const
 
 /**
@@ -103,64 +104,65 @@ const SeedX = (Width - LockupWidth) / 2
 const Middle = Height / 2
 
 /**
- * Homebase's logo in the top left and the QR code in the bottom right, each
- * this far in from both edges, clear of hems and grommets.
+ * The QR code sits this far in from the bottom and right edges, clear of
+ * hems and grommets.
  */
 const CornerMargin = 3
 
 /**
- * Homebase's horizontal lockup in white, which its brand kit
- * (homebase.love/brandkit) gives for banners and for ink, read from the kit's
- * own file. The kit asks for a fifth of the logo's height clear around it,
- * which the margin gives many times over.
- */
-const HomebaseFile = NPath.join(
-  import.meta.dir,
-  "..",
-  "brand/logo/svg/homebase-horizontal-white.svg",
-)
-const HomebaseWidth = 20
-
-/**
- * https://seedme.xyz (`SeedMeUrl` in src/funding.ts) as a QR code, one string
- * a row with # for a dark module: version 2 with error correction Q, which
- * reads with a quarter of it scuffed or creased, set by segno 1.6.6 (mask 1).
- * The rendered banner decodes to the URL with zxing-cpp; scan the printer's
- * proof too.
+ * https://seedme.xyz (`SeedMeUrl` in src/funding.ts) as a QR code whose own
+ * modules draw Homebase's house at its centre, one string a row with # for a
+ * dark module: version 4 with error correction Q, mask 2.
+ *
+ * Decoders stop at the end of the URL and skip the pad bytes after it, but
+ * the pads feed the error correction, which is linear in them, so they were
+ * solved for to lay the house and a clear ring around it into the code. 79 of
+ * those 81 modules came out as wanted, and drawing the house over the other 2
+ * spends at most 2 of the 26 codewords Q can repair, leaving the rest for
+ * scuffs and glare. Set by a scratch encoder that matches segno 1.6.6 bit for
+ * bit; the rendered banner decodes with zxing-cpp and OpenCV.
  */
 const Qr = [
-  "#######..###......#######",
-  "#.....#....###..#.#.....#",
-  "#.###.#...#.#####.#.###.#",
-  "#.###.#.####...##.#.###.#",
-  "#.###.#..#.#.##...#.###.#",
-  "#.....#.####......#.....#",
-  "#######.#.#.#.#.#.#######",
-  "........##..#............",
-  ".##...#...##.##...##.#...",
-  "...###.#.#...#.##.##.#.##",
-  "#....###..###..##.#..##.#",
-  "#...#...#.#..#.###...#...",
-  "#.#..##...##.#..#.#.....#",
-  "...#.#.#.##....#..##...##",
-  "##..#.#.####.###..#..##.#",
-  "...##...#..##.#.##.###...",
-  "#####.#...#....######..#.",
-  "........###.###.#...#...#",
-  "#######..#.#.##.#.#.#...#",
-  "#.....#...##..###...#...#",
-  "#.###.#....##..######..##",
-  "#.###.#........#.#..#.##.",
-  "#.###.#.##..###..#.###.##",
-  "#.....#.####.#..##.##....",
-  "#######.....#...###..#..#",
+  "#######.#...#...#.###..#..#######",
+  "#.....#...#...###.##..#...#.....#",
+  "#.###.#...###.##.#..#.....#.###.#",
+  "#.###.#...#######..#.###..#.###.#",
+  "#.###.#.##.#.........#..#.#.###.#",
+  "#.....#.#.#....#.#...##...#.....#",
+  "#######.#.#.#.#.#.#.#.#.#.#######",
+  "..........#.###..######.#........",
+  ".#######..##..##.##.....#..##...#",
+  "#..#.#...###..####.#.#.#..##.##..",
+  ".#.#####...#..###..#.#..###.#.###",
+  "###..#...#..###.##.#.##...#.###.#",
+  "#.#.#.#.#............#..###..#.##",
+  ".###.#....##....#.....#....#..###",
+  "##....#........###....#####..###.",
+  ".#.....####...#####..#.#.###..#..",
+  ".#....#.#.##.#######..####.####.#",
+  "..##....###...#####...##.###.###.",
+  "#.#...#.##....##.##...#....##.#..",
+  ".#...#..##.#..##.##.#....#.#####.",
+  "#.#...##.###.......#.##....#.#...",
+  "#..#.#.#....##..#...#...##..##..#",
+  "#....##..#####.##....#.....##..#.",
+  "#.#.#...........######..###.##..#",
+  "#....##.#.#.#..###.#..#.#####.#..",
+  "........##.....#.....##.#...#.#..",
+  "#######.######.##.#..#.##.#.#.###",
+  "#.....#.#.#..#..#..#.####...###.#",
+  "#.###.#.#......#..##.#..######.##",
+  "#.###.#.#.###.#.##..#.####..#.##.",
+  "#.###.#.###.###.#..#.#.##.##.##..",
+  "#.....#.#..###.##.#.###.###.#.#..",
+  "#######........#..###.##..##.###.",
 ]
 
 /**
- * Each module is 0.3 in, a whole 45 px at the PNG's 150 ppi, so its edges
- * land on pixels. Scanners want four modules of light around the code.
+ * Each module is 0.26 in, a whole 39 px at the PNG's 150 ppi, so the code
+ * lands on pixels. Scanners want four modules of light around it.
  */
-const QrModule = 0.3
+const QrModule = 0.26
 const QrQuiet = 4
 const QrSize = (Qr.length + 2 * QrQuiet) * QrModule
 
@@ -209,33 +211,55 @@ function place(x: number, y: number, width: number, height: number) {
     .join(" ")
 }
 
-/** Homebase's logo from the kit's file, its dots as drawn there. */
-async function homebase(x: number, y: number, width: number) {
-  const file = await NFs.readFile(HomebaseFile, "utf8")
-  const box = file.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/)
-  if (!box) {
-    throw new Error(`${HomebaseFile} has no viewBox`)
-  }
-  const [, w, h] = box
-  const height = width * +h / +w
-  const dots = file
-    .replace(/^<svg[^>]*>/, "")
-    .replace(/<\/svg>\s*$/, "")
-  return `<svg ${place(x, y, width, height)} viewBox="0 0 ${w} ${h}">${dots}</svg>`
-}
-
-/** The QR code, dark on a paper tile that holds its quiet zone. */
+/**
+ * The QR code in Homebase's dots: Homebase blue on white, as the brand kit
+ * sets its logo on light ground, every module a dot 80% of the pitch, in the
+ * kit's own units, and the house from the kit's dot map at the centre. The
+ * three eyes stay solid squares: a decoder finds the code by them, and
+ * rounded ones lost it in testing.
+ */
 function qr(x: number, y: number) {
-  const side = Qr.length + 2 * QrQuiet
-  // One path, so neighbouring modules fill as one shape, with no seams.
-  const modules = Qr.flatMap((row, r) =>
-    [...row.matchAll(/#+/g)].map(({ 0: run, index }) =>
-      `M${index + QrQuiet} ${r + QrQuiet}h${run.length}v1h-${run.length}z`
-    )
+  const n = Qr.length
+  const side = (n + 2 * QrQuiet) * DotPitch
+  const top = (n - House.rows) / 2
+  const house = new Set(
+    House.dots.map((dot) => `${dot.x + top},${dot.y + top}`),
   )
+  // The house and the ring kept clear around it.
+  const nearHouse = (col: number, row: number) =>
+    col >= top - 1
+    && col <= top + House.columns
+    && row >= top - 1
+    && row <= top + House.rows
+  const inEye = (col: number, row: number) =>
+    (col < 7 || col >= n - 7) && row < 7 || col < 7 && row >= n - 7
+  const at = (cell: number) => (cell + QrQuiet) * DotPitch
+
+  const dots = Qr.flatMap((line, row) =>
+    [...line].flatMap((module, col) => {
+      const dark = nearHouse(col, row)
+        ? house.has(`${col},${row}`)
+        : module === "#"
+      const cx = at(col) + DotPitch / 2
+      const cy = at(row) + DotPitch / 2
+      return dark && !inEye(col, row)
+        ? [`<circle cx="${cx}" cy="${cy}" r="${DotRadius}"/>`]
+        : []
+    })
+  )
+  const eyes = [[0, 0], [n - 7, 0], [0, n - 7]].flatMap(([col, row]) =>
+    [0, 1, 2].map((ring) => {
+      const ex = at(col + ring)
+      const ey = at(row + ring)
+      const size = (7 - 2 * ring) * DotPitch
+      const fill = ring === 1 ? ` fill="${HomebaseColors.white.hex}"` : ""
+      return `<rect x="${ex}" y="${ey}" width="${size}" height="${size}"${fill}/>`
+    })
+  )
+
   return `<svg ${place(x, y, QrSize, QrSize)} viewBox="0 0 ${side} ${side}">
-  <rect width="${side}" height="${side}" rx="1.5" fill="${Brand.paper}"/>
-  <path d="${modules.join("")}" fill="${Brand.ink}"/>
+  <rect width="${side}" height="${side}" rx="${DotPitch * 1.5}" fill="${HomebaseColors.white.hex}"/>
+  <g fill="${HomebaseColors.blue.hex}">${eyes.join("")}${dots.join("")}</g>
 </svg>`
 }
 
@@ -250,7 +274,6 @@ const svg = [
     WordWidth * Scale,
     WordHeight * Scale,
   ),
-  await homebase(CornerMargin, CornerMargin, HomebaseWidth),
   qr(Width - CornerMargin - QrSize, Height - CornerMargin - QrSize),
   `</svg>`,
 ].join("\n") + "\n"
