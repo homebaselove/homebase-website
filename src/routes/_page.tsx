@@ -1,5 +1,6 @@
 /** @jsxImportSource preact */
 import { BasedHouseCard } from "../ui/BasedHouse.tsx"
+import { CareerFair } from "../ui/CareerFair.tsx"
 import { Footer } from "../ui/Footer.tsx"
 import { Header } from "../ui/Header.tsx"
 import { Band } from "../ui/Layout.tsx"
@@ -19,6 +20,10 @@ export default function() {
 
       <Band width="raised">
         <BasedHouseCard />
+      </Band>
+
+      <Band width="medium">
+        <CareerFair />
       </Band>
 
       <Band width="wide">

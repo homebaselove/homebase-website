@@ -44,6 +44,10 @@
       "destination": "/api/map-preview"
     },
     {
+      "source": "/brandkit",
+      "destination": "/HomebaseBrandKit.pdf"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

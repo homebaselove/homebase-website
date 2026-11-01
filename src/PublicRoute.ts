@@ -2,6 +2,7 @@ import { HttpRouter, HttpServerResponse } from "@effect/platform"
 import { Effect, Layer } from "effect"
 import * as NFs from "node:fs/promises"
 import * as NPath from "node:path"
+import { BrandKitFile, BrandKitUrl } from "./brand.ts"
 
 const PublicDir = NPath.join(import.meta.dir, "..", "public")
 
@@ -28,5 +29,11 @@ export const layer = Layer.effectDiscard(
         )
       }
     }
+
+    // The address we give out for the brand kit, as Vercel rewrites it.
+    yield* router.get(
+      BrandKitUrl,
+      HttpServerResponse.file(NPath.join(PublicDir, BrandKitFile)),
+    )
   }),
 )
