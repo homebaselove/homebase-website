@@ -1,8 +1,9 @@
 /// <reference lib="dom" />
 /**
- * A poster of the Homebase logo: the brand kit’s stacked lockup, its primary
- * logo, white and centred on Homebase Blue, at the standard small poster
- * sizes, 11 × 17 in (tabloid) in the US and A3 elsewhere.
+ * Posters of the Homebase logo, white and centred on Homebase Blue: the
+ * brand kit’s stacked lockup, its primary logo, at the standard small poster
+ * sizes, 11 × 17 in (tabloid) in the US and A3 elsewhere; and the house mark
+ * alone, without the wordmark, at A3 and A4.
  *
  *   bun merch/poster.ts
  *
@@ -31,24 +32,56 @@ export interface Sheet {
   bleed: number
 }
 
-/**
- * The step up from a sheet of paper: tabloid next to US letter, A3 next to
- * A4, each with the bleed its print shops usually ask for.
- */
-export const Sheets: Sheet[] = [
+/** US tabloid, the step up from letter, with the ⅛ in bleed US shops ask for. */
+export const Tabloid: Sheet = {
+  name: "11x17in",
+  width: 11,
+  height: 17,
+  unit: "in",
+  bleed: 0.125,
+}
+
+/** ISO A3 and A4, with the 3 mm bleed shops on A sizes ask for. */
+export const A3: Sheet = {
+  name: "a3",
+  width: 297,
+  height: 420,
+  unit: "mm",
+  bleed: 3,
+}
+
+export const A4: Sheet = {
+  name: "a4",
+  width: 210,
+  height: 297,
+  unit: "mm",
+  bleed: 3,
+}
+
+export interface Poster {
+  /** File names start with this. */
+  slug: string
+  /** The kit’s logo file, white, from brand/logo/svg. */
+  logo: string
+  /** The logo’s ink width, as a share of the sheet’s width. */
+  share: number
+  sheets: Sheet[]
+}
+
+export const Posters: Poster[] = [
   {
-    name: "11x17in",
-    width: 11,
-    height: 17,
-    unit: "in",
-    bleed: 0.125,
+    slug: "homebase-poster",
+    logo: "homebase-stacked-white.svg",
+    share: 0.7,
+    sheets: [Tabloid, A3],
   },
+  // The house is square, so it stands narrower than the stacked lockup to
+  // keep as much blue around it.
   {
-    name: "a3",
-    width: 297,
-    height: 420,
-    unit: "mm",
-    bleed: 3,
+    slug: "homebase-mark-poster",
+    logo: "homebase-mark-white.svg",
+    share: 0.55,
+    sheets: [A3, A4],
   },
 ]
 
@@ -57,9 +90,6 @@ export const PxPerUnit = {
   mm: CssPerInch / 25.4,
 }
 
-/** The logo’s ink width, as a share of the sheet’s width. */
-export const LogoShare = 0.7
-
 /**
  * How far above the middle the logo sits, as a share of the sheet’s height:
  * a mark centred exactly looks low.
@@ -67,11 +97,11 @@ export const LogoShare = 0.7
 export const OpticalLift = 0.03
 
 /** Where the logo’s viewBox goes on the sheet, and where its ink lands, in px. */
-export function placeLogo(sheet: Sheet, ink: LogoInk) {
+export function placeLogo(sheet: Sheet, ink: LogoInk, share: number) {
   const px = PxPerUnit[sheet.unit]
   const width = sheet.width * px
   const height = sheet.height * px
-  const scale = (width * LogoShare) / (ink.right - ink.left)
+  const scale = (width * share) / (ink.right - ink.left)
   const inkWidth = (ink.right - ink.left) * scale
   const inkHeight = (ink.bottom - ink.top) * scale
   const inkLeft = (width - inkWidth) / 2
@@ -102,6 +132,7 @@ export function posterSvg(
   sheet: Sheet,
   logoSvg: string,
   ink: LogoInk,
+  share: number,
   bleed = 0,
 ) {
   const px = PxPerUnit[sheet.unit]
@@ -111,7 +142,7 @@ export function posterSvg(
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${-pad} ${-pad} ${width} ${height}" style="display:block">`
     + `<rect x="${-pad}" y="${-pad}" width="${width}" height="${height}" fill="${colors.blue.hex}"/>`
-    + nest(logoSvg, placeLogo(sheet, ink).box)
+    + nest(logoSvg, placeLogo(sheet, ink, share).box)
     + `</svg>`
 }
 
@@ -119,10 +150,6 @@ if (import.meta.main) {
   const { chromium } = await import("playwright")
   const Here = NPath.dirname(NUrl.fileURLToPath(import.meta.url))
   const OutDir = NPath.join(Here, "poster")
-  const logoSvg = await Bun
-    .file(NPath.join(Here, "../brand/logo/svg/homebase-stacked-white.svg"))
-    .text()
-  const ink = logoInk(logoSvg)
 
   await NFs.mkdir(OutDir, {
     recursive: true,
@@ -134,20 +161,27 @@ if (import.meta.main) {
     `<style>@page{margin:0}html,body{margin:0;background:${colors.blue.hex}}</style>`,
   )
 
-  for (const sheet of Sheets) {
-    for (const bleed of [0, sheet.bleed]) {
-      await writePrint(
-        page,
-        posterSvg(sheet, logoSvg, ink, bleed),
-        NPath.join(
-          OutDir,
-          `homebase-poster-${sheet.name}${bleed ? "-bleed" : ""}`,
-        ),
-        {
-          width: `${sheet.width + 2 * bleed}${sheet.unit}`,
-          height: `${sheet.height + 2 * bleed}${sheet.unit}`,
-        },
-      )
+  for (const poster of Posters) {
+    const logoSvg = await Bun
+      .file(NPath.join(Here, "../brand/logo/svg", poster.logo))
+      .text()
+    const ink = logoInk(logoSvg)
+
+    for (const sheet of poster.sheets) {
+      for (const bleed of [0, sheet.bleed]) {
+        await writePrint(
+          page,
+          posterSvg(sheet, logoSvg, ink, poster.share, bleed),
+          NPath.join(
+            OutDir,
+            `${poster.slug}-${sheet.name}${bleed ? "-bleed" : ""}`,
+          ),
+          {
+            width: `${sheet.width + 2 * bleed}${sheet.unit}`,
+            height: `${sheet.height + 2 * bleed}${sheet.unit}`,
+          },
+        )
+      }
     }
   }
 

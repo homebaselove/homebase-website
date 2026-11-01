@@ -1,7 +1,7 @@
 # Merch
 
-Shirts, the Based House Mumbai Telegram avatar, Homebase banners and a logo
-poster.
+Shirts, the Based House Mumbai Telegram avatar, Homebase banners and logo
+posters.
 
 ## Shirts
 
@@ -122,27 +122,26 @@ the edge, clear of hems and grommets. `#0000FF` is brighter than CMYK can
 print: the kit’s starting points are CMYK 100 88 0 0 or Pantone Blue 072 C,
 so ask the shop for a proof.
 
-## Poster
+## Posters
 
-`poster/` holds a poster of the Homebase logo: the kit’s stacked lockup, its
-primary logo, white on Homebase Blue, 70% of the sheet wide, centred across
-and raised 3% of the sheet’s height above the middle, since a mark centred
-exactly looks low. It comes in the standard small poster sizes, the step up
-from a sheet of paper: 11 × 17 in (tabloid) for US print shops and A3
-(297 × 420 mm) elsewhere.
+`poster/` holds two posters of the Homebase logo, white on Homebase Blue,
+centred across and raised 3% of the sheet’s height above the middle, since a
+mark centred exactly looks low.
 
-| File                                | What it is                              |
-| ----------------------------------- | --------------------------------------- |
-| `homebase-poster-11x17in.pdf`       | Vector, 11 × 17 in: send this           |
-| `homebase-poster-11x17in-bleed.pdf` | With ⅛ in of bleed, 11.25 × 17.25 in    |
-| `homebase-poster-a3.pdf`            | Vector, A3                              |
-| `homebase-poster-a3-bleed.pdf`      | With 3 mm of bleed                      |
-| `*-300dpi.png`                      | Each rasterised from its PDF at 300 DPI |
+| Poster                   | Logo                              | Width of the sheet | Sizes          |
+| ------------------------ | --------------------------------- | ------------------ | -------------- |
+| `homebase-poster-*`      | The kit’s stacked lockup          | 70%                | 11 × 17 in, A3 |
+| `homebase-mark-poster-*` | The house mark alone, no wordmark | 55%                | A3, A4         |
+
+11 × 17 in (tabloid) is the standard small poster for US print shops, the
+step up from letter; A3 (297 × 420 mm) is the step up from A4 elsewhere. Each
+size comes as a vector PDF at size (send this), the same with bleed (⅛ in, or
+3 mm on A sizes), and a 300 DPI PNG of each rasterised from its PDF.
 
 The PDFs are pure vector, with no images or fonts. Chromium rounds a page to
-its print grid, so the A3 files come out 0.2 mm taller than 420 mm, blue past
-the bottom edge, well inside a print shop’s trim. Colour as for the banners:
-ask for a proof against CMYK 100 88 0 0 or Pantone Blue 072 C.
+its print grid, so A sizes come out up to 0.2 mm over, blue past the edge,
+well inside a print shop’s trim. Colour as for the banners: ask for a proof
+against CMYK 100 88 0 0 or Pantone Blue 072 C.
 
 ```sh
 bun merch/poster.ts

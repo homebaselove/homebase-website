@@ -1,101 +1,123 @@
 import { expect, test } from "bun:test"
 import {
-  LogoShare,
   OpticalLift,
   placeLogo,
+  Posters,
   posterSvg,
   PxPerUnit,
-  Sheets,
 } from "./poster.ts"
 import { logoInk } from "./print.ts"
 
-const logo = await Bun
-  .file(
-    new URL("../brand/logo/svg/homebase-stacked-white.svg", import.meta.url),
-  )
-  .text()
+const logos = Object.fromEntries(
+  await Promise.all(
+    Posters.map(async (poster) => {
+      const svg = await Bun
+        .file(new URL(`../brand/logo/svg/${poster.logo}`, import.meta.url))
+        .text()
 
-const ink = logoInk(logo)
+      return [poster.slug, {
+        svg,
+        ink: logoInk(svg),
+      }]
+    }),
+  ),
+)
 
-test("the poster comes in tabloid and A3, each with its usual bleed", () => {
+test("each poster carries its kit logo in its sizes, each with the usual bleed", () => {
   expect(
-    Sheets.map(({ name, width, height, unit, bleed }) => ({
-      name,
-      size: `${width} × ${height} ${unit}`,
-      bleed: `${bleed} ${unit}`,
+    Posters.map((poster) => ({
+      slug: poster.slug,
+      logo: poster.logo,
+      sheets: poster.sheets.map(({ name, width, height, unit, bleed }) =>
+        `${name}: ${width} × ${height} ${unit}, ${bleed} ${unit} bleed`
+      ),
     })),
   )
     .toEqual([
       {
-        name: "11x17in",
-        size: "11 × 17 in",
-        bleed: "0.125 in",
+        slug: "homebase-poster",
+        logo: "homebase-stacked-white.svg",
+        sheets: [
+          "11x17in: 11 × 17 in, 0.125 in bleed",
+          "a3: 297 × 420 mm, 3 mm bleed",
+        ],
       },
       {
-        name: "a3",
-        size: "297 × 420 mm",
-        bleed: "3 mm",
+        slug: "homebase-mark-poster",
+        logo: "homebase-mark-white.svg",
+        sheets: [
+          "a3: 297 × 420 mm, 3 mm bleed",
+          "a4: 210 × 297 mm, 3 mm bleed",
+        ],
       },
     ])
 })
 
 test("the logo is centred across, sized to the sheet and raised a little", () => {
-  for (const sheet of Sheets) {
-    const px = PxPerUnit[sheet.unit]
-    const width = sheet.width * px
-    const height = sheet.height * px
-    const placed = placeLogo(sheet, ink).ink
+  for (const poster of Posters) {
+    for (const sheet of poster.sheets) {
+      const px = PxPerUnit[sheet.unit]
+      const width = sheet.width * px
+      const height = sheet.height * px
+      const placed = placeLogo(sheet, logos[poster.slug].ink, poster.share).ink
 
-    expect(
-      (placed.left + placed.right) / 2,
-    )
-      .toBeCloseTo(width / 2, 9)
+      expect(
+        (placed.left + placed.right) / 2,
+      )
+        .toBeCloseTo(width / 2, 9)
 
-    expect(
-      placed.right - placed.left,
-    )
-      .toBeCloseTo(width * LogoShare, 9)
+      expect(
+        placed.right - placed.left,
+      )
+        .toBeCloseTo(width * poster.share, 9)
 
-    expect(
-      (placed.top + placed.bottom) / 2,
-    )
-      .toBeCloseTo(height / 2 - height * OpticalLift, 9)
+      expect(
+        (placed.top + placed.bottom) / 2,
+      )
+        .toBeCloseTo(height / 2 - height * OpticalLift, 9)
+    }
   }
 })
 
 test("the logo keeps the kit’s clear space, a fifth of its height, on every side", () => {
-  for (const sheet of Sheets) {
-    const px = PxPerUnit[sheet.unit]
-    const placed = placeLogo(sheet, ink).ink
-    const clear = (placed.bottom - placed.top) / 5
+  for (const poster of Posters) {
+    for (const sheet of poster.sheets) {
+      const px = PxPerUnit[sheet.unit]
+      const placed = placeLogo(sheet, logos[poster.slug].ink, poster.share).ink
+      const clear = (placed.bottom - placed.top) / 5
 
-    expect(
-      Math.min(
-        placed.left,
-        placed.top,
-        sheet.width * px - placed.right,
-        sheet.height * px - placed.bottom,
-      ),
-    )
-      .toBeGreaterThan(clear)
+      expect(
+        Math.min(
+          placed.left,
+          placed.top,
+          sheet.width * px - placed.right,
+          sheet.height * px - placed.bottom,
+        ),
+      )
+        .toBeGreaterThan(clear)
+    }
   }
 })
 
 test("bleed widens the blue on every side without moving the logo", () => {
-  for (const sheet of Sheets) {
-    const trim = posterSvg(sheet, logo, ink)
-    const bled = posterSvg(sheet, logo, ink, sheet.bleed)
-    const art = (svg: string) => svg.slice(svg.indexOf("/>") + 2)
-    const pad = sheet.bleed * PxPerUnit[sheet.unit]
+  for (const poster of Posters) {
+    const { svg, ink } = logos[poster.slug]
 
-    expect(
-      bled,
-    )
-      .toContain(`viewBox="${-pad} ${-pad} `)
+    for (const sheet of poster.sheets) {
+      const trim = posterSvg(sheet, svg, ink, poster.share)
+      const bled = posterSvg(sheet, svg, ink, poster.share, sheet.bleed)
+      const art = (markup: string) => markup.slice(markup.indexOf("/>") + 2)
+      const pad = sheet.bleed * PxPerUnit[sheet.unit]
 
-    expect(
-      art(bled),
-    )
-      .toBe(art(trim))
+      expect(
+        bled,
+      )
+        .toContain(`viewBox="${-pad} ${-pad} `)
+
+      expect(
+        art(bled),
+      )
+        .toBe(art(trim))
+    }
   }
 })
