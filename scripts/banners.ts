@@ -7,14 +7,14 @@ import { DotPitch, DotRadius, House } from "../src/ui/dots.ts"
 /**
  * Writes the print banners into `print/`, each for a 4 × 8 ft banner hung
  * landscape: a brand centred on its own ground, and in the bottom right a QR
- * code to its site drawn in the other brand's style.
+ * code to seedme.xyz drawn in the other brand's style.
  *
  * - `seedme-banner-4x8ft`: SeedMe's logo followed by its name in lowercase,
- *   spaced as one more letter of the word, on SeedMe's ink. The QR code to
- *   seedme.xyz is drawn in Homebase's dots, with Homebase's house in the code.
+ *   spaced as one more letter of the word, on SeedMe's ink. Its QR code is
+ *   drawn in Homebase's dots, with Homebase's house in the code.
  * - `homebase-banner-4x8ft`: Homebase's horizontal lockup in white on
- *   Homebase blue. The QR code to homebase.love is drawn in SeedMe's seeds,
- *   with SeedMe's icon in the code.
+ *   Homebase blue. Its QR code is drawn in SeedMe's seeds, with SeedMe's icon
+ *   in the code.
  *
  * Each is written as a PDF, one 96 × 48 in page, the size it prints at, all
  * vector but SeedMe's soft inner shadows, which Chromium rasterizes at 300
@@ -139,7 +139,7 @@ interface Qr {
  * scuffs and glare. Set by a scratch encoder that matches segno 1.6.6 bit for
  * bit; the rendered banner decodes with zxing-cpp and OpenCV.
  */
-const SeedMeQr: Qr = {
+const SeedMeBannerQr: Qr = {
   /** 0.26 in, a whole 39 px at the PNG's 150 ppi: a 10.66 in tile. */
   module: 0.26,
   rows: [
@@ -180,63 +180,54 @@ const SeedMeQr: Qr = {
 }
 
 /**
- * https://homebase.love as a QR code whose own modules match SeedMe's icon at
- * its centre, one string a row with # for a dark module: version 6 with error
- * correction H, mask 5.
+ * https://seedme.xyz again, as a QR code whose own modules match SeedMe's
+ * icon at its centre, one string a row with # for a dark module: version 4
+ * with error correction Q, mask 3.
  *
- * Its pads were solved for as `SeedMeQr`'s were, so the code is dark wherever
- * the icon reads dark to a scanner and light in a ring around it. Of the 76
- * modules that read one way or the other, 69 came out as wanted, so the icon
- * spends at most 7 of the 56 codewords H can repair; the 5 under the icon's
- * rounded corners and the seed's highlight read either way. Seeds carry less
- * ink than dots, and a version 6 code at H read as reliably as `SeedMeQr`
- * across distance and tilt, where smaller ones did not.
+ * Its pads were solved for as `SeedMeBannerQr`'s were, so the code is dark
+ * wherever the icon reads dark to a scanner and light in a ring around it. Of
+ * the 76 modules that read one way or the other, 75 came out as wanted, so
+ * the icon spends at most 1 of the 26 codewords Q can repair; the 5 under the
+ * icon's rounded corners and the seed's highlight read either way. Across
+ * distance, blur and tilt it read at least as reliably as `SeedMeBannerQr`.
  */
-const HomebaseQr: Qr = {
-  /** 0.22 in, a whole 33 px at 150 ppi: a 10.78 in tile, near SeedMe's. */
-  module: 0.22,
+const HomebaseBannerQr: Qr = {
+  /** 0.26 in, a whole 39 px at the PNG's 150 ppi: a 10.66 in tile. */
+  module: 0.26,
   rows: [
-    "#######.##..##.##.......##...###..#######",
-    "#.....#...#.###..#...###..#.#.##..#.....#",
-    "#.###.#.##..##..###.##..##..#..##.#.###.#",
-    "#.###.#...####..#..#..######..##..#.###.#",
-    "#.###.#.#.###.#######..#...###....#.###.#",
-    "#.....#..#..#...##...##.#..#..#.#.#.....#",
-    "#######.#.#.#.#.#.#.#.#.#.#.#.#.#.#######",
-    "........#.#..#..#..#########..#..........",
-    ".....##..####.#.######.#.#.#.#....#.#.#.#",
-    ".#####.####.##.####.####.###.###..##...##",
-    "#######.##......##.###....##.#..##.....#.",
-    "...###..##..#...##.##.#..#.#.#####.#.#.#.",
-    ".###.##...#####.###.###..#.#.#..###....##",
-    ".#.##..#.##..###.....#.#.##.#.#.##.###...",
-    "..##..####..####..#.#.#.#.#.#.##.#.#.#..#",
-    "..####....##...#.###.....###...#.#.#..#..",
-    ".#.#####...#.#............##..####.#..#.#",
-    "##.#.#..########.#######..#.##...####...#",
-    "##..#.##..#......###.###.##.#..#..###.#.#",
-    ".###.#.###.#..##.#######...#.##...#.#..##",
-    ".#.##.##...##.##.###.###.#..#.......##.#.",
-    ".##.....#.#.####..###.##.#...##....#.#...",
-    ".....###.#####.#.#.#####.#.#.#.#.#....#..",
-    "####....#.#...##.#####.#.#.....###.#.###.",
-    ".####.#......#.#..#...#.#.###...###.###.#",
-    "#........##...##...##########.##.#..##...",
-    "#.#.###.##..##.##.##..##.#.##.#.#.###...#",
-    ".##.##.#.#...#.##.###...###....#....###..",
-    "#.#.###.##.#.#.##.##.##.##.##.###.#..##.#",
-    "####.#..###.##.#.####.##.##.##.....#####.",
-    "##.##.#..#.#..#.#...##..#...#..#.#.###.##",
-    "#.####..###.#.#..#...###.######...##.#.#.",
-    "#.###.#..##...#####.###.###.#...#####.##.",
-    "........#.##...#.##.######....#.#...##.#.",
-    "#######..##.###.#....###.#.##.#.#.#.#.#..",
-    "#.....#.#..##.##.#.####.##.#...##...####.",
-    "#.###.#..#.###.......#.###.#.##.#########",
-    "#.###.#..#####.#..#..#.###.###..#..#...#.",
-    "#.###.#....####.###..##.###....#######.#.",
-    "#.....#...#..#.#..##.##.####....###.#.#.#",
-    "#######..#...#.#####.##.#.#..#.....###...",
+    "#######..####...#####..#..#######",
+    "#.....#.#..#..#..##.#####.#.....#",
+    "#.###.#.####.#..##.####.#.#.###.#",
+    "#.###.#..##.#..#####.###..#.###.#",
+    "#.###.#...###....#..#..#..#.###.#",
+    "#.....#..#...##...#.#...#.#.....#",
+    "#######.#.#.#.#.#.#.#.#.#.#######",
+    ".........#..##.#....#.##.........",
+    ".###.##..##..#..##.#.##.......##.",
+    "#.####...#..##..##...#.#..##.##..",
+    "......###.#..#.#.#.##..#.#.###.#.",
+    "#.#.#..#.#...##.#..##...####.#.##",
+    "..#.#.##.###.........#..###..#.##",
+    "#...#..##.##.#######.####.#..#.#.",
+    "#...#.##..#..#######.#.#..####...",
+    "#........###.#######.#.#.###..#..",
+    "##.#######.#.#######.##..##.#....",
+    "...###..##...#######.#.##.#.##...",
+    "..######.##..#######..#....##.#..",
+    ".#.#.....#...######..#.####.#..##",
+    "#.#.###.###.............##..####.",
+    "#.#........####...#.....##..##..#",
+    "..###.#.#..##.#..#..#..##.#.#####",
+    ".###.#.##.#.####.#....#...##.####",
+    "#.#.####.##..##..##...#.#####.#..",
+    "........####...###..#.###...##..#",
+    "#######.....#.#..#.#..###.#.#...#",
+    "#.....#.##..###.#..#.####...###.#",
+    "#.###.#...#..#.######..######.##.",
+    "#.###.#.#..#.#.##..###.#...#.....",
+    "#.###.#.#.##.###...#.#.##.##.##..",
+    "#.....#.###.#.##.###..##.#.###..#",
+    "#######....########.##.####.##...",
   ],
 }
 
@@ -465,7 +456,7 @@ const seedmeBanner = [
     WordWidth * Scale,
     WordHeight * Scale,
   ),
-  dottedQr(SeedMeQr),
+  dottedQr(SeedMeBannerQr),
   `</svg>`,
 ].join("\n") + "\n"
 
@@ -475,7 +466,7 @@ const homebaseBanner = [
   `<title>Homebase</title>`,
   `<rect width="${Width}" height="${Height}" fill="${HomebaseColors.blue.hex}"/>`,
   await homebaseLockup(LockupWidth),
-  seededQr(HomebaseQr),
+  seededQr(HomebaseBannerQr),
   `</svg>`,
 ].join("\n") + "\n"
 
