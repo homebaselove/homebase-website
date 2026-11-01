@@ -17,6 +17,7 @@ import * as NFs from "node:fs/promises"
 import * as NPath from "node:path"
 import * as NUrl from "node:url"
 import colors from "../brand/colors.json" with { type: "json" }
+import { CssPerInch, type LogoInk, logoInk, nest, writePrint } from "./print.ts"
 
 export interface Format {
   name: string
@@ -29,15 +30,6 @@ export interface Format {
     bleed: number
   }
 }
-
-/**
- * CSS pixels to the inch. Chromium prints at this scale, so a print format
- * is laid out in pixels and comes out of the PDF at its size in inches.
- */
-export const CssPerInch = 96
-
-/** Raster resolution of the print PNGs. */
-export const PrintDpi = 300
 
 export const Formats: Format[] = [
   {
@@ -138,16 +130,6 @@ export interface Metrics {
   descent: number
 }
 
-/** The logo’s dots inside its viewBox, so its ink can sit on the margin. */
-export interface LogoInk {
-  viewWidth: number
-  viewHeight: number
-  left: number
-  right: number
-  top: number
-  bottom: number
-}
-
 export interface Box {
   left: number
   right: number
@@ -241,28 +223,6 @@ export function insideMargin(format: Format, placed: Layout, metrics: Metrics) {
     && box.right <= format.width - placed.margin
 }
 
-export function logoInk(svg: string): LogoInk {
-  const [, , viewWidth, viewHeight] = svg
-    .match(/viewBox="([^"]+)"/)![1]
-    .split(" ")
-    .map(Number)
-  const circles = [...svg.matchAll(/cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"/g)]
-    .map(([, cx, cy, r]) => ({
-      cx: Number(cx),
-      cy: Number(cy),
-      r: Number(r),
-    }))
-
-  return {
-    viewWidth,
-    viewHeight,
-    left: Math.min(...circles.map((c) => c.cx - c.r)),
-    right: Math.max(...circles.map((c) => c.cx + c.r)),
-    top: Math.min(...circles.map((c) => c.cy - c.r)),
-    bottom: Math.max(...circles.map((c) => c.cy + c.r)),
-  }
-}
-
 /**
  * The banner as SVG. `bleed` (px) widens the blue on every side without
  * moving anything on it: the viewBox starts that far before the trim.
@@ -276,16 +236,7 @@ export function bannerSvg(
 ): string {
   const width = format.width + 2 * bleed
   const height = format.height + 2 * bleed
-  const logo = logoSvg
-    .trim()
-    .replace(/<svg [^>]*>/, (open) =>
-      open
-        .replace(/ width="[^"]*"/, "")
-        .replace(/ height="[^"]*"/, "")
-        .replace(
-          "<svg ",
-          `<svg x="${placed.logo.x}" y="${placed.logo.y}" width="${placed.logo.width}" height="${placed.logo.height}" `,
-        ))
+  const logo = nest(logoSvg, placed.logo)
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${-bleed} ${-bleed} ${width} ${height}" style="display:block">`
     + `<rect x="${-bleed}" y="${-bleed}" width="${width}" height="${height}" fill="${colors.blue.hex}"/>`
@@ -316,7 +267,7 @@ if (import.meta.main) {
   ) as Record<Lockup, { svg: string; ink: LogoInk }>
   const head =
     `<link href="https://fonts.googleapis.com/css2?family=Lato:wght@${Display.weight}&display=swap" rel="stylesheet">`
-    + `<style>@page{margin:0}html,body{margin:0}</style>`
+    + `<style>@page{margin:0}html,body{margin:0;background:${colors.blue.hex}}</style>`
   const PrintDir = NPath.join(OutDir, "print")
 
   await NFs.mkdir(PrintDir, {
@@ -405,34 +356,15 @@ if (import.meta.main) {
       if (format.print) {
         for (const bleed of [0, format.print.bleed]) {
           const pad = bleed * CssPerInch
-          const file = NPath.join(PrintDir, `${name}${bleed ? "-bleed" : ""}`)
-          await show(
+          await writePrint(
             pages[1],
             bannerSvg(format, placed, banner.headline, logo.svg, pad),
+            NPath.join(PrintDir, `${name}${bleed ? "-bleed" : ""}`),
+            {
+              width: `${(format.width + 2 * pad) / CssPerInch}in`,
+              height: `${(format.height + 2 * pad) / CssPerInch}in`,
+            },
           )
-          await pages[1].pdf({
-            path: `${file}.pdf`,
-            width: `${(format.width + 2 * pad) / CssPerInch}in`,
-            height: `${(format.height + 2 * pad) / CssPerInch}in`,
-            printBackground: true,
-            pageRanges: "1",
-          })
-
-          // Rasterised from the PDF, so the PNG cannot drift from it.
-          const raster = Bun.spawnSync([
-            "pdftoppm",
-            "-r",
-            String(PrintDpi),
-            "-png",
-            "-singlefile",
-            `${file}.pdf`,
-            `${file}-${PrintDpi}dpi`,
-          ], {
-            stderr: "pipe",
-          })
-          if (raster.exitCode !== 0) {
-            throw new Error(`pdftoppm: ${raster.stderr.toString()}`)
-          }
         }
         continue
       }

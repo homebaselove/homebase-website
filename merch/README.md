@@ -1,6 +1,7 @@
 # Merch
 
-Shirts, the Based House Mumbai Telegram avatar, and Homebase banners.
+Shirts, the Based House Mumbai Telegram avatar, Homebase banners and a logo
+poster.
 
 ## Shirts
 
@@ -120,6 +121,32 @@ bleed, the exact size otherwise. Logo and headline stay more than 4 in from
 the edge, clear of hems and grommets. `#0000FF` is brighter than CMYK can
 print: the kit’s starting points are CMYK 100 88 0 0 or Pantone Blue 072 C,
 so ask the shop for a proof.
+
+## Poster
+
+`poster/` holds a poster of the Homebase logo: the kit’s stacked lockup, its
+primary logo, white on Homebase Blue, 70% of the sheet wide, centred across
+and raised 3% of the sheet’s height above the middle, since a mark centred
+exactly looks low. It comes in the standard small poster sizes, the step up
+from a sheet of paper: 11 × 17 in (tabloid) for US print shops and A3
+(297 × 420 mm) elsewhere.
+
+| File                                | What it is                              |
+| ----------------------------------- | --------------------------------------- |
+| `homebase-poster-11x17in.pdf`       | Vector, 11 × 17 in: send this           |
+| `homebase-poster-11x17in-bleed.pdf` | With ⅛ in of bleed, 11.25 × 17.25 in    |
+| `homebase-poster-a3.pdf`            | Vector, A3                              |
+| `homebase-poster-a3-bleed.pdf`      | With 3 mm of bleed                      |
+| `*-300dpi.png`                      | Each rasterised from its PDF at 300 DPI |
+
+The PDFs are pure vector, with no images or fonts. Chromium rounds a page to
+its print grid, so the A3 files come out 0.2 mm taller than 420 mm, blue past
+the bottom edge, well inside a print shop’s trim. Colour as for the banners:
+ask for a proof against CMYK 100 88 0 0 or Pantone Blue 072 C.
+
+```sh
+bun merch/poster.ts
+```
 
 ## Sources
 

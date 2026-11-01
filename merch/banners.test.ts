@@ -4,16 +4,15 @@ import {
   bannerSvg,
   clearOfLogo,
   coversAvatar,
-  CssPerInch,
   type Format,
   Formats,
   headlineInk,
   insideMargin,
   layout,
   Lockups,
-  logoInk,
   type Metrics,
 } from "./banners.ts"
+import { CssPerInch, logoInk } from "./print.ts"
 
 const logo = await Bun
   .file(
