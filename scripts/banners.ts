@@ -16,10 +16,15 @@ import { DotPitch, DotRadius, House } from "../src/ui/dots.ts"
  *   Homebase blue. Its QR code is drawn in SeedMe's seeds, with SeedMe's icon
  *   in the code.
  *
- * Each is written as a PDF, one 96 × 48 in page, the size it prints at, all
- * vector but SeedMe's soft inner shadows, which Chromium rasterizes at 300
- * ppi; a PNG, 14400 × 7200, 150 ppi at full size and tagged sRGB, for
- * printers that ask for an image; and the SVG both are rendered from.
+ * Each is written as:
+ *
+ * - `.pdf`: one 96 × 48 in page, the size it prints at, all vector but
+ *   SeedMe's soft inner shadows, which Chromium rasterizes at 300 ppi.
+ * - `-bleed.pdf`: the same with `Bleed` of ground past the trim on every side
+ *   and its TrimBox at 96 × 48 in, for printers that ask for bleed.
+ * - `.png`: 14400 × 7200, 150 ppi at full size and tagged sRGB, for printers
+ *   that ask for an image.
+ * - `.svg`: the drawing the others are rendered from.
  *
  * Set CHROMIUM_PATH when the local Playwright has no browser of its own.
  *
@@ -73,6 +78,8 @@ const IconScale = 0.4684
 const Wordmark = {
   width: 7473,
   height: 1513,
+  /** The d's height: Inter's capitals stand as tall. */
+  baseline: 1490,
   d: "m493 1513q-135 0-240-40q-105-39-170-114q-66-75-83-180l282-38q19 76 72 115q54 39 145 39q85 0 134-32q49-33 49-83q0-43-36-70q-35-28-107-43l-191-38q-160-33-240-112q-80-79-80-204q0-105 58-182q58-77 162-119q104-42 245-42q133 0 232 38q98 38 157 108q59 70 76 165l-268 37q-14-59-62-97q-49-37-130-37q-74 0-123 31q-48 32-48 82q0 42 32 70q33 29 108 44l201 40q161 32 240 106q78 74 78 193q0 109-63 191q-63 81-174 126q-111 46-256 46zm1135-1q-168 0-291-70q-123-70-189-198q-66-128-66-301q0-171 66-299q66-129 186-202q120-72 280-72q112 0 207 36q95 36 166 106q71 71 111 177q40 105 40 243v83h-937v-188h791l-138 49q0-86-27-149q-28-63-80-97q-53-35-130-35q-76 0-130 35q-54 35-83 96q-28 61-28 140v132q0 93 32 158q31 65 90 98q58 34 136 34q54 0 97-16q43-15 74-45q31-29 46-72l271 39q-25 96-93 167q-67 72-169 112q-102 39-232 39zm1153 0q-168 0-291-70q-123-70-189-198q-66-128-66-301q0-171 66-299q66-129 186-202q120-72 280-72q112 0 207 36q95 36 166 106q71 71 111 177q40 105 40 243v83h-937v-188h791l-138 49q0-86-27-149q-28-63-80-97q-53-35-130-35q-76 0-130 35q-54 35-83 96q-28 61-28 140v132q0 93 32 158q31 65 90 98q58 34 136 34q54 0 97-16q43-15 74-45q31-29 46-72l271 39q-25 96-93 167q-67 72-169 112q-102 39-232 39zm1062-3q-130 0-234-67q-103-67-162-194q-59-127-59-309q0-185 60-312q61-126 164-192q104-65 229-65q90 0 152 29q62 29 102 74q41 44 63 92h8v-565h299v1490h-294v-175h-12q-23 48-64 93q-41 44-103 73q-62 28-149 28zm89-240q76 0 130-41q55-42 83-116q29-74 29-174q0-100-28-173q-29-74-83-115q-55-40-131-40q-77 0-130 41q-54 41-81 115q-28 74-28 172q0 99 28 173q28 75 81 117q54 41 130 41zm727 221v-1104h280l11 269h-21q26-100 77-163q51-64 119-94q68-30 142-30q121 0 198 75q78 75 109 226h-34q24-102 79-169q56-66 132-99q76-33 162-33q103 0 183 44q81 45 127 130q46 84 46 206v742h-298v-685q0-95-52-142q-51-46-126-46q-57 0-98 24q-42 25-64 69q-23 44-23 104v676h-288v-694q0-82-49-131q-48-48-126-48q-52 0-95 24q-43 24-67 71q-25 46-25 114v664zm2304 22q-168 0-291-70q-123-70-189-198q-66-128-66-301q0-171 66-299q66-129 186-202q120-72 280-72q112 0 207 36q95 36 166 106q71 71 111 177q40 105 40 243v83h-937v-188h791l-138 49q0-86-27-149q-28-63-80-97q-53-35-130-35q-76 0-130 35q-54 35-83 96q-28 61-28 140v132q0 93 32 158q31 65 90 98q58 34 136 34q54 0 97-16q43-15 74-45q31-29 46-72l271 39q-25 96-93 167q-67 72-169 112q-102 39-232 39z",
 } as const
 
@@ -101,20 +108,30 @@ const WordHeight = Wordmark.height * FontUnit
 const Space = 98 * FontUnit
 
 /**
- * The lockup's ink, seed to word, spans two thirds of the width. That leaves
- * 16 in clear at either end and over 14 above and below, well inside any hem,
- * grommet or pole pocket.
+ * Both banners set their name at one size: the letters of HOMEBASE, and the
+ * tallest of seedme (the d, as tall as Inter's capitals), stand this many
+ * inches. Each brand's mark keeps its own proportion to its name, so the names
+ * match while SeedMe's seed and Homebase's longer dotted name stay their own.
  */
-const LockupWidth = Width * 2 / 3
-const Scale = LockupWidth / (SeedWidth + Space + WordWidth)
-const SeedX = (Width - LockupWidth) / 2
+const NameHeight = 8.5
+
+/** SeedMe's lockup, in inches to the share card's pixels. */
+const Scale = NameHeight / (Wordmark.baseline * FontUnit)
+const SeedX = (Width - (SeedWidth + Space + WordWidth) * Scale) / 2
 const Middle = Height / 2
 
 /**
- * Each banner's QR code sits this far in from the bottom and right edges,
- * clear of hems and grommets.
+ * Each banner's QR code sits this far in from the bottom and right edges, and
+ * nothing comes nearer an edge: clear of hems, grommets and pole pockets up to
+ * 3 in deep.
  */
-const CornerMargin = 3
+const CornerMargin = 4
+
+/**
+ * The bleed of the `-bleed.pdf` files, on every side: the ground runs on past
+ * the trim, so a cut that drifts leaves no white edge.
+ */
+const Bleed = 0.5
 
 /**
  * A QR code as one string a row, # for a dark module, and the side of a
@@ -393,7 +410,7 @@ function seededQr(code: Qr) {
       }
       const cx = at(col) + cell / 2
       const cy = at(row) + cell / 2
-      return [`<use href="#seed-module" x="${cx}" y="${cy}"/>`]
+      return [`<use xlink:href="#seed-module" x="${cx}" y="${cy}"/>`]
     })
   )
   const solid = squares.flatMap(([col, row, size]) =>
@@ -420,8 +437,9 @@ function seededQr(code: Qr) {
 /**
  * Homebase's horizontal lockup in white, which its brand kit
  * (homebase.love/brandkit) gives for banners and sets on Homebase blue, read
- * from the kit's own file and centred. The kit asks for a fifth of its height
- * clear around it, which the banner gives many times over.
+ * from the kit's own file and centred, its letters `NameHeight` tall. The kit
+ * asks for a fifth of its height clear around it, which the banner gives many
+ * times over.
  */
 const HomebaseLockup = NPath.join(
   import.meta.dir,
@@ -429,14 +447,18 @@ const HomebaseLockup = NPath.join(
   "brand/logo/svg/homebase-horizontal-white.svg",
 )
 
-async function homebaseLockup(width: number) {
+async function homebaseLockup() {
   const file = await NFs.readFile(HomebaseLockup, "utf8")
   const box = file.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/)
   if (!box) {
     throw new Error(`${HomebaseLockup} has no viewBox`)
   }
   const [, w, h] = box
-  const height = width * +h / +w
+  // The kit's files keep half a pitch less a dot's radius clear around the
+  // dots, so the letters' ink stops that far inside the box, top and bottom.
+  const ink = +h - 2 * (DotPitch / 2 - DotRadius)
+  const height = NameHeight * +h / ink
+  const width = height * +w / +h
   const dots = file
     .replace(/^<svg[^>]*>/, "")
     .replace(/<\/svg>\s*$/, "")
@@ -445,30 +467,60 @@ async function homebaseLockup(width: number) {
   return `<svg ${place(x, y, width, height)} viewBox="0 0 ${w} ${h}">${dots}</svg>`
 }
 
-const seedmeBanner = [
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Width} ${Height}" width="${Width}in" height="${Height}in">`,
-  `<title>SeedMe</title>`,
-  `<rect width="${Width}" height="${Height}" fill="${SeedMeColors.ink}"/>`,
-  seedLogo(SeedX - SeedMargin * Scale, Middle - Mark * Scale / 2, Mark * Scale),
-  wordmark(
-    SeedX + (SeedWidth + Space) * Scale,
-    Middle - WordHeight * Scale / 2,
-    WordWidth * Scale,
-    WordHeight * Scale,
-  ),
-  dottedQr(SeedMeBannerQr),
-  `</svg>`,
-].join("\n") + "\n"
+/**
+ * A banner's page: its ground running `bleed` inches past the trim on every
+ * side, and its drawing in the trim's own coordinates.
+ */
+function page(banner: Banner, bleed = 0) {
+  const width = Width + 2 * bleed
+  const height = Height + 2 * bleed
+  const view = `${-bleed} ${-bleed} ${width} ${height}`
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="${view}" width="${width}in" height="${height}in">`,
+    `<title>${banner.title}</title>`,
+    `<rect x="${-bleed}" y="${-bleed}" width="${width}" height="${height}" fill="${banner.ground}"/>`,
+    ...banner.body,
+    `</svg>`,
+  ].join("\n") + "\n"
+}
 
-/** Homebase's lockup spans the same two thirds of the width as SeedMe's. */
-const homebaseBanner = [
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Width} ${Height}" width="${Width}in" height="${Height}in">`,
-  `<title>Homebase</title>`,
-  `<rect width="${Width}" height="${Height}" fill="${HomebaseColors.blue.hex}"/>`,
-  await homebaseLockup(LockupWidth),
-  seededQr(HomebaseBannerQr),
-  `</svg>`,
-].join("\n") + "\n"
+interface Banner {
+  name: string
+  title: string
+  ground: string
+  body: readonly string[]
+}
+
+const Banners: Banner[] = [
+  {
+    name: "seedme-banner-4x8ft",
+    title: "SeedMe",
+    ground: SeedMeColors.ink,
+    body: [
+      seedLogo(
+        SeedX - SeedMargin * Scale,
+        Middle - Mark * Scale / 2,
+        Mark * Scale,
+      ),
+      wordmark(
+        SeedX + (SeedWidth + Space) * Scale,
+        Middle - WordHeight * Scale / 2,
+        WordWidth * Scale,
+        WordHeight * Scale,
+      ),
+      dottedQr(SeedMeBannerQr),
+    ],
+  },
+  {
+    name: "homebase-banner-4x8ft",
+    title: "Homebase",
+    ground: HomebaseColors.blue.hex,
+    body: [
+      await homebaseLockup(),
+      seededQr(HomebaseBannerQr),
+    ],
+  },
+]
 
 /**
  * Chromium writes its screenshots with no resolution or colour space, so a
@@ -505,18 +557,56 @@ function chunk(type: string, data: Uint8Array) {
   return out
 }
 
-const Banners = [
-  {
-    name: "seedme-banner-4x8ft",
-    title: "SeedMe banner, 4 × 8 ft",
-    svg: seedmeBanner,
-  },
-  {
-    name: "homebase-banner-4x8ft",
-    title: "Homebase banner, 4 × 8 ft",
-    svg: homebaseBanner,
-  },
-]
+/**
+ * Chromium sets no TrimBox, so a RIP would take the bleed for part of the
+ * banner. This adds TrimBox and BleedBox to the page as an incremental update,
+ * the PDF's own way to amend a file: a new copy of the page object, an xref
+ * section pointing to it, and a trailer chained to the original's.
+ */
+function trimBoxed(pdf: Uint8Array, bleed: number) {
+  const text = Buffer.from(pdf).toString("latin1")
+  const object = /(\d+) 0 obj\s*<<\/Type \/Page\b/.exec(text)
+  const trailer = /trailer\s*<<([^>]*)>>\s*startxref\s*(\d+)\s*%%EOF\s*$/.exec(
+    text,
+  )
+  if (!object || !trailer || /\/(TrimBox|Prev)\b/.test(text)) {
+    throw new Error("Chromium's PDF is not laid out as expected")
+  }
+  const start = text.indexOf("<<", object.index)
+  let end = start
+  for (let depth = 0; end < text.length; end++) {
+    if (text[end] === "(") {
+      throw new Error("the page dictionary holds a string")
+    }
+    if (text.startsWith("<<", end)) {
+      depth++
+      end++
+    } else if (text.startsWith(">>", end)) {
+      if (--depth === 0) {
+        break
+      }
+      end++
+    }
+  }
+  if (end >= text.length) {
+    throw new Error("the page dictionary never closes")
+  }
+  const points = (inches: number) => +(inches * 72).toFixed(2)
+  const trim = [bleed, bleed, Width + bleed, Height + bleed].map(points)
+  const media = [0, 0, Width + 2 * bleed, Height + 2 * bleed].map(points)
+  const copy = `${object[1]} 0 obj\n${
+    text.slice(start, end)
+  }\n/TrimBox [${trim.join(" ")}]\n/BleedBox [${media.join(" ")}]>>\nendobj\n`
+  const objectAt = pdf.length
+  const xrefAt = objectAt + copy.length
+  const update = [
+    copy,
+    `xref\n${object[1]} 1\n${String(objectAt).padStart(10, "0")} 00000 n \n`,
+    `trailer\n<<${trailer[1]}\n/Prev ${trailer[2]}>>\n`,
+    `startxref\n${xrefAt}\n%%EOF\n`,
+  ].join("")
+  return Buffer.concat([pdf, Buffer.from(update, "latin1")])
+}
 
 await NFs.mkdir(OutDir, {
   recursive: true,
@@ -526,24 +616,35 @@ const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH,
 })
 
-for (const banner of Banners) {
-  const file = (extension: string) =>
-    NPath.join(OutDir, `${banner.name}.${extension}`)
-  await NFs.writeFile(file("svg"), banner.svg)
+async function pdf(title: string, svg: string, bleed: number) {
+  const width = Width + 2 * bleed
+  const height = Height + 2 * bleed
+  const tab = await browser.newPage()
+  await tab.setContent(
+    `<title>${title}</title><style>@page{margin:0;size:${width}in ${height}in}html,body{margin:0}svg{display:block}</style>${svg}`,
+  )
+  const out = await tab.pdf({
+    width: `${width}in`,
+    height: `${height}in`,
+    printBackground: true,
+  })
+  await tab.close()
+  return out
+}
 
-  const page = await browser.newPage()
-  await page.setContent(
-    `<title>${banner.title}</title><style>@page{margin:0;size:${Width}in ${Height}in}html,body{margin:0}svg{display:block}</style>${banner.svg}`,
-  )
+for (const banner of Banners) {
+  const file = (ending: string) => NPath.join(OutDir, `${banner.name}${ending}`)
+  const title = `${banner.title} banner, 4 × 8 ft`
+  const svg = page(banner)
+  await NFs.writeFile(file(".svg"), svg)
+  await NFs.writeFile(file(".pdf"), await pdf(title, svg, 0))
   await NFs.writeFile(
-    file("pdf"),
-    await page.pdf({
-      width: `${Width}in`,
-      height: `${Height}in`,
-      printBackground: true,
-    }),
+    file("-bleed.pdf"),
+    trimBoxed(
+      await pdf(`${title}, ${Bleed} in bleed`, page(banner, Bleed), Bleed),
+      Bleed,
+    ),
   )
-  await page.close()
 
   const image = await browser.newPage({
     viewport: {
@@ -552,9 +653,9 @@ for (const banner of Banners) {
     },
   })
   await image.setContent(
-    `<style>html,body{margin:0}svg{display:block;width:100vw;height:100vh}</style>${banner.svg}`,
+    `<style>html,body{margin:0}svg{display:block;width:100vw;height:100vh}</style>${svg}`,
   )
-  await NFs.writeFile(file("png"), tagPng(await image.screenshot(), PngPpi))
+  await NFs.writeFile(file(".png"), tagPng(await image.screenshot(), PngPpi))
   await image.close()
 }
 
