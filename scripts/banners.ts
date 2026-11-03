@@ -84,16 +84,21 @@ const Wordmark = {
 } as const
 
 /**
- * The lockup at the sizes of SeedMe's share card
- * (`frontend/src/lib/shareCard.tsx`), in its pixels: the logo in a 60 square
- * and the type at its wordmark's size, the 1533-unit ink box of "SeedMe" 32
- * tall. The word follows the seed at the spacing of its own letters, and the
- * two are centred on one line.
+ * The lockup in the proportions of SeedMe's own header
+ * (`frontend/src/components/TopBar.tsx`), in its pixels: the seed's 158-unit
+ * box 16.8 tall (`h-[1.05rem]`) beside the wordmark 14 tall for its 1533-unit
+ * ink box, which stands the seed 1.19 times as tall as the capitals. The word
+ * follows the seed at the spacing of its own letters, and the two are centred
+ * on one line.
  */
-const Mark = 60
-const FontUnit = 32 / 1533
+const SeedBox = 16.8
+const FontUnit = 14 / 1533
 
-/** The seed's ink, which the logo's square centres with room to spare. */
+/**
+ * `seedLogo` draws the seed's box 96 units tall in its 100-unit square, which
+ * centres the seed's ink with room to spare.
+ */
+const Mark = SeedBox * 100 / 96
 const SeedWidth = Mark * 96 * EggScale / 100
 const SeedMargin = (Mark - SeedWidth) / 2
 
@@ -110,8 +115,9 @@ const Space = 98 * FontUnit
 /**
  * Both banners set their name at one size: the letters of HOMEBASE, and the
  * tallest of seedme (the d, as tall as Inter's capitals), stand this many
- * inches. Each brand's mark keeps its own proportion to its name, so the names
- * match while SeedMe's seed and Homebase's longer dotted name stay their own.
+ * inches. Each mark keeps its brand's own proportion to its name across a
+ * header, Homebase's house level with its letters and SeedMe's seed 1.19 times
+ * its capitals, so the marks come out close in size as well.
  */
 const NameHeight = 8.5
 

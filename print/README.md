@@ -18,6 +18,8 @@ written by `bun scripts/banners.ts`; edit the script, never the files.
 - There are no fonts: every letter is outlines. The only image in the PDFs
   is the soft inner shadow on SeedMe's seed, at 300 ppi.
 - Both names stand 8.5 in tall: the letters of HOMEBASE and the d of seedme.
+  The marks follow each brand's header: Homebase's house as tall as its
+  letters, 8.5 in, and SeedMe's seed a little taller, 10.1 in.
 - Both QR codes open https://seedme.xyz and decode from these files with
   zxing-cpp and OpenCV. Scan the printed proof with an iPhone and an Android
   phone before the full run.
