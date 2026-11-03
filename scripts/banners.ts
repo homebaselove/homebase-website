@@ -12,9 +12,9 @@ import { DotPitch, DotRadius, House } from "../src/ui/dots.ts"
  * - `seedme-banner-4x8ft`: SeedMe's logo followed by its name in lowercase,
  *   spaced as one more letter of the word, on SeedMe's ink. Its QR code is
  *   drawn in Homebase's dots, with Homebase's house in the code.
- * - `homebase-banner-4x8ft`: Homebase's horizontal lockup in white on
- *   Homebase blue. Its QR code is drawn in SeedMe's seeds, with SeedMe's icon
- *   in the code.
+ * - `homebase-banner-4x8ft`: Homebase's house followed by its name in white
+ *   on Homebase blue. Its QR code is drawn in SeedMe's seeds, with SeedMe's
+ *   icon in the code.
  *
  * Each is written as:
  *
@@ -84,23 +84,13 @@ const Wordmark = {
 } as const
 
 /**
- * The lockup in the proportions of SeedMe's own header
- * (`frontend/src/components/TopBar.tsx`), in its pixels: the seed's 158-unit
- * box 16.8 tall (`h-[1.05rem]`) beside the wordmark 14 tall for its 1533-unit
- * ink box, which stands the seed 1.19 times as tall as the capitals. The word
- * follows the seed at the spacing of its own letters, and the two are centred
- * on one line.
+ * The name at the size SeedMe's share card (`frontend/src/lib/shareCard.tsx`)
+ * gives it, in the card's pixels: the logo in a 60 square and the type at its
+ * wordmark's size, the 1533-unit ink box of "SeedMe" 32 tall, the lockup's ink
+ * spanning two thirds of the banner's width.
  */
-const SeedBox = 16.8
-const FontUnit = 14 / 1533
-
-/**
- * `seedLogo` draws the seed's box 96 units tall in its 100-unit square, which
- * centres the seed's ink with room to spare.
- */
-const Mark = SeedBox * 100 / 96
-const SeedWidth = Mark * 96 * EggScale / 100
-const SeedMargin = (Mark - SeedWidth) / 2
+const CardMark = 60
+const FontUnit = 32 / 1533
 
 const WordWidth = Wordmark.width * FontUnit
 const WordHeight = Wordmark.height * FontUnit
@@ -112,17 +102,26 @@ const WordHeight = Wordmark.height * FontUnit
  */
 const Space = 98 * FontUnit
 
-/**
- * Both banners set their name at one size: the letters of HOMEBASE, and the
- * tallest of seedme (the d, as tall as Inter's capitals), stand this many
- * inches. Each mark keeps its brand's own proportion to its name across a
- * header, Homebase's house level with its letters and SeedMe's seed 1.19 times
- * its capitals, so the marks come out close in size as well.
- */
-const NameHeight = 8.5
+/** SeedMe's lockup, in inches to the card's pixels. */
+const Scale = Width * 2 / 3
+  / (CardMark * 96 * EggScale / 100 + Space + WordWidth)
 
-/** SeedMe's lockup, in inches to the share card's pixels. */
-const Scale = NameHeight / (Wordmark.baseline * FontUnit)
+/**
+ * Both logos stand this many times as tall as the capitals of their names:
+ * SeedMe's seed, which its share card draws 1.78 times as tall, and
+ * Homebase's house, which its horizontal lockup stands level with its letters,
+ * meet a third taller. The names keep the sizes their own lockups give them.
+ */
+const MarkRatio = 4 / 3
+
+/**
+ * The seed's ink at that height, and the logo square holding it: `seedLogo`
+ * draws the egg's 152 units of ink at `EggScale`, centred with room to spare.
+ */
+const SeedHeight = MarkRatio * Wordmark.baseline * FontUnit
+const Mark = SeedHeight / (152 * EggScale / 100)
+const SeedWidth = Mark * 96 * EggScale / 100
+const SeedMargin = (Mark - SeedWidth) / 2
 const SeedX = (Width - (SeedWidth + Space + WordWidth) * Scale) / 2
 const Middle = Height / 2
 
@@ -441,36 +440,70 @@ function seededQr(code: Qr) {
 }
 
 /**
- * Homebase's horizontal lockup in white, which its brand kit
- * (homebase.love/brandkit) gives for banners and sets on Homebase blue, read
- * from the kit's own file and centred, its letters `NameHeight` tall. The kit
- * asks for a fifth of its height clear around it, which the banner gives many
+ * Homebase's house and name in white, from the brand kit's own mark and
+ * wordmark files (homebase.love/brandkit), set as its horizontal lockup sets
+ * them, the house 6 cells from the H and centred on the letters, but with the
+ * house `MarkRatio` times their height where the lockup stands it level. The
+ * letters keep the size the horizontal lockup gives them across two thirds of
+ * the width, and the kit's fifth of the height clear around the logo is many
  * times over.
  */
-const HomebaseLockup = NPath.join(
-  import.meta.dir,
-  "..",
-  "brand/logo/svg/homebase-horizontal-white.svg",
-)
+const HomebaseFiles = {
+  mark: "brand/logo/svg/homebase-mark-white.svg",
+  wordmark: "brand/logo/svg/homebase-wordmark-white.svg",
+}
+
+/** The kit's horizontal lockup sets the house this far from the H. */
+const HouseGap = 6 * DotPitch
+
+async function kitFile(file: string) {
+  const path = NPath.join(import.meta.dir, "..", file)
+  const svg = await NFs.readFile(path, "utf8")
+  const box = svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/)
+  if (!box) {
+    throw new Error(`${path} has no viewBox`)
+  }
+  return {
+    width: +box[1],
+    height: +box[2],
+    dots: svg
+      .replace(/^<svg[^>]*>/, "")
+      .replace(/<\/svg>\s*$/, ""),
+  }
+}
 
 async function homebaseLockup() {
-  const file = await NFs.readFile(HomebaseLockup, "utf8")
-  const box = file.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/)
-  if (!box) {
-    throw new Error(`${HomebaseLockup} has no viewBox`)
-  }
-  const [, w, h] = box
-  // The kit's files keep half a pitch less a dot's radius clear around the
-  // dots, so the letters' ink stops that far inside the box, top and bottom.
-  const ink = +h - 2 * (DotPitch / 2 - DotRadius)
-  const height = NameHeight * +h / ink
-  const width = height * +w / +h
-  const dots = file
-    .replace(/^<svg[^>]*>/, "")
-    .replace(/<\/svg>\s*$/, "")
-  const x = (Width - width) / 2
-  const y = (Height - height) / 2
-  return `<svg ${place(x, y, width, height)} viewBox="0 0 ${w} ${h}">${dots}</svg>`
+  const mark = await kitFile(HomebaseFiles.mark)
+  const word = await kitFile(HomebaseFiles.wordmark)
+  // The kit's files keep half a pitch less a dot's radius clear around their
+  // dots, in the one unit they share.
+  const margin = DotPitch / 2 - DotRadius
+  const letters = word.height - 2 * margin
+  // Across two thirds of the width, as the horizontal lockup was set.
+  const unit = Width * 2 / 3 / (letters + HouseGap + word.width)
+  // The house's ink is square; its file holds it with the margin around.
+  const house = MarkRatio * letters
+  const houseBox = house * mark.height / (mark.height - 2 * margin)
+  const ink = house + HouseGap + word.width - 2 * margin
+  const left = (Width - ink * unit) / 2
+  return [
+    `<svg ${
+      place(
+        left - (houseBox - house) / 2 * unit,
+        Middle - houseBox / 2 * unit,
+        houseBox * unit,
+        houseBox * unit,
+      )
+    } viewBox="0 0 ${mark.width} ${mark.height}">${mark.dots}</svg>`,
+    `<svg ${
+      place(
+        left + (house + HouseGap - margin) * unit,
+        Middle - word.height / 2 * unit,
+        word.width * unit,
+        word.height * unit,
+      )
+    } viewBox="0 0 ${word.width} ${word.height}">${word.dots}</svg>`,
+  ].join("\n")
 }
 
 /**
