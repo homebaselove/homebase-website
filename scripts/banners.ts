@@ -534,13 +534,13 @@ async function homebaseLockup() {
 
 /**
  * Each banner carries its partner's mark in the top left, as far in from the
- * edges as the QR code and in one square box on both banners: one minor-third
- * step (1.2, the subtlest step of the usual modular scales) smaller than the
- * QR tile it balances across the banner, so the mark reads as secondary to
- * the code and to the banner's own lockup, as co-branding guides set a
- * partner's logo where another brand leads. Equal boxes give the two marks
- * equal area, the usual way to make marks of different shapes look the same
- * size.
+ * edges as the QR code and in one square box on both banners: one step of a
+ * minor-third type scale (1.2) smaller than the QR tile it balances across
+ * the banner, so the mark reads as secondary to the code and to the banner's
+ * own lockup, as co-branding guides set a partner's logo where another brand
+ * leads, while staying close to the code's size. Equal boxes give the two
+ * marks equal area, the usual way to make marks of different shapes look the
+ * same size.
  */
 function cornerSize(code: Qr) {
   return corner(code).size / 1.2
