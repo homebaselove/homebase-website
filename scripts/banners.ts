@@ -6,15 +6,17 @@ import { DotPitch, DotRadius, House } from "../src/ui/dots.ts"
 
 /**
  * Writes the print banners into `print/`, each for a 4 × 8 ft banner hung
- * landscape: a brand centred on its own ground, and in the bottom right a QR
- * code to seedme.xyz drawn in the other brand's style.
+ * landscape: a brand centred on its own ground, its partner's mark in the top
+ * left, and in the bottom right a QR code to its own site in its own style.
  *
  * - `seedme-banner-4x8ft`: SeedMe's logo followed by its name in lowercase,
- *   spaced as one more letter of the word, on SeedMe's ink. Its QR code is
- *   drawn in Homebase's dots, with Homebase's house in the code.
+ *   spaced as one more letter of the word, on SeedMe's ink; Homebase's house
+ *   in the top left; a QR code to seedme.xyz drawn in SeedMe's seeds, with
+ *   SeedMe's icon in the code.
  * - `homebase-banner-4x8ft`: Homebase's house followed by its name in white
- *   on Homebase blue. Its QR code is drawn in SeedMe's seeds, with SeedMe's
- *   icon in the code.
+ *   on Homebase blue; SeedMe's icon in the top left; a QR code to
+ *   homebase.love drawn in Homebase's dots, with Homebase's house in the
+ *   code.
  *
  * Each is written as:
  *
@@ -150,70 +152,20 @@ interface Qr {
 
 /**
  * https://seedme.xyz (`SeedMeUrl` in src/funding.ts) as a QR code whose own
- * modules draw Homebase's house at its centre, one string a row with # for a
- * dark module: version 4 with error correction Q, mask 2.
+ * modules match SeedMe's icon at its centre, one string a row with # for a
+ * dark module: version 4 with error correction Q, mask 3.
  *
  * Decoders stop at the end of the URL and skip the pad bytes after it, but
  * the pads feed the error correction, which is linear in them, so they were
- * solved for to lay the house and a clear ring around it into the code. 79 of
- * those 81 modules came out as wanted, and drawing the house over the other 2
- * spends at most 2 of the 26 codewords Q can repair, leaving the rest for
- * scuffs and glare. Set by a scratch encoder that matches segno 1.6.6 bit for
- * bit; the rendered banner decodes with zxing-cpp and OpenCV.
+ * solved for to make the code dark wherever the icon reads dark to a scanner
+ * and light in a ring around it. Of the 76 modules that read one way or the
+ * other, 75 came out as wanted, so the icon costs 1 codeword, where Q can
+ * repair 13 in each of the code's two blocks. The 5 under the icon's rounded
+ * corners and the seed's highlight read either way; were all 5 misread, the
+ * icon would cost 3. Set by a scratch encoder that matches segno 1.6.6 bit
+ * for bit; the rendered banner decodes with zxing-cpp and OpenCV.
  */
 const SeedMeBannerQr: Qr = {
-  /** 0.26 in, a whole 39 px at the PNG's 150 ppi: a 10.66 in tile. */
-  module: 0.26,
-  rows: [
-    "#######.#...#...#.###..#..#######",
-    "#.....#...#...###.##..#...#.....#",
-    "#.###.#...###.##.#..#.....#.###.#",
-    "#.###.#...#######..#.###..#.###.#",
-    "#.###.#.##.#.........#..#.#.###.#",
-    "#.....#.#.#....#.#...##...#.....#",
-    "#######.#.#.#.#.#.#.#.#.#.#######",
-    "..........#.###..######.#........",
-    ".#######..##..##.##.....#..##...#",
-    "#..#.#...###..####.#.#.#..##.##..",
-    ".#.#####...#..###..#.#..###.#.###",
-    "###..#...#..###.##.#.##...#.###.#",
-    "#.#.#.#.#............#..###..#.##",
-    ".###.#....##....#.....#....#..###",
-    "##....#........###....#####..###.",
-    ".#.....####...#####..#.#.###..#..",
-    ".#....#.#.##.#######..####.####.#",
-    "..##....###...#####...##.###.###.",
-    "#.#...#.##....##.##...#....##.#..",
-    ".#...#..##.#..##.##.#....#.#####.",
-    "#.#...##.###.......#.##....#.#...",
-    "#..#.#.#....##..#...#...##..##..#",
-    "#....##..#####.##....#.....##..#.",
-    "#.#.#...........######..###.##..#",
-    "#....##.#.#.#..###.#..#.#####.#..",
-    "........##.....#.....##.#...#.#..",
-    "#######.######.##.#..#.##.#.#.###",
-    "#.....#.#.#..#..#..#.####...###.#",
-    "#.###.#.#......#..##.#..######.##",
-    "#.###.#.#.###.#.##..#.####..#.##.",
-    "#.###.#.###.###.#..#.#.##.##.##..",
-    "#.....#.#..###.##.#.###.###.#.#..",
-    "#######........#..###.##..##.###.",
-  ],
-}
-
-/**
- * https://seedme.xyz again, as a QR code whose own modules match SeedMe's
- * icon at its centre, one string a row with # for a dark module: version 4
- * with error correction Q, mask 3.
- *
- * Its pads were solved for as `SeedMeBannerQr`'s were, so the code is dark
- * wherever the icon reads dark to a scanner and light in a ring around it. Of
- * the 76 modules that read one way or the other, 75 came out as wanted, so
- * the icon spends at most 1 of the 26 codewords Q can repair; the 5 under the
- * icon's rounded corners and the seed's highlight read either way. Across
- * distance, blur and tilt it read at least as reliably as `SeedMeBannerQr`.
- */
-const HomebaseBannerQr: Qr = {
   /** 0.26 in, a whole 39 px at the PNG's 150 ppi: a 10.66 in tile. */
   module: 0.26,
   rows: [
@@ -253,6 +205,60 @@ const HomebaseBannerQr: Qr = {
   ],
 }
 
+/**
+ * https://homebase.love as a QR code whose own modules draw Homebase's house
+ * at its centre, one string a row with # for a dark module: version 4 with
+ * error correction Q, mask 0.
+ *
+ * Its pads were solved for as `SeedMeBannerQr`'s were, to lay the house and a
+ * clear ring around it into the code. The URL is three bytes longer than
+ * seedme.xyz, which leaves fewer pads to steer: 71 of the 81 modules came out
+ * as wanted. The 10 misses, 8 of them in the ring, fall in 4 codewords of one
+ * block, so drawing the house over them spends 4 of the 13 that block can
+ * repair and none of the other's. Larger codes missed fewer but read worse at
+ * a distance; this one read the most reliably of any across distance, blur
+ * and tilt.
+ */
+const HomebaseBannerQr: Qr = {
+  /** 0.26 in, a whole 39 px at the PNG's 150 ppi: a 10.66 in tile. */
+  module: 0.26,
+  rows: [
+    "#######.#...###.###.#.##..#######",
+    "#.....#.###.#....#####.#..#.....#",
+    "#.###.#.#..#.##.#......##.#.###.#",
+    "#.###.#.###.#.##.###.#.#..#.###.#",
+    "#.###.#.#...#..#.##.#.....#.###.#",
+    "#.....#.......#.##.#.#....#.....#",
+    "#######.#.#.#.#.#.#.#.#.#.#######",
+    "........#.##....#.##.##.#........",
+    ".##.#.##.###.####..###.##.#.#####",
+    "###.##..##....###...#.#.####.....",
+    ".#....#.#..###......##....##..#.#",
+    "##.##..####.#..#....#..##...#....",
+    "#####.###..#..............#.##..#",
+    "..#.##.#.##.....#....#.#....#.#.#",
+    "#.#.#####.##...###...##..#.....##",
+    ".#..#..##.#...#####..###..#.#.##.",
+    ".#.##.##....##.#####.#..###...#..",
+    "..#....######.#####.##..####...#.",
+    "..#.#########.#####...#..#....##.",
+    ".##.##.#.##.#.##.##.#########..##",
+    ".#...##..#.....#...#..####.###.#.",
+    ".###.#...#.#.#.#.##.######.#.#.##",
+    "#.##.##.##.#.##....#...##..######",
+    ".###.#..#..#..#..###.##.##.#.#...",
+    "#...#####..#####.#.##############",
+    "........#..#.###....#..##...##...",
+    "#######.#.##....##..##.##.#.#.#.#",
+    "#.....#..##....##.###...#...#....",
+    "#.###.#.#.#.##....##....######..#",
+    "#.###.#..#.#..##.#......#...#.#..",
+    "#.###.#.#.#####.#.#..#.#....#...#",
+    "#.....#.##...#..###..#...#..#.##.",
+    "#######..##......##.##..###.#.###",
+  ],
+}
+
 /** Scanners want four modules of light around a code. */
 const QrQuiet = 4
 
@@ -269,18 +275,27 @@ function corner(code: Qr) {
 /**
  * SeedMe's logo: `iconSvg("bare")`, the seed in its lit gradient with one
  * inner shadow and no ground, which BRAND.md keeps for surfaces already dark.
- * With `ground`, `iconSvg("square")` for light ones: the seed smaller on
- * full-bleed ink, its corners rounded here as BRAND.md leaves to the host.
+ * With a `ground`, `iconSvg("square")` or `iconSvg("circle")` for any other
+ * surface: the seed smaller on ink, a square's corners rounded here as
+ * BRAND.md leaves to the host. `id` keeps two logos in one page off each
+ * other's gradient and clip.
  */
-function seedLogo(x: number, y: number, size: number, ground = false) {
+function seedLogo(
+  x: number,
+  y: number,
+  size: number,
+  ground?: "square" | "circle",
+  id = "seed",
+) {
   const scale = ground ? IconScale : EggScale
   const fit = `translate(50 50) scale(${scale}) translate(-50 -79)`
-  const square = ground
-    ? `\n  <rect width="100" height="100" rx="21" fill="${SeedMeColors.ink}"/>`
-    : ""
+  const backing = {
+    square: `\n  <rect width="100" height="100" rx="21" fill="${SeedMeColors.ink}"/>`,
+    circle: `\n  <circle cx="50" cy="50" r="50" fill="${SeedMeColors.ink}"/>`,
+  }
   return `<svg ${place(x, y, size, size)} viewBox="0 0 100 100">
   <defs>
-    <radialGradient id="seed-shell" cx="0.34" cy="0.24" r="0.92">
+    <radialGradient id="${id}-shell" cx="0.34" cy="0.24" r="0.92">
       <stop offset="0" stop-color="#c2d5ff"/>
       <stop offset="0.16" stop-color="#7ea3ff"/>
       <stop offset="0.36" stop-color="#3d76ff"/>
@@ -288,12 +303,12 @@ function seedLogo(x: number, y: number, size: number, ground = false) {
       <stop offset="0.82" stop-color="#0037ad"/>
       <stop offset="1" stop-color="#001e6b"/>
     </radialGradient>
-    <filter id="seed-blur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3"/></filter>
-    <clipPath id="seed-clip"><path d="${Egg}" transform="${fit}"/></clipPath>
-  </defs>${square}
-  <path d="${Egg}" fill="url(#seed-shell)" transform="${fit}"/>
-  <g clip-path="url(#seed-clip)">
-    <path d="${Egg}" transform="${fit} translate(-6 -7)" fill="none" stroke="#00123f" stroke-width="16" opacity="0.75" filter="url(#seed-blur)"/>
+    <filter id="${id}-blur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3"/></filter>
+    <clipPath id="${id}-clip"><path d="${Egg}" transform="${fit}"/></clipPath>
+  </defs>${ground ? backing[ground] : ""}
+  <path d="${Egg}" fill="url(#${id}-shell)" transform="${fit}"/>
+  <g clip-path="url(#${id}-clip)">
+    <path d="${Egg}" transform="${fit} translate(-6 -7)" fill="none" stroke="#00123f" stroke-width="16" opacity="0.75" filter="url(#${id}-blur)"/>
   </g>
 </svg>`
 }
@@ -321,8 +336,9 @@ function place(x: number, y: number, width: number, height: number) {
  * The QR code in Homebase's dots: Homebase blue on white, as the brand kit
  * sets its logo on light ground, every module a dot 80% of the pitch, in the
  * kit's own units, and the house from the kit's dot map at the centre. The
- * three eyes stay solid squares: a decoder finds the code by them, and
- * rounded ones lost it in testing.
+ * eyes and the small alignment square stay solid: a decoder finds the code by
+ * the eyes, which lost it rounded in testing, and squares it up by the
+ * alignment square, which read better solid under tilt.
  */
 function dottedQr(code: Qr) {
   const rows = code.rows
@@ -338,8 +354,18 @@ function dottedQr(code: Qr) {
     && col <= top + House.columns
     && row >= top - 1
     && row <= top + House.rows
-  const inEye = (col: number, row: number) =>
-    (col < 7 || col >= n - 7) && row < 7 || col < 7 && row >= n - 7
+  // The eyes, and the one alignment square of versions 2 to 6, centred 7
+  // cells in from the far corner.
+  const squares: [number, number, number][] = [
+    [0, 0, 7],
+    [n - 7, 0, 7],
+    [0, n - 7, 7],
+    [n - 9, n - 9, 5],
+  ]
+  const inSquare = (col: number, row: number) =>
+    squares.some(([c, r, size]) =>
+      col >= c && col < c + size && row >= r && row < r + size
+    )
   const at = (cell: number) => (cell + QrQuiet) * DotPitch
 
   const dots = rows.flatMap((line, row) =>
@@ -349,25 +375,25 @@ function dottedQr(code: Qr) {
         : module === "#"
       const cx = at(col) + DotPitch / 2
       const cy = at(row) + DotPitch / 2
-      return dark && !inEye(col, row)
+      return dark && !inSquare(col, row)
         ? [`<circle cx="${cx}" cy="${cy}" r="${DotRadius}"/>`]
         : []
     })
   )
-  const eyes = [[0, 0], [n - 7, 0], [0, n - 7]].flatMap(([col, row]) =>
+  const solid = squares.flatMap(([col, row, size]) =>
     [0, 1, 2].map((ring) => {
       const ex = at(col + ring)
       const ey = at(row + ring)
-      const size = (7 - 2 * ring) * DotPitch
+      const width = (size - 2 * ring) * DotPitch
       const fill = ring === 1 ? ` fill="${HomebaseColors.white.hex}"` : ""
-      return `<rect x="${ex}" y="${ey}" width="${size}" height="${size}"${fill}/>`
+      return `<rect x="${ex}" y="${ey}" width="${width}" height="${width}"${fill}/>`
     })
   )
 
   const tile = corner(code)
   return `<svg ${place(tile.x, tile.y, tile.size, tile.size)} viewBox="0 0 ${side} ${side}">
   <rect width="${side}" height="${side}" rx="${DotPitch * 1.5}" fill="${HomebaseColors.white.hex}"/>
-  <g fill="${HomebaseColors.blue.hex}">${eyes.join("")}${dots.join("")}</g>
+  <g fill="${HomebaseColors.blue.hex}">${solid.join("")}${dots.join("")}</g>
 </svg>`
 }
 
@@ -435,7 +461,7 @@ function seededQr(code: Qr) {
   <defs><path id="seed-module" d="${Egg}" transform="scale(${seed}) translate(-50 -79)"/></defs>
   <rect width="${side}" height="${side}" rx="${cell * 1.5}" fill="${SeedMeColors.paper}"/>
   <g fill="${SeedMeColors.ink}">${solid.join("")}${seeds.join("")}</g>
-  ${seedLogo(at(first), at(first), icon * cell, true)}
+  ${seedLogo(at(first), at(first), icon * cell, "square", "icon")}
 </svg>`
 }
 
@@ -507,6 +533,37 @@ async function homebaseLockup() {
 }
 
 /**
+ * Each banner carries its partner's mark in the top left, as far in from the
+ * edges as the QR code and in one square box on both banners: one minor-third
+ * step (1.2, the subtlest step of the usual modular scales) smaller than the
+ * QR tile it balances across the banner, so the mark reads as secondary to
+ * the code and to the banner's own lockup, as co-branding guides set a
+ * partner's logo where another brand leads. Equal boxes give the two marks
+ * equal area, the usual way to make marks of different shapes look the same
+ * size.
+ */
+function cornerSize(code: Qr) {
+  return corner(code).size / 1.2
+}
+
+/** Homebase's house in white, from the kit's mark file, its ink `size` square. */
+async function cornerHouse(size: number) {
+  const mark = await kitFile(HomebaseFiles.mark)
+  const margin = DotPitch / 2 - DotRadius
+  const box = size * mark.height / (mark.height - 2 * margin)
+  const at = CornerMargin - (box - size) / 2
+  return `<svg ${place(at, at, box, box)} viewBox="0 0 ${mark.width} ${mark.height}">${mark.dots}</svg>`
+}
+
+/**
+ * SeedMe's mark on Homebase blue: `iconSvg("circle")`, its favicon, the seed on
+ * an ink disc, since the bare seed's blue would sink into the ground.
+ */
+function cornerSeed(size: number) {
+  return seedLogo(CornerMargin, CornerMargin, size, "circle", "corner")
+}
+
+/**
  * A banner's page: its ground running `bleed` inches past the trim on every
  * side, and its drawing in the trim's own coordinates.
  */
@@ -547,7 +604,8 @@ const Banners: Banner[] = [
         WordWidth * Scale,
         WordHeight * Scale,
       ),
-      dottedQr(SeedMeBannerQr),
+      await cornerHouse(cornerSize(SeedMeBannerQr)),
+      seededQr(SeedMeBannerQr),
     ],
   },
   {
@@ -556,7 +614,8 @@ const Banners: Banner[] = [
     ground: HomebaseColors.blue.hex,
     body: [
       await homebaseLockup(),
-      seededQr(HomebaseBannerQr),
+      cornerSeed(cornerSize(HomebaseBannerQr)),
+      dottedQr(HomebaseBannerQr),
     ],
   },
 ]
