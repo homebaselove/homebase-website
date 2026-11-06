@@ -1,9 +1,10 @@
 /**
  * The Vercel deployment, stood up locally for the end-to-end run: the static
- * files `bun run build` wrote to dist/, the rewrites in vercel.json, and the
- * functions in api/ answering as Request to Response, all under Node, the
- * runtime they run on there. The pins come from whatever EAS the suite's
- * variables name on the chain HOMEBASE_BASE_RPC reaches, a local one here.
+ * files `bun run build` wrote to dist/, the redirects and rewrites in
+ * vercel.json, and the functions in api/ answering as Request to Response,
+ * all under Node, the runtime they run on there. The pins come from whatever
+ * EAS the suite's variables name on the chain HOMEBASE_BASE_RPC reaches, a
+ * local one here.
  *
  *   node --import ./e2e/luma-stub.ts e2e/vercel.ts
  */
@@ -17,6 +18,12 @@ const Root = NPath.dirname(NPath.dirname(NUrl.fileURLToPath(import.meta.url)))
 const Dist = NPath.join(Root, "dist")
 
 const Port = Number(process.env.PORT ?? 3000)
+
+interface Redirect {
+  readonly source: string
+  readonly destination: string
+  readonly permanent: boolean
+}
 
 interface Rewrite {
   readonly source: string
@@ -42,8 +49,17 @@ const Types: Record<string, string> = {
 const config = JSON.parse(
   await NFs.readFile(NPath.join(Root, "vercel.json"), "utf8"),
 ) as {
+  redirects?: Redirect[]
   rewrites: Rewrite[]
 }
+
+/** Each redirect by its exact source; Vercel answers them before any rewrite. */
+const redirects = new Map(
+  (config.redirects ?? []).map((redirect) => [
+    redirect.source,
+    redirect,
+  ]),
+)
 
 /** The function a path is rewritten to, by its exact source; the catch-all is static. */
 const functions = new Map(
@@ -135,6 +151,17 @@ await NFs.access(NPath.join(Dist, "index.html")).catch(() => {
 const server = NHttp.createServer(async (incoming, response) => {
   try {
     const url = new URL(incoming.url ?? "/", `http://${incoming.headers.host}`)
+    const redirect = redirects.get(url.pathname)
+
+    if (redirect) {
+      response.writeHead(redirect.permanent ? 308 : 307, {
+        location: redirect.destination,
+      })
+      response.end()
+
+      return
+    }
+
     const name = functions.get(url.pathname)
 
     if (!name) {

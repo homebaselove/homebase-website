@@ -3,6 +3,7 @@ import { Effect, Layer } from "effect"
 import * as NFs from "node:fs/promises"
 import * as NPath from "node:path"
 import { BrandKitFile, BrandKitUrl } from "./brand.ts"
+import { TelegramGroupUrl, TelegramUrl } from "./telegram.ts"
 
 const PublicDir = NPath.join(import.meta.dir, "..", "public")
 
@@ -34,6 +35,14 @@ export const layer = Layer.effectDiscard(
     yield* router.get(
       BrandKitUrl,
       HttpServerResponse.file(NPath.join(PublicDir, BrandKitFile)),
+    )
+
+    // The address the deck's QR code gives out, as Vercel redirects it.
+    yield* router.get(
+      TelegramUrl,
+      HttpServerResponse.redirect(TelegramGroupUrl, {
+        status: 307,
+      }),
     )
   }),
 )
