@@ -3,6 +3,7 @@ import * as NPath from "node:path"
 import { chromium } from "playwright"
 import { BrandKitFile, BrandKitZipUrl } from "../src/brand.ts"
 import { type DotMap, DotPitch, DotRadius, House, word } from "../src/ui/dots.ts"
+import { missingLato } from "./render.ts"
 
 /**
  * Writes the brand kit into `brand/`: every logo as SVG, PDF and PNG, the app
@@ -207,16 +208,12 @@ const page = await browser.newPage()
 /**
  * Lato comes from Google Fonts; without it Chromium falls back to another
  * face and says nothing. `document.fonts.ready` can settle before a face has
- * started to load, so each weight is asked for by name.
+ * started to load, so each weight is asked for by name (see `missingLato`).
  */
 async function awaitLato(weights: readonly number[]) {
-  const missing = await page.evaluate(async (weights) => {
-    const fonts = weights.map((weight) => `${weight} 16px Lato`)
-    await Promise.all(fonts.map((font) => document.fonts.load(font)))
-    return fonts.filter((font) => !document.fonts.check(font))
-  }, weights)
+  const missing = await missingLato(page, weights)
   if (missing.length > 0) {
-    throw new Error(`Lato did not load from Google Fonts (${missing.join(", ")}); check the network and run again`)
+    throw new Error(`Lato did not load from Google Fonts (weights ${missing.join(", ")}); check the network and run again`)
   }
 }
 
