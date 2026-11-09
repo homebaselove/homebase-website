@@ -6,17 +6,15 @@ import { DotPitch, DotRadius, House } from "../src/ui/dots.ts"
 
 /**
  * Writes the print banners into `print/`, each for a 4 × 8 ft banner hung
- * landscape: a brand centred on its own ground, its partner's mark in the top
- * left, and in the bottom right a QR code to its own site in its own style.
+ * landscape: a brand centred on its own ground, and in the bottom right a QR
+ * code to its own site in its own style.
  *
  * - `seedme-banner-4x8ft`: SeedMe's logo followed by its name in lowercase,
- *   spaced as one more letter of the word, on SeedMe's ink; Homebase's house
- *   in the top left; a QR code to seedme.xyz drawn in SeedMe's seeds, with
- *   SeedMe's icon in the code.
+ *   spaced as one more letter of the word, on SeedMe's ink; a QR code to
+ *   seedme.xyz drawn in SeedMe's seeds, with SeedMe's icon in the code.
  * - `homebase-banner-4x8ft`: Homebase's house followed by its name in white
- *   on Homebase blue; SeedMe's icon in the top left; a QR code to
- *   homebase.love drawn in Homebase's dots, with Homebase's house in the
- *   code.
+ *   on Homebase blue; a QR code to homebase.love drawn in Homebase's dots,
+ *   with Homebase's house in the code.
  *
  * Each is written as:
  *
@@ -275,24 +273,22 @@ function corner(code: Qr) {
 /**
  * SeedMe's logo: `iconSvg("bare")`, the seed in its lit gradient with one
  * inner shadow and no ground, which BRAND.md keeps for surfaces already dark.
- * With a `ground`, `iconSvg("square")` or `iconSvg("circle")` for any other
- * surface: the seed smaller on ink, a square's corners rounded here as
- * BRAND.md leaves to the host. `id` keeps two logos in one page off each
- * other's gradient and clip.
+ * With `ground`, `iconSvg("square")` for light ones: the seed smaller on
+ * full-bleed ink, its corners rounded here as BRAND.md leaves to the host.
+ * `id` keeps two logos in one page off each other's gradient and clip.
  */
 function seedLogo(
   x: number,
   y: number,
   size: number,
-  ground?: "square" | "circle",
+  ground = false,
   id = "seed",
 ) {
   const scale = ground ? IconScale : EggScale
   const fit = `translate(50 50) scale(${scale}) translate(-50 -79)`
-  const backing = {
-    square: `\n  <rect width="100" height="100" rx="21" fill="${SeedMeColors.ink}"/>`,
-    circle: `\n  <circle cx="50" cy="50" r="50" fill="${SeedMeColors.ink}"/>`,
-  }
+  const square = ground
+    ? `\n  <rect width="100" height="100" rx="21" fill="${SeedMeColors.ink}"/>`
+    : ""
   return `<svg ${place(x, y, size, size)} viewBox="0 0 100 100">
   <defs>
     <radialGradient id="${id}-shell" cx="0.34" cy="0.24" r="0.92">
@@ -305,7 +301,7 @@ function seedLogo(
     </radialGradient>
     <filter id="${id}-blur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3"/></filter>
     <clipPath id="${id}-clip"><path d="${Egg}" transform="${fit}"/></clipPath>
-  </defs>${ground ? backing[ground] : ""}
+  </defs>${square}
   <path d="${Egg}" fill="url(#${id}-shell)" transform="${fit}"/>
   <g clip-path="url(#${id}-clip)">
     <path d="${Egg}" transform="${fit} translate(-6 -7)" fill="none" stroke="#00123f" stroke-width="16" opacity="0.75" filter="url(#${id}-blur)"/>
@@ -461,7 +457,7 @@ function seededQr(code: Qr) {
   <defs><path id="seed-module" d="${Egg}" transform="scale(${seed}) translate(-50 -79)"/></defs>
   <rect width="${side}" height="${side}" rx="${cell * 1.5}" fill="${SeedMeColors.paper}"/>
   <g fill="${SeedMeColors.ink}">${solid.join("")}${seeds.join("")}</g>
-  ${seedLogo(at(first), at(first), icon * cell, "square", "icon")}
+  ${seedLogo(at(first), at(first), icon * cell, true, "icon")}
 </svg>`
 }
 
@@ -533,37 +529,6 @@ async function homebaseLockup() {
 }
 
 /**
- * Each banner carries its partner's mark in the top left, as far in from the
- * edges as the QR code and in one square box on both banners: one step of a
- * minor-third type scale (1.2) smaller than the QR tile it balances across
- * the banner, so the mark reads as secondary to the code and to the banner's
- * own lockup, as co-branding guides set a partner's logo where another brand
- * leads, while staying close to the code's size. Equal boxes give the two
- * marks equal area, the usual way to make marks of different shapes look the
- * same size.
- */
-function cornerSize(code: Qr) {
-  return corner(code).size / 1.2
-}
-
-/** Homebase's house in white, from the kit's mark file, its ink `size` square. */
-async function cornerHouse(size: number) {
-  const mark = await kitFile(HomebaseFiles.mark)
-  const margin = DotPitch / 2 - DotRadius
-  const box = size * mark.height / (mark.height - 2 * margin)
-  const at = CornerMargin - (box - size) / 2
-  return `<svg ${place(at, at, box, box)} viewBox="0 0 ${mark.width} ${mark.height}">${mark.dots}</svg>`
-}
-
-/**
- * SeedMe's mark on Homebase blue: `iconSvg("circle")`, its favicon, the seed on
- * an ink disc, since the bare seed's blue would sink into the ground.
- */
-function cornerSeed(size: number) {
-  return seedLogo(CornerMargin, CornerMargin, size, "circle", "corner")
-}
-
-/**
  * A banner's page: its ground running `bleed` inches past the trim on every
  * side, and its drawing in the trim's own coordinates.
  */
@@ -604,7 +569,6 @@ const Banners: Banner[] = [
         WordWidth * Scale,
         WordHeight * Scale,
       ),
-      await cornerHouse(cornerSize(SeedMeBannerQr)),
       seededQr(SeedMeBannerQr),
     ],
   },
@@ -614,7 +578,6 @@ const Banners: Banner[] = [
     ground: HomebaseColors.blue.hex,
     body: [
       await homebaseLockup(),
-      cornerSeed(cornerSize(HomebaseBannerQr)),
       dottedQr(HomebaseBannerQr),
     ],
   },
