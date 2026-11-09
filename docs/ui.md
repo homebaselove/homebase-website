@@ -333,3 +333,11 @@ page builds from GitHub, nor Foundry, so these were not run:
   shows, since it describes the image.
 - Raised for Based House counts the $home fee share only; donations, which
   go to basedhouse.base.eth, are not added to it.
+- The QR code on the ecosystem deck's last slide encodes
+  `https://homebase.love/telegram`, which `vercel.json` redirects to the
+  Telegram group, as the Bun server does. The redirect is temporary (307), so
+  browsers do not keep it: to move the group, change `TelegramGroupUrl` in
+  `src/telegram.ts` and the redirect, and every copy of the deck already
+  shared follows. The code is made from that address, never copied from a
+  screenshot, and `src/telegram.test.ts` decodes it from the PDF. The first
+  deck carried a screenshot of a Telegram login code in its place.

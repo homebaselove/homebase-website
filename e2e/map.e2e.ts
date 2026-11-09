@@ -1752,7 +1752,8 @@ try {
     JSON.stringify(watching),
   )
 
-  // The interview reads open beside its video, with its two posts under it.
+  // The interview reads open beside its video, with its two posts and then
+  // the ecosystem deck under it.
   const interview = await still.evaluate(() => {
     const card = document.querySelector<HTMLElement>(
       "#story [data-chapter=jesse-at-based-house]",
@@ -1768,10 +1769,15 @@ try {
   })
 
   check(
-    "the interview starts with What happened open, and offers both posts of the visit",
+    "the interview starts with What happened open, and offers both posts of the visit and then the ecosystem deck",
     interview.open
       && interview.buttons.join(" | ")
-        === "Jesse at Based House -> https://x.com/base/status/2038724087078601044 | Decentralizing contribution to Base -> https://x.com/homebasedotlove/status/2095201550037848456",
+        === [
+          "Jesse at Based House -> https://x.com/base/status/2038724087078601044",
+          "Decentralizing contribution to Base -> https://x.com/homebasedotlove/status/2095201550037848456",
+          `Building a sustainable ecosystem -> ${Origin}${SustainableEcosystemUrl}`,
+        ]
+          .join(" | "),
     JSON.stringify(interview),
   )
 
