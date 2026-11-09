@@ -22,6 +22,11 @@ The Homebase website serves as a hub for the Base community, featuring:
   `/brandkit` and every logo file at `/HomebaseBrandKit.zip`,
   both written by `bun scripts/brand-kit.ts` with the files in `brand/`
 
+Banners, posters and social images made from the brand kit are kept beside
+the site, not served by it: what goes to a printer in `print/`, what goes
+online in `social/`. Each is written by a script in `scripts/`, and each
+folder's README says what every file is for.
+
 ## 🚀 Tech Stack
 
 - **UI**: [Preact](https://preactjs.com/) with signals, served by

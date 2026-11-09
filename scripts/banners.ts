@@ -3,6 +3,7 @@ import * as NPath from "node:path"
 import { chromium } from "playwright"
 import HomebaseColors from "../brand/colors.json" with { type: "json" }
 import { DotPitch, DotRadius, House } from "../src/ui/dots.ts"
+import { trimBoxed } from "./render.ts"
 
 /**
  * Writes the print banners into `print/`, each for a 4 × 8 ft banner hung
@@ -633,58 +634,6 @@ function chunk(type: string, data: Uint8Array) {
   return out
 }
 
-/**
- * Chromium sets no TrimBox, so a RIP would take the bleed for part of the
- * banner. This adds TrimBox and BleedBox to the page as an incremental update,
- * the PDF's own way to amend a file: a new copy of the page object, an xref
- * section pointing to it, and a trailer chained to the original's.
- */
-function trimBoxed(pdf: Uint8Array, bleed: number) {
-  const text = Buffer.from(pdf).toString("latin1")
-  const object = /(\d+) 0 obj\s*<<\/Type \/Page\b/.exec(text)
-  const trailer = /trailer\s*<<([^>]*)>>\s*startxref\s*(\d+)\s*%%EOF\s*$/.exec(
-    text,
-  )
-  if (!object || !trailer || /\/(TrimBox|Prev)\b/.test(text)) {
-    throw new Error("Chromium's PDF is not laid out as expected")
-  }
-  const start = text.indexOf("<<", object.index)
-  let end = start
-  for (let depth = 0; end < text.length; end++) {
-    if (text[end] === "(") {
-      throw new Error("the page dictionary holds a string")
-    }
-    if (text.startsWith("<<", end)) {
-      depth++
-      end++
-    } else if (text.startsWith(">>", end)) {
-      if (--depth === 0) {
-        break
-      }
-      end++
-    }
-  }
-  if (end >= text.length) {
-    throw new Error("the page dictionary never closes")
-  }
-  const points = (inches: number) => +(inches * 72).toFixed(2)
-  const trim = [bleed, bleed, Width + bleed, Height + bleed].map(points)
-  const media = [0, 0, Width + 2 * bleed, Height + 2 * bleed].map(points)
-  const copy = `${object[1]} 0 obj\n${text.slice(start, end)}\n/TrimBox [${
-    trim.join(" ")
-  }]\n/BleedBox [${media.join(" ")}]>>\nendobj\n`
-  const objectAt = pdf.length
-  const xrefAt = objectAt + copy.length
-  const update = [
-    copy,
-    `xref\n${object[1]} 1\n${String(objectAt).padStart(10, "0")} 00000 n \n`,
-    `trailer\n<<${trailer[1]}\n/Prev ${trailer[2]}>>\n`,
-    `startxref\n${xrefAt}\n%%EOF\n`,
-  ]
-    .join("")
-  return Buffer.concat([pdf, Buffer.from(update, "latin1")])
-}
-
 await NFs.mkdir(OutDir, {
   recursive: true,
 })
@@ -720,6 +669,8 @@ for (const banner of Banners) {
     trimBoxed(
       await pdf(`${title}, ${Bleed} in bleed`, page(banner, Bleed), Bleed),
       Bleed,
+      Width,
+      Height,
     ),
   )
 
