@@ -103,7 +103,9 @@ const WordHeight = Wordmark.height * FontUnit
 const Space = 98 * FontUnit
 
 /** SeedMe's lockup, in inches to the card's pixels. */
-const Scale = Width * 2 / 3
+const Scale = Width
+  * 2
+  / 3
   / (CardMark * 96 * EggScale / 100 + Space + WordWidth)
 
 /**
@@ -311,19 +313,22 @@ function seedLogo(
 
 /** The wordmark in brand-hi, as the share card and the header draw it. */
 function wordmark(x: number, y: number, width: number, height: number) {
-  return `<svg ${place(x, y, width, height)} viewBox="0 0 ${Wordmark.width} ${Wordmark.height}">
+  return `<svg ${
+    place(x, y, width, height)
+  } viewBox="0 0 ${Wordmark.width} ${Wordmark.height}">
   <path d="${Wordmark.d}" fill="${SeedMeColors.blueHi}"/>
 </svg>`
 }
 
 /** Where a nested drawing sits on the banner, in inches. */
 function place(x: number, y: number, width: number, height: number) {
-  return Object.entries({
-    x,
-    y,
-    width,
-    height,
-  })
+  return Object
+    .entries({
+      x,
+      y,
+      width,
+      height,
+    })
     .map(([name, value]) => `${name}="${Math.round(value * 1e4) / 1e4}"`)
     .join(" ")
 }
@@ -387,8 +392,12 @@ function dottedQr(code: Qr) {
   )
 
   const tile = corner(code)
-  return `<svg ${place(tile.x, tile.y, tile.size, tile.size)} viewBox="0 0 ${side} ${side}">
-  <rect width="${side}" height="${side}" rx="${DotPitch * 1.5}" fill="${HomebaseColors.white.hex}"/>
+  return `<svg ${
+    place(tile.x, tile.y, tile.size, tile.size)
+  } viewBox="0 0 ${side} ${side}">
+  <rect width="${side}" height="${side}" rx="${
+    DotPitch * 1.5
+  }" fill="${HomebaseColors.white.hex}"/>
   <g fill="${HomebaseColors.blue.hex}">${solid.join("")}${dots.join("")}</g>
 </svg>`
 }
@@ -453,9 +462,13 @@ function seededQr(code: Qr) {
   const seed = (1.04 * cell / 152).toFixed(4)
   const tile = corner(code)
 
-  return `<svg ${place(tile.x, tile.y, tile.size, tile.size)} viewBox="0 0 ${side} ${side}">
+  return `<svg ${
+    place(tile.x, tile.y, tile.size, tile.size)
+  } viewBox="0 0 ${side} ${side}">
   <defs><path id="seed-module" d="${Egg}" transform="scale(${seed}) translate(-50 -79)"/></defs>
-  <rect width="${side}" height="${side}" rx="${cell * 1.5}" fill="${SeedMeColors.paper}"/>
+  <rect width="${side}" height="${side}" rx="${
+    cell * 1.5
+  }" fill="${SeedMeColors.paper}"/>
   <g fill="${SeedMeColors.ink}">${solid.join("")}${seeds.join("")}</g>
   ${seedLogo(at(first), at(first), icon * cell, true, "icon")}
 </svg>`
@@ -525,7 +538,8 @@ async function homebaseLockup() {
         word.height * unit,
       )
     } viewBox="0 0 ${word.width} ${word.height}">${word.dots}</svg>`,
-  ].join("\n")
+  ]
+    .join("\n")
 }
 
 /**
@@ -542,7 +556,8 @@ function page(banner: Banner, bleed = 0) {
     `<rect x="${-bleed}" y="${-bleed}" width="${width}" height="${height}" fill="${banner.ground}"/>`,
     ...banner.body,
     `</svg>`,
-  ].join("\n") + "\n"
+  ]
+    .join("\n") + "\n"
 }
 
 interface Banner {
@@ -655,9 +670,9 @@ function trimBoxed(pdf: Uint8Array, bleed: number) {
   const points = (inches: number) => +(inches * 72).toFixed(2)
   const trim = [bleed, bleed, Width + bleed, Height + bleed].map(points)
   const media = [0, 0, Width + 2 * bleed, Height + 2 * bleed].map(points)
-  const copy = `${object[1]} 0 obj\n${
-    text.slice(start, end)
-  }\n/TrimBox [${trim.join(" ")}]\n/BleedBox [${media.join(" ")}]>>\nendobj\n`
+  const copy = `${object[1]} 0 obj\n${text.slice(start, end)}\n/TrimBox [${
+    trim.join(" ")
+  }]\n/BleedBox [${media.join(" ")}]>>\nendobj\n`
   const objectAt = pdf.length
   const xrefAt = objectAt + copy.length
   const update = [
@@ -665,7 +680,8 @@ function trimBoxed(pdf: Uint8Array, bleed: number) {
     `xref\n${object[1]} 1\n${String(objectAt).padStart(10, "0")} 00000 n \n`,
     `trailer\n<<${trailer[1]}\n/Prev ${trailer[2]}>>\n`,
     `startxref\n${xrefAt}\n%%EOF\n`,
-  ].join("")
+  ]
+    .join("")
   return Buffer.concat([pdf, Buffer.from(update, "latin1")])
 }
 
