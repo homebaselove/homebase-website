@@ -16,7 +16,7 @@ export const DotRadius = 4
 
 const LetterGap = 3
 
-function solid(cells: readonly string[]): DotMap {
+export function solid(cells: readonly string[]): DotMap {
   const dots: Dot[] = []
 
   cells.forEach((row, y) =>
@@ -43,7 +43,7 @@ function solid(cells: readonly string[]): DotMap {
  * Letters are drawn as solid blocks and then traced, which is what gives the
  * wordmark its hollow strokes: every stem comes out as two lines of dots.
  */
-function outlined(cells: readonly string[]): DotMap {
+export function outlined(cells: readonly string[]): DotMap {
   const filled = (x: number, y: number) => cells[y]?.[x] === "X"
   const map = solid(cells)
 
@@ -102,6 +102,41 @@ const Glyphs: Record<string, DotMap> = {
     "XXXXXXXXXXX",
     "XXXXXXXXXXX",
     "XXXXXXXXXXX",
+  ]),
+  C: outlined([
+    "XXXXXXXXXXX",
+    "XXXXXXXXXXX",
+    "XXXXXXXXXXX",
+    "XXX........",
+    "XXX........",
+    "XXX........",
+    "XXX........",
+    "XXX........",
+    "XXX........",
+    "XXX........",
+    "XXX........",
+    "XXX........",
+    "XXXXXXXXXXX",
+    "XXXXXXXXXXX",
+    "XXXXXXXXXXX",
+  ]),
+  /** The right corners are cut on the diagonal the M's strokes run on, so D does not read as O. */
+  D: outlined([
+    "XXXXXXXXX..",
+    "XXXXXXXXXX.",
+    "XXXXXXXXXXX",
+    "XXX.....XXX",
+    "XXX.....XXX",
+    "XXX.....XXX",
+    "XXX.....XXX",
+    "XXX.....XXX",
+    "XXX.....XXX",
+    "XXX.....XXX",
+    "XXX.....XXX",
+    "XXX.....XXX",
+    "XXXXXXXXXXX",
+    "XXXXXXXXXX.",
+    "XXXXXXXXX..",
   ]),
   E: outlined([
     "XXXXXXXXXXX",
@@ -188,12 +223,34 @@ const Glyphs: Record<string, DotMap> = {
     "XXXXXXXXXXX",
     "XXXXXXXXXXX",
   ]),
+  /** The arms meet on the M's diagonal, where a squared Y read as a U on a stem. */
+  Y: outlined([
+    "XXX.....XXX",
+    "XXX.....XXX",
+    "XXX.....XXX",
+    "XXXX...XXXX",
+    ".XXXX.XXXX.",
+    "..XXXXXXX..",
+    "...XXXXX...",
+    "....XXX....",
+    "....XXX....",
+    "....XXX....",
+    "....XXX....",
+    "....XXX....",
+    "....XXX....",
+    "....XXX....",
+    "....XXX....",
+  ]),
 }
 
-export function word(text: string): DotMap {
+/** `overrides` swaps in other glyphs by letter, as the Academy concepts swap in their own A. */
+export function word(
+  text: string,
+  overrides: Readonly<Record<string, DotMap>> = {},
+): DotMap {
   const glyphs = text
     .split("")
-    .map((char) => Glyphs[char])
+    .map((char) => overrides[char] ?? Glyphs[char])
     .filter((glyph) => glyph !== undefined)
 
   let offset = 0
