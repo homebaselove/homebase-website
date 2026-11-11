@@ -315,60 +315,86 @@ function alone(art: Mark): Art {
 }
 
 /**
- * 04 Seal. Dots round three circles, as near the grid's pitch as a whole
- * number of them allows, the outer two one stroke apart like a letter's two
- * lines; the house in the middle, and the name round the top in Lato 900.
+ * 04 Seal. One ring of the wordmark's dots, as near the grid's pitch as a
+ * whole number of them allows; the name over the house and the year under it
+ * in Lato 900, a dot at either end of the name; the house at 3.3 times the
+ * ring's dots, as the kit's stacked logo stands it over the letters.
  */
 const Seal = {
-  rings: [230, 210, 152],
-  text: 181,
-  size: 33,
-  tracking: 6.6,
+  ring: 232,
+  text: 199,
+  size: 30,
+  /** 0.3 em: seals are lettered wide. */
+  tracking: 9,
   /** Lato's cap height, 1433 of its 2000 units. */
   capHeight: 1433 / 2000,
-  house: 3,
+  house: StackedScale,
   top: "HOMEBASE ACADEMY",
-  bottom: "HOMEBASE.LOVE",
+  /** The year the Academy opens. */
+  bottom: "EST. 2026",
 }
 
-const SealReach = Seal.rings[0] + DotRadius
+/**
+ * The seal without its lettering, for icons and for lockups beside the
+ * wordmark, where the name is already written: the ring drawn tighter round
+ * the house, in dots twice the size, so it still reads as a ring at 32 px.
+ */
+const RingedHouse = {
+  ring: 176,
+  dot: 2,
+}
 
-function ring(cx: number, cy: number, radius: number, scale: number): Circle[] {
-  const count = Math.round(2 * Math.PI * radius / DotPitch)
+const SealReach = Seal.ring + DotRadius
+const RingedReach = RingedHouse.ring + DotRadius * RingedHouse.dot
+
+function ring(
+  cx: number,
+  cy: number,
+  radius: number,
+  dot: number,
+  scale: number,
+): Circle[] {
+  const count = Math.round(2 * Math.PI * radius / (DotPitch * dot))
 
   return Array.from({ length: count }, (_, i) => {
     const angle = i / count * 2 * Math.PI - Math.PI / 2
     return {
       cx: cx + radius * scale * Math.cos(angle),
       cy: cy + radius * scale * Math.sin(angle),
-      r: DotRadius * scale,
+      r: DotRadius * dot * scale,
     }
   })
+}
+
+function houseAt(cx: number, cy: number, scale: number): Circle[] {
+  return place(
+    House,
+    scale,
+    cx - House.columns * DotPitch * scale / 2,
+    cy - House.rows * DotPitch * scale / 2,
+  )
 }
 
 /**
  * The lettering sits on two arcs a cap height apart, so that the top line,
  * which stands on its arc, and the bottom line, which hangs from it, fill the
- * same band and both read left to right.
+ * same band and both read left to right. Tracking follows every letter, the
+ * last included, so each line is moved on by half of it to sit centred.
  */
 function seal(cx: number, cy: number, scale: number) {
-  const houseScale = Seal.house * scale
   const half = Seal.size * Seal.capHeight / 2
   const top = round((Seal.text - half) * scale)
   const bottom = round((Seal.text + half) * scale)
+  const centre = (radius: number) =>
+    round(Math.PI * radius / 2 + Seal.tracking * scale / 2)
   const circles = [
-    ...Seal.rings.flatMap((radius) => ring(cx, cy, radius, scale)),
+    ...ring(cx, cy, Seal.ring, 1, scale),
     ...[-1, 1].map((side) => ({
       cx: cx + side * Seal.text * scale,
       cy,
-      r: (DotRadius + 1) * scale,
+      r: DotRadius * scale,
     })),
-    ...place(
-      House,
-      houseScale,
-      cx - House.columns * DotPitch * houseScale / 2,
-      cy - House.rows * DotPitch * houseScale / 2,
-    ),
+    ...houseAt(cx, cy, Seal.house * scale),
   ]
   // Each file names its arcs after itself, so two seals inlined in one page keep their own.
   const markup = (fill: string, id: string) =>
@@ -386,8 +412,12 @@ function seal(cx: number, cy: number, scale: number) {
       }" letter-spacing="${
         round(Seal.tracking * scale)
       }" text-anchor="middle">`,
-      `<text><textPath href="#${id}-top" startOffset="50%">${Seal.top}</textPath></text>`,
-      `<text><textPath href="#${id}-bottom" startOffset="50%">${Seal.bottom}</textPath></text>`,
+      `<text><textPath href="#${id}-top" startOffset="${
+        centre(top)
+      }">${Seal.top}</textPath></text>`,
+      `<text><textPath href="#${id}-bottom" startOffset="${
+        centre(bottom)
+      }">${Seal.bottom}</textPath></text>`,
       `</g>`,
     ]
       .join("")
@@ -398,42 +428,47 @@ function seal(cx: number, cy: number, scale: number) {
   }
 }
 
+function ringedHouse(cx: number, cy: number, scale: number): Circle[] {
+  return [
+    ...ring(cx, cy, RingedHouse.ring, RingedHouse.dot, scale),
+    ...houseAt(cx, cy, Seal.house * scale),
+  ]
+}
+
 function sealAlone(): Art {
   const { circles, markup } = seal(SealReach, SealReach, 1)
   return fit(circles, markup)
 }
 
-/** The seal as tall as both lines, where the kit stands its house. */
+function ringedAlone(): Art {
+  return fit(ringedHouse(RingedReach, RingedReach, 1))
+}
+
+/** The ringed house as tall as both lines, where the kit stands its house. */
 function sealHorizontal(): Art {
-  const scale = (BlockRows * DotPitch - 2 * Margin) / (2 * SealReach)
-  const { circles, markup } = seal(
-    SealReach * scale + Margin,
-    BlockRows * DotPitch / 2,
-    scale,
-  )
+  const scale = (BlockRows * DotPitch - 2 * Margin) / (2 * RingedReach)
 
   return fit([
-    ...circles,
+    ...ringedHouse(
+      RingedReach * scale + Margin,
+      BlockRows * DotPitch / 2,
+      scale,
+    ),
     ...block(
-      2 * SealReach * scale + Margin + HorizontalGap - Margin,
+      2 * RingedReach * scale + Margin + HorizontalGap - Margin,
       0,
       Academy,
       false,
     ),
-  ], markup)
+  ])
 }
 
-function sealStacked(scale: number): Art {
-  const { circles, markup } = seal(
-    Homebase.columns * DotPitch / 2,
-    SealReach * scale,
-    scale,
-  )
-
+/** The ringed house at its own size: its house 3.3 times the letters' dots. */
+function sealStacked(): Art {
   return fit([
-    ...circles,
-    ...block(0, 2 * SealReach * scale + StackedGap - Margin, Academy, true),
-  ], markup)
+    ...ringedHouse(Homebase.columns * DotPitch / 2, RingedReach, 1),
+    ...block(0, 2 * RingedReach + StackedGap - Margin, Academy, true),
+  ])
 }
 
 /** The house, then the A it becomes, the two dots it gives up left as rings. */
@@ -541,8 +576,10 @@ const Files: Record<string, [Art, string]> = {
   "blueprint-idea": [blueprintIdea(), Blue],
   "seal-blue": [sealAlone(), Blue],
   "seal-white": [sealAlone(), White],
+  "seal-small-blue": [ringedAlone(), Blue],
+  "seal-small-white": [ringedAlone(), White],
   "seal-horizontal-blue": [sealHorizontal(), Blue],
-  "seal-stacked-white": [sealStacked(0.75), White],
+  "seal-stacked-white": [sealStacked(), White],
   "academy-wordmark-blue": [alone(mark(Academy)), Blue],
   "academy-wordmark-peaked-blue": [alone(mark(AcademyPeaked)), Blue],
   "academy-letters": [letters(), Blue],

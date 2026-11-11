@@ -60,14 +60,24 @@ share one dot size.
 
 ## 04 Seal
 
-Three rings of dots round the house, HOMEBASE ACADEMY over it and
-HOMEBASE.LOVE under it in Lato 900. Round, so it fills a circular avatar and
-stamps a certificate. The lettering is live text: it renders in Lato only where
-Lato is installed, so set it in outlines before it goes to print.
+One ring of the wordmark's dots round the house, HOMEBASE ACADEMY over it
+and EST. 2026 under it in Lato 900, lettered wide, a dot at either end of the
+name. The house is 3.3 times the ring's dots, as the kit's stacked logo stands
+it over the letters. Round, so it fills a circular avatar and stamps a
+certificate. The year is `Seal.bottom` in the script. The lettering is live
+text: it renders in Lato only where Lato is installed, so set it in outlines
+before it goes to print.
 
-![Seal, horizontal](concepts/seal-horizontal-blue.svg)
+For icons, and for lockups beside the wordmark where the name is already
+written, the ringed house drops the lettering: its ring sits tighter round the
+house, in dots twice the size, so it still reads as a ring at 32 px.
 
-- `seal-blue`, `seal-white`, `seal-horizontal-blue`, `seal-stacked-white`.
+![Seal](concepts/seal-blue.svg)
+
+- `seal-blue`, `seal-white`: the seal.
+- `seal-small-blue`, `seal-small-white`: the ringed house.
+- `seal-horizontal-blue`, `seal-stacked-white`: the ringed house with the
+  wordmark.
 
 ## 05 Endorsed
 
