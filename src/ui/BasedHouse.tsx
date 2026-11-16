@@ -19,8 +19,7 @@ export function BasedHouseCard() {
       class="scroll-mt-8 flex flex-col gap-8"
     >
       <SectionHeading
-        kicker="Up next"
-        title="Based House Mumbai"
+        title="Join the Homies"
       />
 
       <div class="grid items-start lg:items-center gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
