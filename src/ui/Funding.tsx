@@ -145,7 +145,7 @@ export function FundingCard() {
               : raised.value === null
               ? (
                 <h3 class="text-4xl max-sm:text-3xl font-bold leading-none">
-                  Fund {Campaign}
+                  Support {Campaign}
                 </h3>
               )
               : (
