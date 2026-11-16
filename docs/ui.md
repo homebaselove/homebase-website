@@ -28,7 +28,7 @@ column of bands, each a `Band` at the width its content reads best at:
 | --- | --- | --- |
 | Header | `Header`, `Socials`, `ConnectButton`, `HouseLogo`, `Wordmark` | The dot-matrix house and wordmark (`DotMatrix` over the dot maps in `dots.ts`), the social links and the one wallet button. |
 | Our Story | `BasedHouseStory` (`Story.tsx`, data in `story.ts`) | A scroll-snap reel of chapters with a dot rail. It opens on the most recent chapter and holds it while the page settles; off-centre cards are `inert`; the arrow keys, dots and swipes move it. A chapter can lead with a `Film` (no download until Watch) or a `Cover` of one or two photos. |
-| Based House Mumbai | `BasedHouseCard`, `FundingCard`, `BasedHouseBlueprint` | The raise and how to give; the BasedPaint blueprint the reader can pick up and drop, with reduced motion honoured. |
+| Join the Homies | `BasedHouseCard`, `FundingCard`, `BasedHouseBlueprint` | The raise and how to give; the BasedPaint blueprint the reader can pick up and drop, with reduced motion honoured. |
 | Homebase Map | `MapCard`, `MapView`, `EventList`, `EventDetails`, `AddEventDialog` | Luma events pinned on Base, on a MapLibre map and in a list that point at each other. `docs/map.md` covers it in full. |
 | Homebase Live | `LiveCard`, `AddCalendarDialog` | Streams ahead from the calendars the admin added, by day, in any zone. `docs/live.md` covers it in full. |
 | Videos | `VideoGallery` (data in `videos.ts`) | Talks and build sessions; YouTube plays in a dialog, anything else opens where it was posted. |
