@@ -1,16 +1,16 @@
 # Homebase Academy logo concepts
 
-Four ways to draw Homebase Academy from the Homebase logo, and a fifth that
-draws nothing new. Every SVG in `concepts/` is written by
+Six ways to draw Homebase Academy from the Homebase logo, and one that draws
+nothing new. Every SVG in `concepts/` is written by
 `bun scripts/academy-logos.ts` from the dot maps in `src/ui/dots.ts`, the
 same maps the site and the brand kit draw the Homebase logo from. Edit those
 or the script, never the files.
 
-The first four share one wordmark: HOMEBASE over ACADEMY, 6 cells apart, set
-by the brand kit's measures for its stacked and horizontal lockups. ACADEMY
-needed three letters the kit did not have. C, D and Y are drawn the way the
-kit draws every letter: a solid block 15 cells tall and 11 wide, traced to its
-outline.
+Every concept but 05 shares one wordmark: HOMEBASE over ACADEMY, 6 cells
+apart, set by the brand kit's measures for its stacked and horizontal lockups.
+ACADEMY needed three letters the kit did not have. C, D and Y are drawn the way
+the kit draws every letter: a solid block 15 cells tall and 11 wide, traced to
+its outline.
 
 ![C, D, Y and the Academy's A on their grid](concepts/academy-letters.svg)
 
@@ -84,6 +84,34 @@ house, in dots twice the size, so it still reads as a ring at 32 px.
 No new drawing: the kit's horizontal Homebase logo with ACADEMY beside it in
 Lato 900, in a pill like the brand deck's tags. It ships today, but the
 Academy gets no mark of its own, so its avatar and favicon are Homebase's.
+
+## 06 Graduation cap
+
+A mortarboard drawn in the house's dots, from 🎓. The board is a diamond whose
+rows step out two dots a side, as the house's roof steps out one. The cap is a
+chevron under it, one empty row below the board's front edge, so the board
+reads as lying on top. The tassel hangs straight from the right corner and ends
+in a fringe.
+
+![Graduation cap, horizontal](concepts/cap-horizontal-blue.svg)
+
+- `cap-mark-blue`, `cap-mark-white`, `cap-horizontal-blue`,
+  `cap-stacked-white`.
+- `cap-grid`: the cap on the grid it is drawn to.
+
+## 07 Schoolhouse
+
+The Homebase house as a school, from 🏫: a clock in its gable, a flag on its
+peak, and a wing of two windows either side, the eaves overhanging the gaps
+where the wings meet it.
+
+![Schoolhouse, horizontal](concepts/schoolhouse-horizontal-blue.svg)
+
+- `schoolhouse-mark-blue`, `schoolhouse-mark-white`,
+  `schoolhouse-horizontal-blue`, `schoolhouse-stacked-white`.
+- `schoolhouse-small-blue`, `schoolhouse-small-white`: the house with its clock
+  and flag but no wings, for 64 px and below.
+- `schoolhouse-idea`: the house beside the schoolhouse it becomes.
 
 ## Wordmarks
 

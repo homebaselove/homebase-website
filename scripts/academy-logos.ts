@@ -183,6 +183,63 @@ function filledIn(count: number): Mark {
 const Blueprint = outlined(enlarge(cellsOf(House), 5))
 const BlueprintSmall = outlined(enlarge(cellsOf(House), 2))
 
+/**
+ * 06 Graduation cap. A mortarboard in the house's dots: the board a diamond
+ * whose rows step out two dots a side, as the house's roof steps out one; the
+ * cap a chevron under it, one empty row below the board's front edge, so the
+ * board reads as lying on top of it; the tassel straight down from the board's
+ * right corner, ending in a fringe.
+ */
+const Cap = solid([
+  "........X.........",
+  "......XXXXX.......",
+  "....XXXXXXXXX.....",
+  "..XXXXXXXXXXXXX...",
+  "XXXXXXXXXXXXXXXXX.",
+  "..XXXXXXXXXXXXX.X.",
+  "....XXXXXXXXX...X.",
+  "...X..XXXXX..X..X.",
+  "...XXX..X..XXX..X.",
+  "....XXXX.XXXX...X.",
+  "......XXXXX....XXX",
+  "........X......XXX",
+])
+
+/** Wider than the house, the cap stands smaller than the kit's 3.3 over the letters. */
+const CapStackedScale = 2.4
+
+/**
+ * 07 Schoolhouse. The house at the centre, with a clock in its gable where
+ * 01 has its counter and a flag on its peak, between two wings of two windows
+ * each; its eaves overhang the gaps where the wings meet it. Below 64 px the
+ * wings drop and the house keeps its clock and flag.
+ */
+const Schoolhouse = solid([
+  "........XXX......",
+  "........XXX......",
+  "........X........",
+  "........X........",
+  ".......XXX.......",
+  "......XX.XX......",
+  ".....XXXXXXX.....",
+  "XXXXX.XXXXX.XXXXX",
+  "X.X.X.XX.XX.X.X.X",
+  "XXXXX.XX.XX.XXXXX",
+])
+
+const SchoolhouseSmall = solid([
+  "...XXX.",
+  "...XXX.",
+  "...X...",
+  "...X...",
+  "..XXX..",
+  ".XX.XX.",
+  "XXXXXXX",
+  ".XXXXX.",
+  ".XX.XX.",
+  ".XX.XX.",
+])
+
 const Homebase = word("HOMEBASE")
 const Academy = word("ACADEMY")
 const AcademyPeaked = word("ACADEMY", {
@@ -492,7 +549,27 @@ function blueprintIdea(): Art {
   ])
 }
 
-/** The new letters and the Academy's A on the grid they are drawn to, every cell a pinpoint. */
+/** A map on the grid it is drawn to: its dots, and a pinpoint in every cell it leaves empty. */
+function onGrid(map: DotMap, dx: number): Circle[] {
+  const pinpoints: Circle[] = []
+
+  for (let y = 0; y < map.rows; y++) {
+    for (let x = 0; x < map.columns; x++) {
+      if (!map.dots.some(same({ x, y }))) {
+        pinpoints.push({
+          cx: dx + x * DotPitch + DotPitch / 2,
+          cy: y * DotPitch + DotPitch / 2,
+          r: 1,
+          fill: GridGrey,
+        })
+      }
+    }
+  }
+
+  return [...pinpoints, ...place(map, 1, dx, 0)]
+}
+
+/** The new letters and the Academy's A on the grid they are drawn to. */
 function letters(): Art {
   const glyphs = [word("C"), word("D"), word("Y"), PeakA]
   const gap = 6
@@ -500,23 +577,19 @@ function letters(): Art {
   const all: Circle[] = []
 
   for (const glyph of glyphs) {
-    for (let y = 0; y < glyph.rows; y++) {
-      for (let x = 0; x < glyph.columns; x++) {
-        if (!glyph.dots.some(same({ x, y }))) {
-          all.push({
-            cx: (offset + x) * DotPitch + DotPitch / 2,
-            cy: y * DotPitch + DotPitch / 2,
-            r: 1,
-            fill: GridGrey,
-          })
-        }
-      }
-    }
-    all.push(...place(glyph, 1, offset * DotPitch, 0))
+    all.push(...onGrid(glyph, offset * DotPitch))
     offset += glyph.columns + gap
   }
 
   return fit(all)
+}
+
+/** The house, then the schoolhouse it becomes, both standing on one line. */
+function schoolhouseIdea(): Art {
+  return fit([
+    ...place(House, 1, 0, (Schoolhouse.rows - House.rows) * DotPitch),
+    ...place(Schoolhouse, 1, (House.columns + 4) * DotPitch, 0),
+  ])
 }
 
 function svg(art: Art, fill: string, id: string) {
@@ -580,6 +653,21 @@ const Files: Record<string, [Art, string]> = {
   "seal-small-white": [ringedAlone(), White],
   "seal-horizontal-blue": [sealHorizontal(), Blue],
   "seal-stacked-white": [sealStacked(), White],
+  "cap-mark-blue": [alone(mark(Cap)), Blue],
+  "cap-mark-white": [alone(mark(Cap)), White],
+  "cap-horizontal-blue": [horizontal(mark(Cap), Academy), Blue],
+  "cap-stacked-white": [stacked(mark(Cap), Academy, CapStackedScale), White],
+  "cap-grid": [fit(onGrid(Cap, 0)), Blue],
+  "schoolhouse-mark-blue": [alone(mark(Schoolhouse)), Blue],
+  "schoolhouse-mark-white": [alone(mark(Schoolhouse)), White],
+  "schoolhouse-small-blue": [alone(mark(SchoolhouseSmall)), Blue],
+  "schoolhouse-small-white": [alone(mark(SchoolhouseSmall)), White],
+  "schoolhouse-horizontal-blue": [horizontal(mark(Schoolhouse), Academy), Blue],
+  "schoolhouse-stacked-white": [
+    stacked(mark(Schoolhouse), Academy, StackedScale),
+    White,
+  ],
+  "schoolhouse-idea": [schoolhouseIdea(), Blue],
   "academy-wordmark-blue": [alone(mark(Academy)), Blue],
   "academy-wordmark-peaked-blue": [alone(mark(AcademyPeaked)), Blue],
   "academy-letters": [letters(), Blue],
